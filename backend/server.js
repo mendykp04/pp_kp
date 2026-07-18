@@ -35,8 +35,8 @@ fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // ชื่อผู้ใช้/รหัสผ่านสำหรับล็อกอินหลังบ้าน อ่านจาก environment variable ก่อนเสมอ (ตั้งค่าตอน deploy จริง)
 // ถ้าไม่ได้ตั้งค่าไว้ (เช่นตอนรันทดสอบในเครื่อง) จะ fallback ไปใช้ค่าเริ่มต้นด้านล่าง
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME || '1234';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '12123';
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin1234';
 // ถ้ากำลังใช้รหัสผ่าน default อยู่ (ไม่ได้ตั้งค่า ADMIN_PASSWORD เอง) ให้เตือนไว้ใน console กันลืมเปลี่ยนตอนขึ้นเซิร์ฟเวอร์จริง
 if (!process.env.ADMIN_PASSWORD) {
   console.warn(

@@ -411,20 +411,61 @@ function renderOrderTable() {
   }
   // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
   orderTableBody.innerHTML = orders
-    .map(
-      (o) => `
+    .map((o) => {
+      // รายการสถานะที่เลือกได้ตามปกติ
+      const statusOptions = ['รอดำเนินการ', 'จัดส่งแล้ว'];
+      // ถ้าออเดอร์นี้มีสถานะเก่าที่ไม่ตรงกับ 2 ตัวเลือกด้านบน (เช่นข้อมูลเก่าก่อนหน้านี้) ให้เติมสถานะเดิมเข้าไปเป็นตัวเลือกเพิ่ม
+      // เพื่อไม่ให้ dropdown แสดงค่าผิดไปจากสถานะจริงที่บันทึกไว้
+      if (!statusOptions.includes(o.status)) statusOptions.unshift(o.status);
+      // สร้างตัวเลือก <option> ทั้งหมด โดยเลือกตัวที่ตรงกับสถานะปัจจุบันของออเดอร์ไว้ก่อน
+      const optionsHTML = statusOptions
+        .map((s) => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`)
+        .join('');
+      return `
     <tr>
       <td>${o.id}</td>
       <td>${o.customerName}<br /><small>${o.address}</small></td>
       <td>${o.phone}</td>
       <td>${o.items.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')}</td>
       <td>${formatPrice(o.total)}</td>
-      <td><span class="status-badge">${o.status}</span></td>
+      <td>
+        <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) -->
+        <select class="order-status-select" data-id="${o.id}">${optionsHTML}</select>
+      </td>
       <td>${new Date(o.createdAt).toLocaleString('th-TH')}</td>
     </tr>
-  `
-    )
+  `;
+    })
     .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
+
+  // ผูก event ให้ทุกดรอปดาวน์สถานะที่เพิ่งวาดใหม่ เมื่อเปลี่ยนตัวเลือกให้ยิง API อัปเดตสถานะทันที
+  orderTableBody.querySelectorAll('.order-status-select').forEach((select) => {
+    select.addEventListener('change', async () => {
+      // อ้างอิงรหัสออเดอร์จาก data-id และสถานะใหม่ที่เพิ่งเลือก
+      const orderId = select.dataset.id;
+      const newStatus = select.value;
+      // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
+      try {
+        // ยิง HTTP PUT ไปที่ /api/orders/<id>/status พร้อมสถานะใหม่
+        const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        // ถ้า response ไม่สำเร็จ ให้โยน error
+        if (!res.ok) throw new Error('update failed');
+        // อัปเดตสถานะในตัวแปร orders ที่เก็บไว้ในหน่วยความจำด้วย ให้ตรงกับที่บันทึกจริง (เผื่อมีการอ้างอิงใช้ที่อื่นต่อ)
+        const order = orders.find((o) => o.id === orderId);
+        if (order) order.status = newStatus;
+        // แจ้งเตือนว่าอัปเดตสำเร็จ
+        showToast(`อัปเดตสถานะออเดอร์เป็น "${newStatus}" เรียบร้อย`);
+      } catch (err) {
+        // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้ และโหลดตารางใหม่เพื่อดึงสถานะจริงกลับมาแสดง (เผื่อ dropdown ค้างค่าที่ยังไม่ถูกบันทึกจริง)
+        showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+        loadOrders();
+      }
+    });
+  });
 }
 
 // ---------- Employees ----------

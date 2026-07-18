@@ -240,6 +240,17 @@ td img {
   color: var(--accent);                      /* ตัวอักษรสีเน้น (ส้ม) */
 }
 
+/* ดรอปดาวน์เปลี่ยนสถานะออเดอร์ในตารางคำสั่งซื้อ */
+.order-status-select {
+  background: var(--bg);              /* สีพื้นหลัง */
+  border: 1px solid var(--border);    /* เส้นขอบ */
+  color: var(--text);                 /* สีตัวอักษร */
+  padding: 6px 10px;                   /* ระยะห่างภายใน */
+  border-radius: 8px;                  /* มุมโค้ง */
+  font-size: 0.85rem;                  /* ขนาดตัวอักษร */
+  cursor: pointer;                     /* เปลี่ยนเมาส์เป็นรูปมือ */
+}
+
 /* Modal */
 /* ฉากหลังมืดครอบทั้งหน้าจอ เวลาเปิดหน้าต่างลอย (modal) เพิ่ม/แก้ไขสินค้า */
 .modal-overlay {
