@@ -1,0 +1,102 @@
+<!-- บอกเบราว์เซอร์ว่านี่คือเอกสาร HTML5 -->
+<!DOCTYPE html>
+<!-- แท็กเปิดของหน้าเว็บ กำหนดภาษาเริ่มต้นเป็นภาษาไทย (th) เพื่อการเข้าถึง/SEO -->
+<html lang="th">
+<head>
+  <!-- กำหนดชุดตัวอักษร (encoding) เป็น UTF-8 เพื่อให้แสดงภาษาไทยได้ถูกต้อง -->
+  <meta charset="UTF-8" />
+  <!-- ตั้งค่าให้หน้าเว็บ responsive คือปรับขนาดตามความกว้างของหน้าจออุปกรณ์ (มือถือ/แท็บเล็ต/คอม) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ข้อความที่จะแสดงบนแท็บของเบราว์เซอร์ -->
+  <title>SNEAK&apos;R | ร้านรองเท้าสนีกเกอร์</title>
+  <!-- เชื่อมไฟล์ CSS ภายนอกเข้ามาตกแต่งหน้าเว็บนี้ -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- แถบเมนูด้านบนสุดของหน้าเว็บ (โลโก้ + ลิงก์ไปหน้าต่าง ๆ) -->
+  <header class="navbar">
+    <!-- โลโก้ร้าน กดแล้วกลับมาหน้าแรก -->
+    <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
+    <nav>
+      <!-- ลิงก์ไปหน้าแสดงสินค้า (หน้านี้เอง) -->
+      <a href="index.html">สินค้า</a>
+      <!-- ลิงก์ไปหน้าตะกร้า พร้อมตัวเลขนับจำนวนสินค้าในตะกร้า (อัปเดตด้วย JavaScript) -->
+      <a href="cart.html" class="cart-link">
+        🛒 ตะกร้า <span class="cart-count" id="cartCount">0</span>
+      </a>
+    </nav>
+  </header>
+
+  <!-- ส่วนหัวโฆษณาขนาดใหญ่ (hero banner) ต้อนรับผู้เข้าชม -->
+  <section class="hero">
+    <h1>ก้าวไปข้างหน้า<br />ด้วย <span>Sneaker</span> ที่ใช่</h1>
+    <p>รวมรองเท้าผ้าใบแบรนด์ดัง คัดสรรคุณภาพ ส่งตรงถึงบ้านคุณ</p>
+    <!-- ปุ่มกดแล้วเลื่อนหน้าจอลงไปยัง section ที่มี id="products" ด้านล่าง -->
+    <a href="#products" class="btn">เลือกซื้อเลย</a>
+  </section>
+
+  <!-- โซน Flash Sale แสดงเฉพาะตอนมีสินค้าที่กำลังลดราคาอยู่จริง เริ่มต้นซ่อนไว้ก่อน (JS จะสั่งแสดงถ้ามีข้อมูล) -->
+  <section class="section flash-sale-section" id="flashSaleSection" style="display:none;">
+    <h2 class="section-title flash-sale-title">⚡ Flash Sale</h2>
+    <!-- กล่อง grid ที่จะถูกเติมการ์ดสินค้า Flash Sale ที่กำลังลดราคาอยู่ตอนนี้โดย JavaScript -->
+    <div class="product-grid" id="flashSaleGrid"></div>
+  </section>
+
+  <!-- ส่วนหลักของหน้า แสดงรายการสินค้าทั้งหมด id="products" ใช้เป็นจุดเชื่อมกับปุ่ม "เลือกซื้อเลย" ด้านบน -->
+  <main class="section" id="products">
+    <h2 class="section-title">สินค้าทั้งหมด</h2>
+    <!-- แถบตัวกรอง/ค้นหาสินค้า -->
+    <div class="filters">
+      <!-- ช่องกรอกค้นหาสินค้าด้วยชื่อหรือแบรนด์ (JavaScript คอยฟังการพิมพ์ในช่องนี้) -->
+      <input type="text" id="searchInput" placeholder="ค้นหารองเท้า หรือแบรนด์..." />
+      <!-- ดรอปดาวน์เลือกกรองตามแบรนด์ ตัวเลือกอื่น ๆ นอกจาก "ทุกแบรนด์" จะถูกเติมโดย JavaScript ตอนโหลดสินค้า -->
+      <select id="brandFilter">
+        <option value="">ทุกแบรนด์</option>
+      </select>
+      <!-- ดรอปดาวน์เลือกกรองตามหมวดหมู่ราคา (เช่น ราคาถูก/กลาง/แพง) ตัวเลือกจะถูกเติมโดย JavaScript จากข้อมูลหมวดหมู่ที่แอดมินตั้งไว้ -->
+      <select id="categoryFilter">
+        <option value="">ทุกหมวดหมู่</option>
+      </select>
+      <!-- ดรอปดาวน์เลือกการเรียงลำดับราคา -->
+      <select id="sortFilter">
+        <option value="default">เรียงตาม</option>
+        <option value="price-asc">ราคา: น้อย → มาก</option>
+        <option value="price-desc">ราคา: มาก → น้อย</option>
+      </select>
+    </div>
+    <!-- กล่อง grid ที่จะถูกเติมการ์ดสินค้าทั้งหมดโดย JavaScript (ตอนแรกยังไม่มีสินค้า เลยขึ้นข้อความ "กำลังโหลด...") -->
+    <div class="product-grid" id="productGrid">
+      <p>กำลังโหลดสินค้า...</p>
+    </div>
+  </main>
+
+  <!-- ส่วนท้ายของหน้าเว็บ -->
+  <footer>© 2026 SNEAK&apos;R Shop. All rights reserved.</footer>
+
+  <!-- Modal เลือกไซส์ -->
+  <!-- กล่องหน้าต่างลอย (popup) สำหรับให้ผู้ใช้เลือกไซส์รองเท้าก่อนเพิ่มลงตะกร้า ปกติจะซ่อนอยู่ (แสดงเมื่อมี class "open") -->
+  <div class="modal-overlay" id="sizeModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทสำหรับปิด modal -->
+      <span class="close-btn" id="closeModal">&times;</span>
+      <!-- หัวข้อ modal จะถูกเปลี่ยนเป็นชื่อสินค้าที่กำลังเลือกโดย JavaScript -->
+      <h3 id="modalProductName">เลือกไซส์</h3>
+      <div class="field">
+        <label>ไซส์ที่มี</label>
+        <!-- กล่องนี้จะถูกเติมปุ่มไซส์ทั้งหมดของสินค้าที่เลือกโดย JavaScript -->
+        <div class="size-grid" id="sizeGrid"></div>
+      </div>
+      <!-- ปุ่มยืนยันเพิ่มสินค้า+ไซส์ที่เลือกลงตะกร้า -->
+      <button class="btn btn-block" id="confirmAddToCart">เพิ่มลงตะกร้า</button>
+    </div>
+  </div>
+
+  <!-- กล่องข้อความแจ้งเตือนเล็ก ๆ (toast) มุมล่างของจอ เช่น "เพิ่มลงตะกร้าแล้ว" ควบคุมการแสดง/ซ่อนด้วย JavaScript -->
+  <div class="toast" id="toast"></div>
+
+  <!-- โหลดไฟล์ common.js ก่อน เพราะมีฟังก์ชันกลาง (จัดการตะกร้า) ที่ shop.js ต้องใช้ -->
+  <script src="js/common.js"></script>
+  <!-- โหลดไฟล์ shop.js ซึ่งเป็นตัวควบคุมการทำงานหลักของหน้านี้ (โหลด/แสดง/กรองสินค้า) -->
+  <script src="js/shop.js"></script>
+</body>
+</html>

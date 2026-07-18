@@ -1,0 +1,20 @@
+[
+  {
+    "id": "smrpq53fy6od4b",
+    "employeeId": "E001",
+    "employeeName": "สมชาย ใจดี",
+    "items": [
+      {
+        "productId": "p1",
+        "name": "Air Zoom Runner",
+        "price": 3590,
+        "size": 40,
+        "qty": 1
+      }
+    ],
+    "total": 3590,
+    "amountReceived": 5000,
+    "change": 1410,
+    "createdAt": "2026-07-18T02:04:55.342Z"
+  }
+]

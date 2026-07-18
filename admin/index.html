@@ -1,0 +1,452 @@
+<!-- บอกเบราว์เซอร์ว่านี่คือเอกสาร HTML5 -->
+<!DOCTYPE html>
+<!-- แท็กเปิดของหน้าเว็บ กำหนดภาษาเริ่มต้นเป็นภาษาไทย -->
+<html lang="th">
+<head>
+  <!-- กำหนดชุดตัวอักษรเป็น UTF-8 -->
+  <meta charset="UTF-8" />
+  <!-- ตั้งค่าหน้าเว็บให้ responsive ตามขนาดหน้าจออุปกรณ์ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ข้อความที่แสดงบนแท็บเบราว์เซอร์ -->
+  <title>Admin | SNEAK&apos;R</title>
+  <!-- เชื่อมไฟล์ CSS เฉพาะของหน้า admin (แยกจาก style.css ของหน้าร้านค้า) -->
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body>
+  <!-- โครงหลักของหน้า admin แบ่งเป็น 2 ส่วน: แถบเมนูซ้าย (sidebar) + เนื้อหาหลัก (content) -->
+  <div class="admin-layout">
+    <!-- แถบเมนูด้านซ้าย -->
+    <aside class="sidebar">
+      <!-- โลโก้ร้าน + คำว่า Admin กำกับไว้ -->
+      <div class="brand">SNEAK<span>&apos;R</span> <small>Admin</small></div>
+      <nav>
+        <!-- ปุ่มสลับไปแท็บ "จัดการสินค้า" เริ่มต้นเป็นแท็บที่ active (เปิดอยู่) data-tab ใช้บอก JS ว่าปุ่มนี้คู่กับแท็บไหน -->
+        <button class="nav-btn active" data-tab="products">📦 จัดการสินค้า</button>
+        <!-- ปุ่มสลับไปแท็บ "หมวดหมู่สินค้า" (เช่น ราคาถูก/กลาง/แพง) -->
+        <button class="nav-btn" data-tab="categories">🏷️ หมวดหมู่สินค้า</button>
+        <!-- ปุ่มสลับไปแท็บ "Flash Sale" -->
+        <button class="nav-btn" data-tab="flashsales">⚡ Flash Sale</button>
+        <!-- ปุ่มสลับไปแท็บ "คำสั่งซื้อ" (ออเดอร์จากหน้าร้านค้าออนไลน์) -->
+        <button class="nav-btn" data-tab="orders">🧾 คำสั่งซื้อ</button>
+        <!-- ปุ่มสลับไปแท็บ "จัดการพนักงาน" -->
+        <button class="nav-btn" data-tab="employees">👤 พนักงาน</button>
+        <!-- ปุ่มสลับไปแท็บ "ขายหน้าร้าน" (จุดขาย/รับชำระเงิน) -->
+        <button class="nav-btn" data-tab="pos">🧮 ขายหน้าร้าน</button>
+        <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" -->
+        <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
+      </nav>
+      <!-- ลิงก์กลับไปหน้าร้านค้าฝั่งลูกค้า -->
+      <a href="/" class="back-link">← กลับหน้าร้านค้า</a>
+    </aside>
+
+    <!-- เนื้อหาหลักฝั่งขวา จะสลับแสดงตามแท็บที่เลือก -->
+    <main class="content">
+      <!-- Tab: Products -->
+      <!-- แท็บจัดการสินค้า มี class "active" ทำให้แสดงผลเป็นค่าเริ่มต้นตอนเปิดหน้า -->
+      <section id="tab-products" class="tab-panel active">
+        <div class="panel-header">
+          <h1>จัดการสินค้า</h1>
+          <!-- ปุ่มเปิด modal สำหรับเพิ่มสินค้าใหม่ -->
+          <button class="btn" id="addProductBtn">+ เพิ่มสินค้าใหม่</button>
+        </div>
+        <!-- กล่องครอบตาราง เผื่อกรณีตารางกว้างเกินจอ จะได้เลื่อนซ้าย-ขวาได้ -->
+        <div class="table-wrap">
+          <table>
+            <!-- หัวตาราง กำหนดชื่อคอลัมน์ -->
+            <thead>
+              <tr>
+                <th>รูป</th>
+                <th>ชื่อสินค้า</th>
+                <th>แบรนด์</th>
+                <th>หมวดหมู่</th>
+                <th>ราคา</th>
+                <th>สต็อก</th>
+                <th>ไซส์</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตาราง (แถวข้อมูลสินค้า) จะถูกเติมโดย admin.js ตอนแรกยังไม่มีข้อมูลจึงขึ้น "กำลังโหลด..." -->
+            <tbody id="productTableBody">
+              <tr><td colspan="8">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab: Categories (หมวดหมู่ราคาสินค้า) -->
+      <section id="tab-categories" class="tab-panel">
+        <div class="panel-header">
+          <h1>หมวดหมู่สินค้า</h1>
+          <!-- ปุ่มเปิด modal สำหรับเพิ่มหมวดหมู่ใหม่ -->
+          <button class="btn" id="addCategoryBtn">+ เพิ่มหมวดหมู่ใหม่</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ชื่อหมวดหมู่</th>
+                <th>จำนวนสินค้าในหมวดหมู่</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางหมวดหมู่จะถูกเติมโดย admin.js -->
+            <tbody id="categoryTableBody">
+              <tr><td colspan="3">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab: Flash Sale -->
+      <section id="tab-flashsales" class="tab-panel">
+        <div class="panel-header">
+          <h1>Flash Sale</h1>
+          <!-- ปุ่มเปิด modal สำหรับตั้งค่า Flash Sale ใหม่ -->
+          <button class="btn" id="addFlashSaleBtn">+ ตั้งค่า Flash Sale</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>สินค้า</th>
+                <th>ราคาปกติ</th>
+                <th>ราคา Flash Sale</th>
+                <th>เริ่ม</th>
+                <th>สิ้นสุด</th>
+                <th>สถานะ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตาราง Flash Sale จะถูกเติมโดย admin.js -->
+            <tbody id="flashSaleTableBody">
+              <tr><td colspan="7">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab: Orders -->
+      <!-- แท็บคำสั่งซื้อ ไม่มี class "active" ตอนเปิดหน้าแรกจึงถูกซ่อนไว้ก่อนตาม CSS (.tab-panel ที่ไม่มี .active จะถูกซ่อน) -->
+      <section id="tab-orders" class="tab-panel">
+        <div class="panel-header">
+          <h1>คำสั่งซื้อ</h1>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>รหัสออเดอร์</th>
+                <th>ลูกค้า</th>
+                <th>เบอร์โทร</th>
+                <th>รายการ</th>
+                <th>ยอดรวม</th>
+                <th>สถานะ</th>
+                <th>วันที่</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางคำสั่งซื้อจะถูกเติมโดย admin.js -->
+            <tbody id="orderTableBody">
+              <tr><td colspan="7">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab: Employees -->
+      <!-- แท็บจัดการพนักงาน: เพิ่ม/แก้ไข/ลบ + ค้นหาจากรหัสพนักงานหรือชื่อ -->
+      <section id="tab-employees" class="tab-panel">
+        <div class="panel-header">
+          <h1>จัดการพนักงาน</h1>
+          <!-- ปุ่มเปิด modal สำหรับเพิ่มพนักงานใหม่ -->
+          <button class="btn" id="addEmployeeBtn">+ เพิ่มพนักงานใหม่</button>
+        </div>
+        <!-- ช่องค้นหาพนักงาน จาก "รหัสพนักงาน" หรือ "ชื่อ-สกุล" (ค้นแบบ real-time ตามที่พิมพ์) -->
+        <div class="filters">
+          <input type="text" id="employeeSearchInput" placeholder="ค้นหาจากรหัสพนักงาน หรือ ชื่อ-สกุล..." />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>รหัสพนักงาน</th>
+                <th>ชื่อ-สกุล</th>
+                <th>เบอร์โทร</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางพนักงานจะถูกเติมโดย admin.js -->
+            <tbody id="employeeTableBody">
+              <tr><td colspan="4">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab: POS (ขายหน้าร้าน / รับชำระเงิน) -->
+      <section id="tab-pos" class="tab-panel">
+        <div class="panel-header">
+          <h1>ขายหน้าร้าน / รับชำระเงิน</h1>
+        </div>
+
+        <!-- เลือกพนักงานผู้ทำรายการขายนี้ -->
+        <div class="field">
+          <label for="posEmployeeSelect">พนักงานผู้ขาย</label>
+          <select id="posEmployeeSelect"></select>
+        </div>
+
+        <!-- แถวสำหรับเลือกสินค้า+ไซส์+จำนวน แล้วกดเพิ่มเข้ารายการขาย -->
+        <div class="pos-add-row">
+          <div class="field">
+            <label for="posProductSelect">รองเท้า</label>
+            <select id="posProductSelect"></select>
+          </div>
+          <div class="field">
+            <label for="posSizeSelect">ไซส์</label>
+            <select id="posSizeSelect"></select>
+          </div>
+          <div class="field pos-qty-field">
+            <label for="posQtyInput">จำนวน</label>
+            <input type="number" id="posQtyInput" min="1" value="1" />
+          </div>
+          <!-- ปุ่มเพิ่มรองเท้าที่เลือกไว้ด้านบนลงในรายการขายด้านล่าง -->
+          <button type="button" class="btn" id="posAddItemBtn">+ เพิ่มรายการ</button>
+        </div>
+
+        <!-- ตารางแสดงรายการรองเท้าที่กำลังจะขายในรอบนี้ -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>รองเท้า</th>
+                <th>ไซส์</th>
+                <th>ราคา/คู่</th>
+                <th>จำนวน</th>
+                <th>รวม</th>
+                <th></th>
+              </tr>
+            </thead>
+            <!-- รายการสินค้าที่เพิ่มไว้ในตะกร้าขายรอบนี้ จะถูกเติมโดย admin.js -->
+            <tbody id="posCartBody">
+              <tr><td colspan="6">ยังไม่มีรายการ กรุณาเลือกรองเท้าด้านบนแล้วกด "+ เพิ่มรายการ"</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- กล่องสรุปยอดชำระ + รับเงิน + เงินทอน -->
+        <div class="cart-summary">
+          <div class="row"><span>ยอดชำระทั้งหมด</span><span id="posTotal">0 บาท</span></div>
+          <div class="field">
+            <label for="posAmountReceived">จำนวนเงินที่ได้รับจากลูกค้า</label>
+            <!-- เมื่อพิมพ์จำนวนเงิน จะคำนวณเงินทอนให้ทันทีด้วย JavaScript -->
+            <input type="number" id="posAmountReceived" min="0" placeholder="0" />
+          </div>
+          <div class="row total"><span>เงินทอน</span><span id="posChange">0 บาท</span></div>
+          <!-- ปุ่มบันทึกรายการขาย จะยิง API ไปสร้างรายการขายจริง พร้อมตัดสต็อกสินค้า -->
+          <button class="btn btn-block" id="posSaveBtn" style="margin-top:16px;">บันทึกการชำระเงิน</button>
+        </div>
+      </section>
+
+      <!-- Tab: รายงานสรุปยอดขายประจำวัน -->
+      <section id="tab-report" class="tab-panel">
+        <div class="panel-header">
+          <h1>สรุปยอดขายประจำวัน</h1>
+          <!-- ปุ่มสั่งพิมพ์ ใช้ window.print() ของเบราว์เซอร์ (มี class "no-print" กันไม่ให้ตัวปุ่มเองถูกพิมพ์ออกมาด้วย) -->
+          <button class="btn no-print" id="printReportBtn">🖨️ พิมพ์ใบสรุปยอดขาย</button>
+        </div>
+        <!-- ช่องเลือกวันที่ต้องการดูสรุปยอดขาย ค่าเริ่มต้นเป็นวันที่ปัจจุบัน (ตั้งค่าโดย JavaScript) -->
+        <div class="filters no-print">
+          <input type="date" id="reportDateInput" />
+        </div>
+
+        <!-- กล่องเนื้อหาที่จะถูกพิมพ์ออกมา (หัวกระดาษ + ตาราง + ยอดรวม) -->
+        <div id="reportPrintArea">
+          <!-- หัวกระดาษใบสรุปยอดขาย แสดงเฉพาะตอนพิมพ์ให้ดูเป็นทางการ -->
+          <div class="print-header">
+            <h2>SNEAK&apos;R Shop</h2>
+            <p>ใบสรุปยอดขายประจำวันที่ <span id="reportDateLabel">-</span></p>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>เวลา</th>
+                  <th>พนักงาน</th>
+                  <th>รายการ</th>
+                  <th>รับเงิน</th>
+                  <th>เงินทอน</th>
+                  <th>ยอดขาย</th>
+                </tr>
+              </thead>
+              <!-- รายการขายของวันที่เลือกจะถูกเติมโดย admin.js -->
+              <tbody id="reportTableBody">
+                <tr><td colspan="6">กำลังโหลด...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- สรุปยอดขายรวมทั้งวัน -->
+          <div class="cart-summary">
+            <div class="row"><span>จำนวนบิล</span><span id="reportBillCount">0</span></div>
+            <div class="row total"><span>ยอดขายรวมทั้งวัน</span><span id="reportTotalRevenue">0 บาท</span></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal เพิ่ม/แก้ไขสินค้า -->
+  <!-- หน้าต่างลอย (popup) ใช้ทั้งตอนเพิ่มสินค้าใหม่และแก้ไขสินค้าเดิม (สลับโหมดด้วย JavaScript) -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทปิด modal -->
+      <span class="close-btn" id="closeProductModal">&times;</span>
+      <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "เพิ่มสินค้าใหม่" กับ "แก้ไขสินค้า" โดย JS -->
+      <h3 id="productModalTitle">เพิ่มสินค้าใหม่</h3>
+      <!-- ฟอร์มกรอกข้อมูลสินค้า เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขสินค้าผ่าน API -->
+      <form id="productForm">
+        <!-- ช่องซ่อน เก็บ id ของสินค้า (มีค่า = โหมดแก้ไข, ว่าง = โหมดเพิ่มใหม่) ผู้ใช้มองไม่เห็นช่องนี้ -->
+        <input type="hidden" id="productId" />
+        <div class="field">
+          <label for="productName">ชื่อสินค้า</label>
+          <input type="text" id="productName" required />
+        </div>
+        <div class="field">
+          <label for="productBrand">แบรนด์</label>
+          <input type="text" id="productBrand" required />
+        </div>
+        <!-- จัดราคาและสต็อกให้อยู่แถวเดียวกัน (ดู CSS .field-row) -->
+        <div class="field-row">
+          <div class="field">
+            <label for="productPrice">ราคา (บาท)</label>
+            <!-- type="number" + min="0" บังคับให้กรอกเฉพาะตัวเลขที่ไม่ติดลบ -->
+            <input type="number" id="productPrice" min="0" required />
+          </div>
+          <div class="field">
+            <label for="productStock">จำนวนสต็อก</label>
+            <input type="number" id="productStock" min="0" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="productSizes">ไซส์ที่มี (คั่นด้วยจุลภาค เช่น 40,41,42)</label>
+          <input type="text" id="productSizes" required />
+        </div>
+        <div class="field">
+          <label for="productCategory">หมวดหมู่ราคา</label>
+          <!-- ตัวเลือกในดรอปดาวน์นี้จะถูกเติมโดย admin.js จากรายการหมวดหมู่ที่จัดการไว้ในแท็บ "หมวดหมู่สินค้า" -->
+          <select id="productCategory">
+            <option value="">-- ไม่ระบุหมวดหมู่ --</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="productImageFile">รูปภาพสินค้า (อัปโหลดจากเครื่อง)</label>
+          <!-- ช่องเลือกไฟล์รูปภาพจากเครื่อง accept="image/*" กรองให้เลือกได้เฉพาะไฟล์รูปภาพในหน้าต่างเลือกไฟล์ -->
+          <input type="file" id="productImageFile" accept="image/*" />
+          <!-- รูปตัวอย่าง (preview) แสดงรูปที่เลือกใหม่ หรือรูปเดิมตอนแก้ไขสินค้า เริ่มต้นซ่อนไว้ก่อน -->
+          <img id="productImagePreview" src="" alt="ตัวอย่างรูปภาพ" style="display:none; width:80px; height:80px; object-fit:cover; border-radius:8px; margin-top:8px;" />
+          <!-- ช่องซ่อน เก็บ path ของรูปที่บันทึกไว้แล้ว (จากการอัปโหลดก่อนหน้า หรือรูปเดิมตอนแก้ไข) -->
+          <input type="hidden" id="productImage" />
+        </div>
+        <div class="field">
+          <label for="productDescription">รายละเอียดสินค้า</label>
+          <input type="text" id="productDescription" />
+        </div>
+        <!-- ปุ่ม submit ฟอร์ม -->
+        <button type="submit" class="btn btn-block">บันทึกสินค้า</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal เพิ่ม/แก้ไขพนักงาน -->
+  <!-- หน้าต่างลอย ใช้ทั้งตอนเพิ่มพนักงานใหม่และแก้ไขพนักงานเดิม (สลับโหมดด้วย JavaScript) -->
+  <div class="modal-overlay" id="employeeModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทปิด modal -->
+      <span class="close-btn" id="closeEmployeeModal">&times;</span>
+      <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "เพิ่มพนักงานใหม่" กับ "แก้ไขพนักงาน" โดย JS -->
+      <h3 id="employeeModalTitle">เพิ่มพนักงานใหม่</h3>
+      <!-- ฟอร์มกรอกข้อมูลพนักงาน เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขพนักงานผ่าน API -->
+      <form id="employeeForm">
+        <div class="field">
+          <label for="employeeId">รหัสพนักงาน</label>
+          <!-- ตอนแก้ไขพนักงาน ช่องนี้จะถูกสั่งปิดแก้ไข (disabled) เพราะใช้รหัสเป็นตัวอ้างอิงหลัก เปลี่ยนไม่ได้ -->
+          <input type="text" id="employeeId" required />
+        </div>
+        <div class="field">
+          <label for="employeeName">ชื่อ-สกุล</label>
+          <input type="text" id="employeeName" required />
+        </div>
+        <div class="field">
+          <label for="employeePhone">เบอร์โทร</label>
+          <input type="tel" id="employeePhone" />
+        </div>
+        <!-- ปุ่ม submit ฟอร์ม -->
+        <button type="submit" class="btn btn-block">บันทึกข้อมูลพนักงาน</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal เพิ่ม/แก้ไขหมวดหมู่สินค้า -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทปิด modal -->
+      <span class="close-btn" id="closeCategoryModal">&times;</span>
+      <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "เพิ่มหมวดหมู่ใหม่" กับ "แก้ไขหมวดหมู่" โดย JS -->
+      <h3 id="categoryModalTitle">เพิ่มหมวดหมู่ใหม่</h3>
+      <!-- ฟอร์มกรอกชื่อหมวดหมู่ เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขหมวดหมู่ผ่าน API -->
+      <form id="categoryForm">
+        <!-- ช่องซ่อน เก็บ id ของหมวดหมู่ (มีค่า = โหมดแก้ไข, ว่าง = โหมดเพิ่มใหม่) -->
+        <input type="hidden" id="categoryId" />
+        <div class="field">
+          <label for="categoryName">ชื่อหมวดหมู่ (เช่น ราคาถูก, ราคากลาง, ราคาแพง)</label>
+          <input type="text" id="categoryName" required />
+        </div>
+        <!-- ปุ่ม submit ฟอร์ม -->
+        <button type="submit" class="btn btn-block">บันทึกหมวดหมู่</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal ตั้งค่า/แก้ไข Flash Sale -->
+  <div class="modal-overlay" id="flashSaleModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทปิด modal -->
+      <span class="close-btn" id="closeFlashSaleModal">&times;</span>
+      <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "ตั้งค่า Flash Sale ใหม่" กับ "แก้ไข Flash Sale" โดย JS -->
+      <h3 id="flashSaleModalTitle">ตั้งค่า Flash Sale ใหม่</h3>
+      <!-- ฟอร์มตั้งค่า Flash Sale เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขผ่าน API -->
+      <form id="flashSaleForm">
+        <!-- ช่องซ่อน เก็บ id ของ Flash Sale (มีค่า = โหมดแก้ไข, ว่าง = โหมดตั้งค่าใหม่) -->
+        <input type="hidden" id="flashSaleId" />
+        <div class="field">
+          <label for="flashSaleProduct">เลือกสินค้าที่จะลดราคา</label>
+          <!-- ตัวเลือกในดรอปดาวน์นี้จะถูกเติมโดย admin.js จากรายการสินค้าทั้งหมด -->
+          <select id="flashSaleProduct" required></select>
+        </div>
+        <!-- แสดงราคาปกติของสินค้าที่เลือกไว้ ให้แอดมินเทียบก่อนตั้งราคาลด (อัปเดตอัตโนมัติเมื่อเปลี่ยนสินค้า) -->
+        <p class="field-hint">ราคาปกติ: <span id="flashSaleOriginalPrice">-</span></p>
+        <div class="field">
+          <label for="flashSalePrice">ราคา Flash Sale (บาท)</label>
+          <input type="number" id="flashSalePrice" min="0" required />
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="flashSaleStart">เวลาเริ่ม</label>
+            <input type="datetime-local" id="flashSaleStart" required />
+          </div>
+          <div class="field">
+            <label for="flashSaleEnd">เวลาสิ้นสุด</label>
+            <input type="datetime-local" id="flashSaleEnd" required />
+          </div>
+        </div>
+        <!-- ปุ่ม submit ฟอร์ม -->
+        <button type="submit" class="btn btn-block">บันทึก Flash Sale</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- กล่องข้อความแจ้งเตือนเล็ก ๆ (toast) เช่น "เพิ่มสินค้าเรียบร้อย" -->
+  <div class="toast" id="toast"></div>
+
+  <!-- โหลด admin.js ซึ่งควบคุมการทำงานทั้งหมดของหน้านี้ (สลับแท็บ, CRUD สินค้า/พนักงาน, ขายหน้าร้าน, รายงาน) -->
+  <script src="js/admin.js"></script>
+</body>
+</html>

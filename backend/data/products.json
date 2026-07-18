@@ -1,0 +1,1188 @@
+[
+  {
+    "id": "p1",
+    "name": "Air Zoom Runner",
+    "brand": "Nike",
+    "price": 3590,
+    "categoryId": "c2",
+    "stock": 24,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
+    "description": "รองเท้าวิ่งน้ำหนักเบา รองรับแรงกระแทกดีเยี่ยม เหมาะกับการใช้งานทุกวัน"
+  },
+  {
+    "id": "p2",
+    "name": "UltraBoost Street",
+    "brand": "Adidas",
+    "price": 4290,
+    "categoryId": "c3",
+    "stock": 18,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=600&q=80",
+    "description": "ดีไซน์สายสตรีท พื้นรองเท้าเทคโนโลยี Boost คืนพลังงานทุกก้าว"
+  },
+  {
+    "id": "p3",
+    "name": "Classic Leather 90",
+    "brand": "Reebok",
+    "price": 2890,
+    "categoryId": "c2",
+    "stock": 30,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1512374382149-233c42b6a83b?w=600&q=80",
+    "description": "รองเท้าหนังคลาสสิก ทรงสวย ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p4",
+    "name": "Chuck Canvas High",
+    "brand": "Converse",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 40,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1543508282-6319a3e2621f?w=600&q=80",
+    "description": "รองเท้าผ้าใบทรงสูง สไตล์วินเทจไม่มีวันตกเทรนด์"
+  },
+  {
+    "id": "p5",
+    "name": "Fresh Foam Glide",
+    "brand": "New Balance",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 15,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "image": "https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=600&q=80",
+    "description": "พื้นรองเท้านุ่มสบาย ใส่เดินหรือวิ่งได้ทั้งวัน"
+  },
+  {
+    "id": "p6",
+    "name": "Old Skool Wave",
+    "brand": "Vans",
+    "price": 2490,
+    "categoryId": "c1",
+    "stock": 22,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1494496195158-c3becb4f2475?w=600&q=80",
+    "description": "รองเท้าลายคลาสสิก เข้ากับทุกลุค casual"
+  },
+  {
+    "id": "p7",
+    "name": "Air Zoom Pegasus",
+    "brand": "Nike",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 15,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1495555961986-6d4c1ecb7be3?w=600&q=80",
+    "description": "สไตล์คลาสสิกที่ไม่มีวันตกเทรนด์ ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p8",
+    "name": "Air Force Retro",
+    "brand": "Nike",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 22,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1542219550-37153d387c27?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p9",
+    "name": "React Infinity",
+    "brand": "Nike",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 42,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1524532787116-e70228437bbe?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p10",
+    "name": "Downshifter",
+    "brand": "Nike",
+    "price": 1990,
+    "categoryId": "c1",
+    "stock": 9,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  },
+  {
+    "id": "p11",
+    "name": "Revolution 6",
+    "brand": "Nike",
+    "price": 3690,
+    "categoryId": "c2",
+    "stock": 9,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p12",
+    "name": "Air Max Motion",
+    "brand": "Nike",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 36,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p13",
+    "name": "Waffle Runner",
+    "brand": "Nike",
+    "price": 4190,
+    "categoryId": "c3",
+    "stock": 35,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1556906781-9a412961c28c?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p14",
+    "name": "Court Vision",
+    "brand": "Nike",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 29,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1556048219-bb6978360b84?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p15",
+    "name": "Blazer Mid",
+    "brand": "Nike",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 30,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "image": "https://images.unsplash.com/photo-1544441892-794166f1e3be?w=600&q=80",
+    "description": "สไตล์คลาสสิกที่ไม่มีวันตกเทรนด์ ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p16",
+    "name": "Metcon Trainer",
+    "brand": "Nike",
+    "price": 4490,
+    "categoryId": "c3",
+    "stock": 10,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "image": "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p17",
+    "name": "UltraBoost Light",
+    "brand": "Adidas",
+    "price": 4990,
+    "categoryId": "c3",
+    "stock": 32,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1575537302964-96cd47c06b1b?w=600&q=80",
+    "description": "สไตล์คลาสสิกที่ไม่มีวันตกเทรนด์ ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p18",
+    "name": "Stan Smith Classic",
+    "brand": "Adidas",
+    "price": 4690,
+    "categoryId": "c3",
+    "stock": 31,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1562183241-b937e95585b6?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p19",
+    "name": "Superstar Bold",
+    "brand": "Adidas",
+    "price": 1990,
+    "categoryId": "c1",
+    "stock": 22,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1537636568536-a2e00b44cb85?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  },
+  {
+    "id": "p20",
+    "name": "Gazelle Vintage",
+    "brand": "Adidas",
+    "price": 4690,
+    "categoryId": "c3",
+    "stock": 14,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "image": "https://images.unsplash.com/photo-1562105962-2fbaaf107fe3?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p21",
+    "name": "NMD Runner",
+    "brand": "Adidas",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 31,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1561909848-977d0617f275?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p22",
+    "name": "Runfalcon 3",
+    "brand": "Adidas",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 25,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1556774687-0e2fdd0116c0?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p23",
+    "name": "Duramo SL",
+    "brand": "Adidas",
+    "price": 3690,
+    "categoryId": "c2",
+    "stock": 23,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1584735175097-719d848f8449?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p24",
+    "name": "Grand Court",
+    "brand": "Adidas",
+    "price": 2890,
+    "categoryId": "c2",
+    "stock": 43,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p25",
+    "name": "ZX Flux",
+    "brand": "Adidas",
+    "price": 4690,
+    "categoryId": "c3",
+    "stock": 11,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1562424995-2efe650421dd?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p26",
+    "name": "Adizero Boston",
+    "brand": "Adidas",
+    "price": 3190,
+    "categoryId": "c2",
+    "stock": 25,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1581000197533-d6e5083b3201?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p27",
+    "name": "Classic Nylon",
+    "brand": "Reebok",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 39,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "image": "https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p28",
+    "name": "Club C Retro",
+    "brand": "Reebok",
+    "price": 2490,
+    "categoryId": "c1",
+    "stock": 24,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=600&q=80",
+    "description": "สไตล์คลาสสิกที่ไม่มีวันตกเทรนด์ ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p29",
+    "name": "Zig Kinetica",
+    "brand": "Reebok",
+    "price": 4190,
+    "categoryId": "c3",
+    "stock": 45,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "image": "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p30",
+    "name": "Floatride Run",
+    "brand": "Reebok",
+    "price": 2990,
+    "categoryId": "c2",
+    "stock": 22,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1597350584914-55bb62285896?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p31",
+    "name": "Royal Bridge",
+    "brand": "Reebok",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 11,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1591370409347-2fd43b7842de?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p32",
+    "name": "Workout Plus",
+    "brand": "Reebok",
+    "price": 4490,
+    "categoryId": "c3",
+    "stock": 35,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p33",
+    "name": "Nano X Trainer",
+    "brand": "Reebok",
+    "price": 3890,
+    "categoryId": "c3",
+    "stock": 37,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "image": "https://images.unsplash.com/photo-1584609226397-de5612afdfea?w=600&q=80",
+    "description": "ดีไซน์ทันสมัย สวมใส่สบายตลอดวัน เหมาะกับทุกกิจกรรม"
+  },
+  {
+    "id": "p34",
+    "name": "CL Legacy",
+    "brand": "Reebok",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 15,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "image": "https://images.unsplash.com/photo-1603808033192-082d6919d3e1?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p35",
+    "name": "Energen Run",
+    "brand": "Reebok",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 26,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1603191659812-ee978eeeef76?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p36",
+    "name": "Court Advance",
+    "brand": "Reebok",
+    "price": 1990,
+    "categoryId": "c1",
+    "stock": 24,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p37",
+    "name": "Chuck 70 High",
+    "brand": "Converse",
+    "price": 4690,
+    "categoryId": "c3",
+    "stock": 27,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1605408499391-6368c628ef42?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p38",
+    "name": "One Star Pro",
+    "brand": "Converse",
+    "price": 4490,
+    "categoryId": "c3",
+    "stock": 18,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1584735174914-6b1272458e3e?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p39",
+    "name": "Run Star Hike",
+    "brand": "Converse",
+    "price": 3490,
+    "categoryId": "c2",
+    "stock": 9,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&q=80",
+    "description": "สไตล์คลาสสิกที่ไม่มีวันตกเทรนด์ ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p40",
+    "name": "All Star Low",
+    "brand": "Converse",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 11,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p41",
+    "name": "Chuck Taylor Lift",
+    "brand": "Converse",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 39,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1608379743498-ac08f6d022ba?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p42",
+    "name": "Weapon Retro",
+    "brand": "Converse",
+    "price": 2490,
+    "categoryId": "c1",
+    "stock": 38,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1608667508764-33cf0726b13a?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p43",
+    "name": "Star Player",
+    "brand": "Converse",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 42,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1595909236612-9fd30b476365?w=600&q=80",
+    "description": "สไตล์คลาสสิกที่ไม่มีวันตกเทรนด์ ใส่ได้ทุกโอกาส"
+  },
+  {
+    "id": "p44",
+    "name": "Pro Blaze",
+    "brand": "Converse",
+    "price": 3190,
+    "categoryId": "c2",
+    "stock": 31,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "image": "https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p45",
+    "name": "Renew Canvas",
+    "brand": "Converse",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 23,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1585591359088-e144e8a61170?w=600&q=80",
+    "description": "เหมาะสำหรับนักวิ่งและผู้ที่รักการออกกำลังกาย"
+  },
+  {
+    "id": "p46",
+    "name": "Chuck Crater",
+    "brand": "Converse",
+    "price": 1990,
+    "categoryId": "c1",
+    "stock": 45,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1618677831708-0e7fda3148b4?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  },
+  {
+    "id": "p47",
+    "name": "Fresh Foam 880",
+    "brand": "New Balance",
+    "price": 1990,
+    "categoryId": "c1",
+    "stock": 12,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1603808033587-935942847de4?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p48",
+    "name": "574 Classic",
+    "brand": "New Balance",
+    "price": 4990,
+    "categoryId": "c3",
+    "stock": 10,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1603808033596-5d1fa1629eae?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  },
+  {
+    "id": "p49",
+    "name": "990v5 Heritage",
+    "brand": "New Balance",
+    "price": 2890,
+    "categoryId": "c2",
+    "stock": 39,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1605523741177-cd660595c2cf?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p50",
+    "name": "FuelCell Rebel",
+    "brand": "New Balance",
+    "price": 4190,
+    "categoryId": "c3",
+    "stock": 44,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1621665421571-2d325f9c7c6a?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p51",
+    "name": "327 Retro",
+    "brand": "New Balance",
+    "price": 4490,
+    "categoryId": "c3",
+    "stock": 34,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1615109255391-b0dfdcd5b8d8?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p52",
+    "name": "993 Made in US",
+    "brand": "New Balance",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 35,
+    "sizes": [
+      39,
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1625860191460-10a66c7384fb?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p53",
+    "name": "Fresh Foam Roav",
+    "brand": "New Balance",
+    "price": 3490,
+    "categoryId": "c2",
+    "stock": 11,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1626379616459-b2ce1d9decbc?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p54",
+    "name": "1080v12",
+    "brand": "New Balance",
+    "price": 4190,
+    "categoryId": "c3",
+    "stock": 29,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1622760806364-5ccac8096b59?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  },
+  {
+    "id": "p55",
+    "name": "550 Court",
+    "brand": "New Balance",
+    "price": 2690,
+    "categoryId": "c2",
+    "stock": 42,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1612905468542-585ca599afbc?w=600&q=80",
+    "description": "ดีไซน์เรียบหรู เข้ากับชุดลำลองได้ทุกสไตล์"
+  },
+  {
+    "id": "p56",
+    "name": "608 Trainer",
+    "brand": "New Balance",
+    "price": 2490,
+    "categoryId": "c1",
+    "stock": 25,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1626947346165-4c2288dadc2a?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p57",
+    "name": "Old Skool Classic",
+    "brand": "Vans",
+    "price": 3490,
+    "categoryId": "c2",
+    "stock": 43,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1625357165350-bdbcb6d7d524?w=600&q=80",
+    "description": "ดีไซน์ทันสมัย สวมใส่สบายตลอดวัน เหมาะกับทุกกิจกรรม"
+  },
+  {
+    "id": "p58",
+    "name": "Sk8-Hi Platform",
+    "brand": "Vans",
+    "price": 2190,
+    "categoryId": "c1",
+    "stock": 23,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1608229751021-ed4bd8677753?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p59",
+    "name": "Authentic Canvas",
+    "brand": "Vans",
+    "price": 3490,
+    "categoryId": "c2",
+    "stock": 21,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1616696038562-574c18066055?w=600&q=80",
+    "description": "วัสดุคุณภาพสูง ทนทาน ใช้งานได้ยาวนาน"
+  },
+  {
+    "id": "p60",
+    "name": "Era Pro",
+    "brand": "Vans",
+    "price": 3190,
+    "categoryId": "c2",
+    "stock": 8,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "image": "https://images.unsplash.com/photo-1625697501075-29fa2ae7dfbd?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p61",
+    "name": "Slip-On Checker",
+    "brand": "Vans",
+    "price": 2890,
+    "categoryId": "c2",
+    "stock": 35,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1668069226492-508742b03147?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  },
+  {
+    "id": "p62",
+    "name": "Ultrarange EXO",
+    "brand": "Vans",
+    "price": 2890,
+    "categoryId": "c2",
+    "stock": 21,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1631087606988-a6be38fccaf6?w=600&q=80",
+    "description": "ดีไซน์ทันสมัย สวมใส่สบายตลอดวัน เหมาะกับทุกกิจกรรม"
+  },
+  {
+    "id": "p63",
+    "name": "Knu Skool",
+    "brand": "Vans",
+    "price": 4190,
+    "categoryId": "c3",
+    "stock": 28,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "image": "https://images.unsplash.com/photo-1626947346194-1c926eff4066?w=600&q=80",
+    "description": "รองรับแรงกระแทกได้ดีเยี่ยม ปกป้องข้อเท้าทุกการเคลื่อนไหว"
+  },
+  {
+    "id": "p64",
+    "name": "Comfycush Era",
+    "brand": "Vans",
+    "price": 3690,
+    "categoryId": "c2",
+    "stock": 41,
+    "sizes": [
+      38,
+      39,
+      40,
+      41,
+      42
+    ],
+    "image": "https://images.unsplash.com/photo-1626379625260-7111605463e8?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p65",
+    "name": "Half Cab Skate",
+    "brand": "Vans",
+    "price": 4690,
+    "categoryId": "c3",
+    "stock": 19,
+    "sizes": [
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43
+    ],
+    "image": "https://images.unsplash.com/photo-1656164753657-8ff832063a71?w=600&q=80",
+    "description": "น้ำหนักเบา ระบายอากาศดี รองรับการเคลื่อนไหวได้อย่างคล่องตัว"
+  },
+  {
+    "id": "p66",
+    "name": "Atwood Low",
+    "brand": "Vans",
+    "price": 3990,
+    "categoryId": "c3",
+    "stock": 23,
+    "sizes": [
+      40,
+      41,
+      42,
+      43,
+      44
+    ],
+    "image": "https://images.unsplash.com/photo-1649920566440-eb5678255340?w=600&q=80",
+    "description": "พื้นรองเท้าเทคโนโลยีพิเศษ เพิ่มแรงสะท้อนทุกก้าวย่าง"
+  }
+]

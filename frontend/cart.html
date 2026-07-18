@@ -1,0 +1,85 @@
+<!-- บอกเบราว์เซอร์ว่านี่คือเอกสาร HTML5 -->
+<!DOCTYPE html>
+<!-- แท็กเปิดของหน้าเว็บ กำหนดภาษาเริ่มต้นเป็นภาษาไทย -->
+<html lang="th">
+<head>
+  <!-- กำหนดชุดตัวอักษรเป็น UTF-8 เพื่อให้แสดงภาษาไทยถูกต้อง -->
+  <meta charset="UTF-8" />
+  <!-- ตั้งค่าหน้าเว็บให้ responsive ตามขนาดหน้าจออุปกรณ์ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ข้อความที่แสดงบนแท็บเบราว์เซอร์ -->
+  <title>ตะกร้าสินค้า | SNEAK&apos;R</title>
+  <!-- เชื่อมไฟล์ CSS เดียวกันกับหน้าแรก เพื่อให้ธีม/สไตล์เหมือนกันทั้งเว็บ -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- แถบเมนูด้านบน เหมือนกับหน้า index.html เพื่อให้กดสลับหน้าได้ตลอดเวลา -->
+  <header class="navbar">
+    <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
+    <nav>
+      <a href="index.html">สินค้า</a>
+      <!-- ลิงก์ตะกร้า (อยู่หน้านี้อยู่แล้ว) พร้อมตัวเลขจำนวนสินค้า อัปเดตโดย JavaScript -->
+      <a href="cart.html" class="cart-link">
+        🛒 ตะกร้า <span class="cart-count" id="cartCount">0</span>
+      </a>
+    </nav>
+  </header>
+
+  <main class="section">
+    <h2 class="section-title">ตะกร้าสินค้า</h2>
+
+    <!-- กล่องแสดงรายการสินค้าในตะกร้า + สรุปยอดรวม -->
+    <div id="cartView">
+      <!-- รายการสินค้าทั้งหมดในตะกร้าจะถูกวาดลงในนี้โดย cart.js -->
+      <div id="cartItems"></div>
+      <!-- กล่องสรุปจำนวน/ยอดรวม เริ่มต้นซ่อนไว้ก่อน (style="display:none") จะถูกแสดงโดย JS เมื่อมีสินค้า -->
+      <div class="cart-summary" id="cartSummary" style="display:none;">
+        <div class="row"><span>จำนวนสินค้า</span><span id="summaryCount">0</span></div>
+        <div class="row total"><span>ยอดรวม</span><span id="summaryTotal">0 บาท</span></div>
+      </div>
+    </div>
+
+    <!-- ส่วนฟอร์มกรอกข้อมูลจัดส่งสำหรับ checkout เริ่มต้นซ่อนไว้ก่อน จะแสดงเมื่อตะกร้ามีสินค้า -->
+    <div id="checkoutSection" style="display:none; margin-top: 32px;">
+      <h2 class="section-title">ข้อมูลจัดส่ง</h2>
+      <!-- ฟอร์มนี้เมื่อกด submit จะถูก JavaScript ดักไว้ (preventDefault) แล้วส่งข้อมูลไปที่ API แทนการรีโหลดหน้า -->
+      <form id="checkoutForm">
+        <div class="field">
+          <label for="customerName">ชื่อ-นามสกุล</label>
+          <!-- required คือบังคับให้กรอกก่อนถึงจะกด submit ผ่าน -->
+          <input type="text" id="customerName" required />
+        </div>
+        <div class="field">
+          <label for="phone">เบอร์โทรศัพท์</label>
+          <!-- type="tel" ช่วยให้มือถือขึ้นคีย์บอร์ดตัวเลขให้อัตโนมัติ -->
+          <input type="tel" id="phone" required />
+        </div>
+        <div class="field">
+          <label for="address">ที่อยู่จัดส่ง</label>
+          <input type="text" id="address" required />
+        </div>
+        <!-- ปุ่มชนิด submit เมื่อกดจะสั่งให้ฟอร์มด้านบนทำงาน (trigger event submit) -->
+        <button type="submit" class="btn btn-block">ยืนยันสั่งซื้อ</button>
+      </form>
+    </div>
+
+    <!-- ข้อความแจ้งสั่งซื้อสำเร็จ เริ่มต้นซ่อนไว้ก่อน จะแสดงหลังยิง API สร้างออเดอร์สำเร็จ -->
+    <div id="successMessage" style="display:none;" class="empty-state">
+      <h3 style="color: var(--success);">สั่งซื้อสำเร็จ 🎉</h3>
+      <!-- ช่องนี้จะถูกเติมหมายเลขคำสั่งซื้อ (order id) โดย JavaScript -->
+      <p id="orderRef"></p>
+      <a href="index.html" class="btn">เลือกซื้อสินค้าต่อ</a>
+    </div>
+  </main>
+
+  <footer>© 2026 SNEAK&apos;R Shop. All rights reserved.</footer>
+
+  <!-- กล่องข้อความแจ้งเตือนเล็ก ๆ (toast) เช่นตอนเกิดข้อผิดพลาดระหว่างสั่งซื้อ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- โหลด common.js ก่อน เพื่อให้มีฟังก์ชันจัดการตะกร้าให้ cart.js เรียกใช้ได้ -->
+  <script src="js/common.js"></script>
+  <!-- โหลด cart.js ซึ่งควบคุมการทำงานหลักของหน้านี้ (แสดงตะกร้า + ส่งคำสั่งซื้อ) -->
+  <script src="js/cart.js"></script>
+</body>
+</html>
