@@ -8,6 +8,8 @@ const fs = require('fs');
 const path = require('path');
 // เรียกใช้ไลบรารี multer สำหรับรับไฟล์ที่อัปโหลดมาจากฟอร์ม (multipart/form-data) เช่นรูปสินค้า
 const multer = require('multer');
+// เรียกใช้ไลบรารี express-session เพื่อจดจำว่าใคร "ล็อกอิน" อยู่บ้าง (เก็บสถานะไว้ฝั่งเซิร์ฟเวอร์ ผูกกับ cookie ที่ส่งให้เบราว์เซอร์)
+const session = require('express-session');
 
 // สร้างแอปพลิเคชัน Express ขึ้นมา 1 ตัว เก็บไว้ในตัวแปร app
 const app = express();
@@ -31,10 +33,38 @@ const UPLOADS_DIR = path.join(__dirname, 'uploads');
 // ถ้ายังไม่มีโฟลเดอร์ uploads (เช่นรันครั้งแรก) ให้สร้างขึ้นมาก่อน { recursive: true } กันไม่ให้ error หากมีอยู่แล้ว
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
-// เปิดใช้งาน CORS กับทุก request ที่เข้ามา
-app.use(cors());
+// ชื่อผู้ใช้/รหัสผ่านสำหรับล็อกอินหลังบ้าน อ่านจาก environment variable ก่อนเสมอ (ตั้งค่าตอน deploy จริง)
+// ถ้าไม่ได้ตั้งค่าไว้ (เช่นตอนรันทดสอบในเครื่อง) จะ fallback ไปใช้ค่าเริ่มต้นด้านล่าง
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || '1234';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '12123';
+// ถ้ากำลังใช้รหัสผ่าน default อยู่ (ไม่ได้ตั้งค่า ADMIN_PASSWORD เอง) ให้เตือนไว้ใน console กันลืมเปลี่ยนตอนขึ้นเซิร์ฟเวอร์จริง
+if (!process.env.ADMIN_PASSWORD) {
+  console.warn(
+    '⚠️  กำลังใช้รหัสผ่านแอดมิน default (admin/admin1234) กรุณาตั้งค่า ADMIN_USERNAME และ ADMIN_PASSWORD ผ่าน environment variable ก่อนนำขึ้นใช้งานจริงบนอินเทอร์เน็ต'
+  );
+}
+
+// เปิดใช้งาน CORS กับทุก request ที่เข้ามา พร้อม credentials: true เพื่อให้เบราว์เซอร์ส่ง cookie ของ session ไปกับ request ข้ามโดเมนได้ (เผื่อ frontend/backend อยู่คนละโดเมนตอน deploy)
+app.use(cors({ origin: true, credentials: true }));
 // เปิดใช้งานการแปลง body ของ request ที่เป็น JSON ให้กลายเป็น object ใน req.body อัตโนมัติ
 app.use(express.json());
+// เปิดใช้งานระบบ session: เมื่อผู้ใช้ล็อกอินสำเร็จ เซิร์ฟเวอร์จะส่ง cookie กลับไปเก็บไว้ในเบราว์เซอร์ แล้วใช้ cookie นี้จดจำสถานะล็อกอินในคำขอถัดไป
+app.use(
+  session({
+    // กุญแจลับใช้เข้ารหัส/เซ็นชื่อ cookie กันคนปลอมแปลง ควรตั้งค่าเองผ่าน env ตอน deploy จริง (ไม่งั้นจะสุ่มใหม่ทุกครั้งที่เซิร์ฟเวอร์รีสตาร์ท ทำให้ทุกคนต้องล็อกอินใหม่)
+    secret: process.env.SESSION_SECRET || 'sneaker-shop-dev-secret-change-me',
+    // ไม่ต้องบันทึก session ซ้ำถ้าข้อมูลไม่ได้เปลี่ยนแปลง (ลดการเขียนข้อมูลโดยไม่จำเป็น)
+    resave: false,
+    // ไม่สร้าง session ไว้ล่วงหน้าจนกว่าจะมีการเก็บค่าอะไรบางอย่างจริง ๆ (เช่นตอนล็อกอินสำเร็จ)
+    saveUninitialized: false,
+    cookie: {
+      // httpOnly กัน JavaScript ฝั่งเบราว์เซอร์อ่านค่า cookie นี้ได้ (ป้องกันการขโมย session ผ่าน XSS)
+      httpOnly: true,
+      // อายุ cookie 8 ชั่วโมง หลังจากนั้นต้องล็อกอินใหม่
+      maxAge: 8 * 60 * 60 * 1000,
+    },
+  })
+);
 
 // เสิร์ฟหน้าบ้าน (frontend) ที่ path หลัก
 // บอก Express ว่าเมื่อมีคนเข้ามาที่ "/" ให้ไปหยิบไฟล์ static (html/css/js) จากโฟลเดอร์ ../frontend มาให้
@@ -91,12 +121,55 @@ function isFlashSaleActive(sale) {
   return now >= new Date(sale.startAt).getTime() && now <= new Date(sale.endAt).getTime();
 }
 
+// Middleware ตรวจสอบว่า request นี้มาจากคนที่ "ล็อกอินหลังบ้านแล้ว" หรือไม่ ใช้ครอบ API ที่เป็นของแอดมินเท่านั้น
+// ถ้า req.session.isAdmin เป็น true (ตั้งไว้ตอนล็อกอินสำเร็จ) ให้ผ่านไปทำงานต่อ (next()) ถ้าไม่ใช่ ให้ตอบกลับ 401 ทันที
+function requireAuth(req, res, next) {
+  if (req.session && req.session.isAdmin) return next();
+  res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' });
+}
+
+// ---------- Auth API (ระบบล็อกอินเข้าหลังบ้าน) ----------
+
+// เมื่อมีการเรียก POST ที่ /api/auth/login (กรอกฟอร์มล็อกอินแล้วกดเข้าสู่ระบบ)
+app.post('/api/auth/login', (req, res) => {
+  // ดึงชื่อผู้ใช้และรหัสผ่านที่กรอกมาจาก body
+  const { username, password } = req.body;
+  // เทียบกับชื่อผู้ใช้/รหัสผ่านที่ตั้งไว้ (จาก environment variable หรือค่า default)
+  // หมายเหตุ: เทียบแบบข้อความตรง ๆ เพราะระบบนี้มีผู้ดูแลคนเดียว ไม่ได้เก็บผู้ใช้หลายคนในฐานข้อมูล
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    // ตั้งค่าสถานะล็อกอินไว้ใน session (ผูกกับ cookie ที่ส่งกลับไปให้เบราว์เซอร์อัตโนมัติ)
+    req.session.isAdmin = true;
+    // เก็บชื่อผู้ใช้ไว้ใน session ด้วย เผื่อต้องการแสดงผลภายหลัง
+    req.session.username = username;
+    return res.json({ success: true, username });
+  }
+  // ถ้าชื่อผู้ใช้หรือรหัสผ่านผิด ให้ตอบกลับ 401 พร้อมข้อความทั่วไป (ไม่บอกว่าผิดที่ชื่อผู้ใช้หรือรหัสผ่าน เพื่อความปลอดภัย)
+  res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
+});
+
+// เมื่อมีการเรียก POST ที่ /api/auth/logout (กดออกจากระบบ)
+app.post('/api/auth/logout', (req, res) => {
+  // ทำลาย session ทิ้ง (ลบสถานะล็อกอินออกจากฝั่งเซิร์ฟเวอร์)
+  req.session.destroy(() => {
+    res.json({ success: true });
+  });
+});
+
+// เมื่อมีการเรียก GET ที่ /api/auth/me (เช็คว่าตอนนี้ล็อกอินอยู่หรือไม่ ใช้ตอนเปิดหน้า admin ทุกครั้ง)
+app.get('/api/auth/me', (req, res) => {
+  // ตอบกลับสถานะการล็อกอินปัจจุบัน อ่านจาก session
+  if (req.session && req.session.isAdmin) {
+    return res.json({ loggedIn: true, username: req.session.username });
+  }
+  res.json({ loggedIn: false });
+});
+
 // ---------- Upload API ----------
 // API สำหรับรับไฟล์รูปภาพที่อัปโหลดจากหน้า admin แล้วบันทึกไว้ในโฟลเดอร์ uploads
 
 // เมื่อมีการเรียก POST ที่ /api/upload พร้อมแนบไฟล์มาด้วย
 // upload.single('image') คือให้ multer ดักรับไฟล์จาก field ชื่อ "image" เพียงไฟล์เดียว แล้วค่อยรันฟังก์ชันต่อท้าย
-app.post('/api/upload', upload.single('image'), (req, res) => {
+app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
   // ถ้าไม่มีไฟล์แนบมาเลย (เช่น ผู้ใช้กด submit โดยไม่เลือกไฟล์) ให้ตอบกลับ error 400
   if (!req.file) return res.status(400).json({ error: 'กรุณาเลือกไฟล์รูปภาพ' });
   // ตอบกลับ path ของรูปที่บันทึกไว้ (เช่น /uploads/img-xxxxx.jpg) ให้ฝั่ง admin นำไปใช้เป็นค่า image ของสินค้า
@@ -126,8 +199,8 @@ app.get('/api/products/:id', (req, res) => {
   res.json(product);
 });
 
-// เมื่อมีการเรียก POST ที่ /api/products (เพิ่มสินค้าใหม่)
-app.post('/api/products', (req, res) => {
+// เมื่อมีการเรียก POST ที่ /api/products (เพิ่มสินค้าใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (requireAuth)
+app.post('/api/products', requireAuth, (req, res) => {
   // ดึงข้อมูลฟิลด์ต่าง ๆ ออกจาก body ของ request ที่ส่งมา (ฝั่ง admin ส่งมาเป็น JSON)
   const { name, brand, price, stock, sizes, image, description, categoryId } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อสินค้าและราคา ถ้าไม่มีให้ตอบกลับ error 400 (ข้อมูลไม่ถูกต้อง)
@@ -157,8 +230,8 @@ app.post('/api/products', (req, res) => {
   res.status(201).json(newProduct);
 });
 
-// เมื่อมีการเรียก PUT ที่ /api/products/:id (แก้ไขสินค้าตามรหัส)
-app.put('/api/products/:id', (req, res) => {
+// เมื่อมีการเรียก PUT ที่ /api/products/:id (แก้ไขสินค้าตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.put('/api/products/:id', requireAuth, (req, res) => {
   // อ่านรายการสินค้าทั้งหมดจากไฟล์
   const products = readJSON(PRODUCTS_FILE);
   // หาตำแหน่ง (index) ของสินค้าที่ id ตรงกับที่ส่งมาใน URL
@@ -190,8 +263,8 @@ app.put('/api/products/:id', (req, res) => {
   res.json(products[idx]);
 });
 
-// เมื่อมีการเรียก DELETE ที่ /api/products/:id (ลบสินค้าตามรหัส)
-app.delete('/api/products/:id', (req, res) => {
+// เมื่อมีการเรียก DELETE ที่ /api/products/:id (ลบสินค้าตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.delete('/api/products/:id', requireAuth, (req, res) => {
   // อ่านรายการสินค้าทั้งหมดจากไฟล์
   const products = readJSON(PRODUCTS_FILE);
   // หาตำแหน่งของสินค้าที่ต้องการลบ
@@ -209,8 +282,8 @@ app.delete('/api/products/:id', (req, res) => {
 // ---------- Orders API ----------
 // กลุ่ม API ที่เกี่ยวกับ "คำสั่งซื้อ" ทั้งหมด (ดู/สร้าง/อัปเดตสถานะ)
 
-// เมื่อมีการเรียก GET ที่ /api/orders (ขอรายการคำสั่งซื้อทั้งหมด สำหรับหน้า admin)
-app.get('/api/orders', (req, res) => {
+// เมื่อมีการเรียก GET ที่ /api/orders (ขอรายการคำสั่งซื้อทั้งหมด สำหรับหน้า admin) — มีข้อมูลลูกค้า (ชื่อ/เบอร์โทร/ที่อยู่) จึงต้องล็อกอินก่อน
+app.get('/api/orders', requireAuth, (req, res) => {
   // อ่านรายการคำสั่งซื้อทั้งหมดจากไฟล์
   const orders = readJSON(ORDERS_FILE);
   // เรียงลำดับคำสั่งซื้อจากใหม่ไปเก่า (เทียบวันที่สร้าง createdAt) แล้วส่งกลับไป
@@ -294,8 +367,8 @@ app.post('/api/orders', (req, res) => {
   res.status(201).json(newOrder);
 });
 
-// เมื่อมีการเรียก PUT ที่ /api/orders/:id/status (แอดมินอัปเดตสถานะออเดอร์ เช่น "จัดส่งแล้ว")
-app.put('/api/orders/:id/status', (req, res) => {
+// เมื่อมีการเรียก PUT ที่ /api/orders/:id/status (แอดมินอัปเดตสถานะออเดอร์ เช่น "จัดส่งแล้ว") — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.put('/api/orders/:id/status', requireAuth, (req, res) => {
   // ดึงค่าสถานะใหม่จาก body
   const { status } = req.body;
   // อ่านรายการคำสั่งซื้อทั้งหมดจากไฟล์
@@ -316,8 +389,8 @@ app.put('/api/orders/:id/status', (req, res) => {
 // กลุ่ม API ที่เกี่ยวกับ "พนักงาน" ทั้งหมด (ดู/ค้นหา/เพิ่ม/แก้/ลบ)
 // ใช้รหัสพนักงาน (id) ที่แอดมินกรอกเองเป็นตัวระบุตัวตน (ไม่ได้สุ่มสร้างให้เหมือนสินค้า/ออเดอร์)
 
-// เมื่อมีการเรียก GET ที่ /api/employees (ขอรายการพนักงาน รองรับค้นหาด้วย query string ?q=)
-app.get('/api/employees', (req, res) => {
+// เมื่อมีการเรียก GET ที่ /api/employees (ขอรายการพนักงาน รองรับค้นหาด้วย query string ?q=) — ข้อมูลพนักงานเป็นข้อมูลภายใน จึงต้องล็อกอินก่อน
+app.get('/api/employees', requireAuth, (req, res) => {
   // อ่านข้อมูลพนักงานทั้งหมดจากไฟล์
   const employees = readJSON(EMPLOYEES_FILE);
   // ดึงคำค้นหาจาก query string เช่น /api/employees?q=สมชาย แล้วแปลงเป็นตัวพิมพ์เล็กเพื่อเทียบแบบไม่สนตัวพิมพ์ใหญ่เล็ก
@@ -332,8 +405,8 @@ app.get('/api/employees', (req, res) => {
   res.json(filtered);
 });
 
-// เมื่อมีการเรียก POST ที่ /api/employees (เพิ่มพนักงานใหม่)
-app.post('/api/employees', (req, res) => {
+// เมื่อมีการเรียก POST ที่ /api/employees (เพิ่มพนักงานใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.post('/api/employees', requireAuth, (req, res) => {
   // ดึงข้อมูลรหัสพนักงาน, ชื่อ-สกุล, เบอร์โทร จาก body ที่ส่งมา
   const { id, name, phone } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีรหัสพนักงานและชื่อ ถ้าไม่มีให้ตอบกลับ error 400
@@ -356,8 +429,8 @@ app.post('/api/employees', (req, res) => {
   res.status(201).json(newEmployee);
 });
 
-// เมื่อมีการเรียก PUT ที่ /api/employees/:id (แก้ไขข้อมูลพนักงานตามรหัส)
-app.put('/api/employees/:id', (req, res) => {
+// เมื่อมีการเรียก PUT ที่ /api/employees/:id (แก้ไขข้อมูลพนักงานตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.put('/api/employees/:id', requireAuth, (req, res) => {
   // อ่านรายการพนักงานทั้งหมดจากไฟล์
   const employees = readJSON(EMPLOYEES_FILE);
   // หาตำแหน่งของพนักงานที่รหัสตรงกับที่ส่งมาใน URL
@@ -379,8 +452,8 @@ app.put('/api/employees/:id', (req, res) => {
   res.json(employees[idx]);
 });
 
-// เมื่อมีการเรียก DELETE ที่ /api/employees/:id (ลบพนักงานตามรหัส)
-app.delete('/api/employees/:id', (req, res) => {
+// เมื่อมีการเรียก DELETE ที่ /api/employees/:id (ลบพนักงานตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.delete('/api/employees/:id', requireAuth, (req, res) => {
   // อ่านรายการพนักงานทั้งหมดจากไฟล์
   const employees = readJSON(EMPLOYEES_FILE);
   // หาตำแหน่งของพนักงานที่ต้องการลบ
@@ -398,8 +471,8 @@ app.delete('/api/employees/:id', (req, res) => {
 // ---------- Sales API (ระบบขายหน้าร้าน / รับชำระเงิน) ----------
 // กลุ่ม API สำหรับพนักงานหน้าร้าน: เลือกสินค้า คำนวณยอดชำระ+เงินทอน แล้วบันทึกรายการขาย
 
-// เมื่อมีการเรียก GET ที่ /api/sales (ขอรายการขายทั้งหมด รองรับกรองตามวันที่ด้วย query string ?date=YYYY-MM-DD)
-app.get('/api/sales', (req, res) => {
+// เมื่อมีการเรียก GET ที่ /api/sales (ขอรายการขายทั้งหมด รองรับกรองตามวันที่ด้วย query string ?date=YYYY-MM-DD) — ข้อมูลยอดขายเป็นความลับทางธุรกิจ จึงต้องล็อกอินก่อน
+app.get('/api/sales', requireAuth, (req, res) => {
   // อ่านรายการขายทั้งหมดจากไฟล์
   let sales = readJSON(SALES_FILE);
   // ถ้ามีการระบุ query string "date" มา (เช่น ตอนดูสรุปยอดขายของวันที่เลือก)
@@ -411,8 +484,8 @@ app.get('/api/sales', (req, res) => {
   res.json(sales.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
 });
 
-// เมื่อมีการเรียก POST ที่ /api/sales (พนักงานกดบันทึกการรับชำระเงินที่หน้าร้าน)
-app.post('/api/sales', (req, res) => {
+// เมื่อมีการเรียก POST ที่ /api/sales (พนักงานกดบันทึกการรับชำระเงินที่หน้าร้าน) — ต้องล็อกอินหลังบ้านก่อนถึงจะขายผ่านระบบ POS ได้
+app.post('/api/sales', requireAuth, (req, res) => {
   // ดึงข้อมูลที่ส่งมา: รหัสพนักงานที่ขาย, รายการสินค้าที่ขาย, จำนวนเงินที่ลูกค้าจ่ายมา
   const { employeeId, items, amountReceived } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องระบุพนักงาน, มีรายการสินค้าอย่างน้อย 1 ชิ้น, และระบุจำนวนเงินที่รับมา
@@ -499,8 +572,8 @@ app.get('/api/categories', (req, res) => {
   res.json(readJSON(CATEGORIES_FILE));
 });
 
-// เมื่อมีการเรียก POST ที่ /api/categories (เพิ่มหมวดหมู่ใหม่)
-app.post('/api/categories', (req, res) => {
+// เมื่อมีการเรียก POST ที่ /api/categories (เพิ่มหมวดหมู่ใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (GET ยังเปิดสาธารณะไว้ เพราะหน้าร้านค้าต้องใช้กรองสินค้า)
+app.post('/api/categories', requireAuth, (req, res) => {
   // ดึงชื่อหมวดหมู่จาก body ที่ส่งมา
   const { name } = req.body;
   // ตรวจสอบว่าต้องระบุชื่อหมวดหมู่ ถ้าไม่มีให้ตอบกลับ error 400
@@ -517,8 +590,8 @@ app.post('/api/categories', (req, res) => {
   res.status(201).json(newCategory);
 });
 
-// เมื่อมีการเรียก PUT ที่ /api/categories/:id (แก้ไขชื่อหมวดหมู่ตามรหัส)
-app.put('/api/categories/:id', (req, res) => {
+// เมื่อมีการเรียก PUT ที่ /api/categories/:id (แก้ไขชื่อหมวดหมู่ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.put('/api/categories/:id', requireAuth, (req, res) => {
   // อ่านรายการหมวดหมู่ทั้งหมดจากไฟล์
   const categories = readJSON(CATEGORIES_FILE);
   // หาตำแหน่งของหมวดหมู่ที่ id ตรงกับที่ส่งมาใน URL
@@ -533,8 +606,8 @@ app.put('/api/categories/:id', (req, res) => {
   res.json(categories[idx]);
 });
 
-// เมื่อมีการเรียก DELETE ที่ /api/categories/:id (ลบหมวดหมู่ตามรหัส)
-app.delete('/api/categories/:id', (req, res) => {
+// เมื่อมีการเรียก DELETE ที่ /api/categories/:id (ลบหมวดหมู่ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.delete('/api/categories/:id', requireAuth, (req, res) => {
   // อ่านรายการหมวดหมู่ทั้งหมดจากไฟล์
   const categories = readJSON(CATEGORIES_FILE);
   // หาตำแหน่งของหมวดหมู่ที่ต้องการลบ
@@ -580,8 +653,8 @@ function enrichFlashSale(sale, products) {
   };
 }
 
-// เมื่อมีการเรียก GET ที่ /api/flash-sales (ขอรายการ Flash Sale ทั้งหมด สำหรับหน้า admin จัดการ)
-app.get('/api/flash-sales', (req, res) => {
+// เมื่อมีการเรียก GET ที่ /api/flash-sales (ขอรายการ Flash Sale ทั้งหมด สำหรับหน้า admin จัดการ) — รวมรายการที่หมดเวลาไปแล้วด้วย จึงเปิดเฉพาะแอดมิน (หน้าร้านค้าใช้ /active แทน ซึ่งเปิดสาธารณะ)
+app.get('/api/flash-sales', requireAuth, (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
   const flashSales = readJSON(FLASHSALES_FILE);
   // อ่านรายการสินค้าทั้งหมด เพื่อใช้แนบข้อมูลสินค้าประกอบแต่ละ Flash Sale
@@ -606,8 +679,8 @@ app.get('/api/flash-sales/active', (req, res) => {
   res.json(active);
 });
 
-// เมื่อมีการเรียก POST ที่ /api/flash-sales (สร้าง Flash Sale ใหม่จากหลังบ้าน)
-app.post('/api/flash-sales', (req, res) => {
+// เมื่อมีการเรียก POST ที่ /api/flash-sales (สร้าง Flash Sale ใหม่จากหลังบ้าน) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.post('/api/flash-sales', requireAuth, (req, res) => {
   // ดึงข้อมูลที่ส่งมา: สินค้าที่จะลดราคา, ราคาที่ลดแล้ว, เวลาเริ่ม, เวลาสิ้นสุด
   const { productId, salePrice, startAt, endAt } = req.body;
   // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
@@ -646,8 +719,8 @@ app.post('/api/flash-sales', (req, res) => {
   res.status(201).json(enrichFlashSale(newSale, products));
 });
 
-// เมื่อมีการเรียก PUT ที่ /api/flash-sales/:id (แก้ไข Flash Sale ตามรหัส)
-app.put('/api/flash-sales/:id', (req, res) => {
+// เมื่อมีการเรียก PUT ที่ /api/flash-sales/:id (แก้ไข Flash Sale ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.put('/api/flash-sales/:id', requireAuth, (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
   const flashSales = readJSON(FLASHSALES_FILE);
   // หาตำแหน่งของ Flash Sale ที่ id ตรงกับที่ส่งมาใน URL
@@ -686,8 +759,8 @@ app.put('/api/flash-sales/:id', (req, res) => {
   res.json(enrichFlashSale(merged, products));
 });
 
-// เมื่อมีการเรียก DELETE ที่ /api/flash-sales/:id (ยกเลิก/ลบ Flash Sale ตามรหัส)
-app.delete('/api/flash-sales/:id', (req, res) => {
+// เมื่อมีการเรียก DELETE ที่ /api/flash-sales/:id (ยกเลิก/ลบ Flash Sale ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.delete('/api/flash-sales/:id', requireAuth, (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
   const flashSales = readJSON(FLASHSALES_FILE);
   // หาตำแหน่งของ Flash Sale ที่ต้องการลบ

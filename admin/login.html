@@ -1,0 +1,43 @@
+<!-- บอกเบราว์เซอร์ว่านี่คือเอกสาร HTML5 -->
+<!DOCTYPE html>
+<!-- แท็กเปิดของหน้าเว็บ กำหนดภาษาเริ่มต้นเป็นภาษาไทย -->
+<html lang="th">
+<head>
+  <!-- กำหนดชุดตัวอักษรเป็น UTF-8 -->
+  <meta charset="UTF-8" />
+  <!-- ตั้งค่าหน้าเว็บให้ responsive ตามขนาดหน้าจออุปกรณ์ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ข้อความที่แสดงบนแท็บเบราว์เซอร์ -->
+  <title>เข้าสู่ระบบหลังบ้าน | SNEAK&apos;R</title>
+  <!-- เชื่อมไฟล์ CSS เดียวกับหน้า admin เพื่อให้ธีมสีเข้ากัน -->
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body class="login-body">
+  <!-- กล่องฟอร์มล็อกอิน อยู่กึ่งกลางหน้าจอ (จัดด้วย CSS class login-card) -->
+  <div class="login-card">
+    <!-- โลโก้ร้าน -->
+    <div class="brand" style="text-align:center; margin-bottom: 24px;">
+      SNEAK<span>&apos;R</span> <small>Admin</small>
+    </div>
+    <h1 class="login-title">เข้าสู่ระบบหลังบ้าน</h1>
+    <!-- กล่องแสดงข้อความ error เมื่อล็อกอินผิดพลาด เริ่มต้นซ่อนไว้ก่อน -->
+    <p class="login-error" id="loginError" style="display:none;"></p>
+    <!-- ฟอร์มล็อกอิน เมื่อกด submit จะถูก JS ดักไว้เพื่อยิงไปที่ /api/auth/login -->
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">ชื่อผู้ใช้</label>
+        <input type="text" id="username" required autofocus />
+      </div>
+      <div class="field">
+        <label for="password">รหัสผ่าน</label>
+        <input type="password" id="password" required />
+      </div>
+      <!-- ปุ่ม submit ฟอร์ม -->
+      <button type="submit" class="btn btn-block" id="loginBtn">เข้าสู่ระบบ</button>
+    </form>
+  </div>
+
+  <!-- โหลด login.js ซึ่งควบคุมการทำงานของหน้านี้ (ส่งข้อมูลล็อกอิน + redirect เมื่อสำเร็จ) -->
+  <script src="js/login.js"></script>
+</body>
+</html>

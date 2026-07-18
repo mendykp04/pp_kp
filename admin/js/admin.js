@@ -1,6 +1,29 @@
 // ตัวแปรกำหนด path หลักของ API ที่หน้า admin จะเรียกใช้
 const API_BASE = '/api';
 
+// ---------- Auth Guard ----------
+// ก่อนจะเริ่มโหลดข้อมูลอะไรในหน้า admin ต้องเช็คก่อนว่าผู้ใช้ล็อกอินอยู่จริงหรือไม่
+// (ป้องกันกรณีมีคน "เดา" URL เข้ามาที่ /admin/index.html ตรง ๆ โดยไม่ผ่านหน้า login)
+
+// ฟังก์ชัน async เช็คสถานะล็อกอินกับ backend ถ้ายังไม่ได้ล็อกอิน ให้เด้งกลับไปหน้า login ทันที
+async function checkAuth() {
+  // ใช้ try/catch เผื่อกรณีเรียก API ไม่สำเร็จ (เช่นเซิร์ฟเวอร์ล่ม) จะได้ไม่ปล่อยให้หน้าค้างเงียบ ๆ
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`);
+    const data = await res.json();
+    // ถ้ายังไม่ได้ล็อกอิน ให้พาไปหน้า login ทันที แล้วหยุดการทำงานของสคริปต์ส่วนที่เหลือ (โหลดข้อมูล/ผูก event ต่าง ๆ)
+    if (!data.loggedIn) {
+      window.location.href = 'login.html';
+      return false;
+    }
+    return true;
+  } catch (err) {
+    // ถ้าเช็คสถานะไม่ได้เลย ให้ถือว่าปลอดภัยไว้ก่อน (พาไปหน้า login เช่นกัน)
+    window.location.href = 'login.html';
+    return false;
+  }
+}
+
 // ตัวแปรเก็บรายการสินค้าทั้งหมดที่โหลดมาจาก API (ไว้ใช้ตอนแก้ไข/ลบ โดยไม่ต้องยิง API ซ้ำ)
 let products = [];
 // ตัวแปรเก็บรายการคำสั่งซื้อทั้งหมดที่โหลดมาจาก API
@@ -1162,9 +1185,19 @@ async function deleteFlashSale(sale) {
   }
 }
 
+// ผูก event ให้ปุ่ม "ออกจากระบบ" ยิงไปทำลาย session ที่ backend แล้วพากลับไปหน้า login
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+  window.location.href = 'login.html';
+});
+
 // เรียกโหลดข้อมูลเริ่มต้นทั้งหมดตามลำดับที่เหมาะสมทันทีที่ไฟล์นี้ถูกโหลด
 // ใช้ async IIFE (ฟังก์ชันไม่มีชื่อที่ประกาศแล้วเรียกใช้ตัวเองทันที) เพื่อให้ใช้ await เรียงลำดับการโหลดได้
 (async () => {
+  // เช็คสถานะล็อกอินก่อนเป็นอันดับแรก ถ้ายังไม่ได้ล็อกอิน checkAuth() จะเด้งไปหน้า login และคืนค่า false ให้หยุดทำงานทันที ไม่โหลดข้อมูลใด ๆ ต่อ
+  const isAuthenticated = await checkAuth();
+  if (!isAuthenticated) return;
+
   // โหลดหมวดหมู่ก่อน เพราะตารางสินค้าต้องใช้ชื่อหมวดหมู่มาแสดงในคอลัมน์ "หมวดหมู่"
   await loadCategories();
   // โหลดสินค้าต่อ เพื่อแสดงตารางสินค้าตั้งแต่เปิดหน้ามา (ตอนนี้มีชื่อหมวดหมู่ให้แสดงแล้ว)
