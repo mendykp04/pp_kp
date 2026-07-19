@@ -58,6 +58,42 @@
           <label for="address">ที่อยู่จัดส่ง</label>
           <input type="text" id="address" required />
         </div>
+
+        <!-- ช่องเลือกวิธีการชำระเงิน มี 3 แบบ: เก็บเงินปลายทาง, โอนธนาคาร, พร้อมเพย์ -->
+        <div class="field">
+          <label>วิธีการชำระเงิน</label>
+          <div class="payment-options">
+            <!-- ค่าเริ่มต้น (checked) คือเก็บเงินปลายทาง เพราะเป็นวิธีที่ไม่ต้องโอนล่วงหน้า สะดวกสุดสำหรับลูกค้าทั่วไป -->
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="cod" checked />
+              <span>เก็บเงินปลายทาง</span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="bank_transfer" />
+              <span>โอนเงินผ่านธนาคาร</span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="promptpay" />
+              <span>พร้อมเพย์ (PromptPay)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- กล่องแสดงเลขบัญชีธนาคาร แสดงเฉพาะตอนเลือก "โอนเงินผ่านธนาคาร" เท่านั้น (ควบคุมการซ่อน/แสดงด้วย JavaScript) -->
+        <div class="payment-detail-box" id="bankTransferDetail" style="display:none;">
+          <p><strong>ธนาคาร:</strong> <span id="bankName">-</span></p>
+          <p><strong>เลขบัญชี:</strong> <span id="bankAccountNumber">-</span></p>
+          <p><strong>ชื่อบัญชี:</strong> <span id="bankAccountName">-</span></p>
+          <p class="payment-hint">กรุณาโอนเงินตามยอดที่ต้องชำระ แล้วเก็บสลิปไว้เป็นหลักฐาน</p>
+        </div>
+
+        <!-- กล่องแสดง QR code พร้อมเพย์ แสดงเฉพาะตอนเลือก "พร้อมเพย์" เท่านั้น (สร้างรูปใหม่ทุกครั้งให้ตรงกับยอดที่ต้องชำระ) -->
+        <div class="payment-detail-box" id="promptpayDetail" style="display:none;">
+          <p>สแกน QR code นี้เพื่อชำระเงินยอด <strong id="promptpayAmount">0 บาท</strong></p>
+          <img id="promptpayQrImage" src="" alt="PromptPay QR Code" class="promptpay-qr-img" />
+          <p class="payment-hint">กรุณาชำระเงินตามยอดที่ระบุ แล้วเก็บสลิปไว้เป็นหลักฐาน</p>
+        </div>
+
         <!-- ปุ่มชนิด submit เมื่อกดจะสั่งให้ฟอร์มด้านบนทำงาน (trigger event submit) -->
         <button type="submit" class="btn btn-block">ยืนยันสั่งซื้อ</button>
       </form>
@@ -68,6 +104,8 @@
       <h3 style="color: var(--success);">สั่งซื้อสำเร็จ 🎉</h3>
       <!-- ช่องนี้จะถูกเติมหมายเลขคำสั่งซื้อ (order id) โดย JavaScript -->
       <p id="orderRef"></p>
+      <!-- ข้อความเตือนให้โอนเงิน แสดงเฉพาะตอนเลือกวิธีชำระเงินที่ต้องโอนล่วงหน้า (ซ่อนไว้ก่อนเป็นค่าเริ่มต้น) -->
+      <p id="paymentReminder" style="display:none; color: var(--accent); font-weight: 700;"></p>
       <a href="index.html" class="btn">เลือกซื้อสินค้าต่อ</a>
     </div>
   </main>

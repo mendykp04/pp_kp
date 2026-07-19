@@ -10,6 +10,10 @@ const path = require('path');
 const multer = require('multer');
 // เรียกใช้ไลบรารี express-session เพื่อจดจำว่าใคร "ล็อกอิน" อยู่บ้าง (เก็บสถานะไว้ฝั่งเซิร์ฟเวอร์ ผูกกับ cookie ที่ส่งให้เบราว์เซอร์)
 const session = require('express-session');
+// เรียกใช้ไลบรารี promptpay-qr เพื่อสร้างข้อความ (payload) ตามมาตรฐาน EMV QR สำหรับพร้อมเพย์
+const generatePromptPayPayload = require('promptpay-qr');
+// เรียกใช้ไลบรารี qrcode เพื่อแปลงข้อความ payload ให้กลายเป็นรูปภาพ QR code จริง ๆ
+const QRCode = require('qrcode');
 
 // สร้างแอปพลิเคชัน Express ขึ้นมา 1 ตัว เก็บไว้ในตัวแปร app
 const app = express();
@@ -43,6 +47,16 @@ if (!process.env.ADMIN_PASSWORD) {
     '⚠️  กำลังใช้รหัสผ่านแอดมิน default (admin/admin1234) กรุณาตั้งค่า ADMIN_USERNAME และ ADMIN_PASSWORD ผ่าน environment variable ก่อนนำขึ้นใช้งานจริงบนอินเทอร์เน็ต'
   );
 }
+
+// ข้อมูลบัญชีสำหรับรับโอนเงิน (โอนธนาคาร / พร้อมเพย์) อ่านจาก environment variable ก่อนเสมอ ถ้าไม่ได้ตั้งค่าไว้จะ fallback ไปใช้ค่าเริ่มต้นด้านล่าง
+// ชื่อธนาคารที่ใช้รับโอน
+const BANK_NAME = process.env.BANK_NAME || 'ธนาคารกสิกรไทย';
+// เลขบัญชีธนาคาร
+const BANK_ACCOUNT_NUMBER = process.env.BANK_ACCOUNT_NUMBER || '987-5-43567-8';
+// ชื่อบัญชีธนาคาร (เจ้าของบัญชี)
+const BANK_ACCOUNT_NAME = process.env.BANK_ACCOUNT_NAME || 'ฒิญฌาณ เหมุทัย';
+// หมายเลขที่ผูกกับพร้อมเพย์ (เบอร์โทรศัพท์ หรือเลขบัตรประชาชน) ใช้สร้าง QR code รับเงิน
+const PROMPTPAY_ID = process.env.PROMPTPAY_ID || '0827564321';
 
 // เปิดใช้งาน CORS กับทุก request ที่เข้ามา พร้อม credentials: true เพื่อให้เบราว์เซอร์ส่ง cookie ของ session ไปกับ request ข้ามโดเมนได้ (เผื่อ frontend/backend อยู่คนละโดเมนตอน deploy)
 app.use(cors({ origin: true, credentials: true }));
@@ -162,6 +176,41 @@ app.get('/api/auth/me', (req, res) => {
     return res.json({ loggedIn: true, username: req.session.username });
   }
   res.json({ loggedIn: false });
+});
+
+// ---------- Payment API (ข้อมูลบัญชีรับโอนเงิน + สร้าง QR code พร้อมเพย์) ----------
+// กลุ่ม API ที่ใช้ในหน้าตะกร้าสินค้า ตอนลูกค้าเลือกวิธีชำระเงินเป็น "โอนธนาคาร" หรือ "พร้อมเพย์"
+
+// เมื่อมีการเรียก GET ที่ /api/payment-info (ขอข้อมูลบัญชีธนาคาร สำหรับแสดงตอนลูกค้าเลือกโอนเงินผ่านธนาคาร)
+app.get('/api/payment-info', (req, res) => {
+  // ส่งข้อมูลบัญชีธนาคารกลับไปเป็น JSON (ไม่มีข้อมูลอ่อนไหวเกินไป เพราะเป็นข้อมูลที่ร้านค้าตั้งใจเปิดเผยให้ลูกค้าโอนเงินอยู่แล้ว)
+  res.json({
+    bankName: BANK_NAME,
+    accountNumber: BANK_ACCOUNT_NUMBER,
+    accountName: BANK_ACCOUNT_NAME,
+  });
+});
+
+// เมื่อมีการเรียก GET ที่ /api/payment/promptpay-qr (ขอรูป QR code พร้อมเพย์ พร้อมระบุยอดเงินที่ต้องโอน)
+app.get('/api/payment/promptpay-qr', async (req, res) => {
+  // อ่านยอดเงินจาก query string เช่น /api/payment/promptpay-qr?amount=1590
+  const amount = Number(req.query.amount);
+  // ตรวจสอบว่ายอดเงินที่ส่งมาต้องเป็นตัวเลขที่มากกว่า 0 เท่านั้น
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: 'กรุณาระบุยอดเงินที่ถูกต้อง' });
+  }
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างสร้าง QR code
+  try {
+    // สร้างข้อความ (payload) ตามมาตรฐาน EMV QR จากหมายเลขพร้อมเพย์และยอดเงินที่ต้องชำระ
+    const payload = generatePromptPayPayload(PROMPTPAY_ID, { amount });
+    // แปลง payload ให้เป็นรูปภาพ QR code ในรูปแบบ data URL (ฝัง base64 ไว้ในตัวข้อความเลย ไม่ต้องเซฟไฟล์แยก)
+    const qrDataUrl = await QRCode.toDataURL(payload, { width: 320, margin: 1 });
+    // ตอบกลับ data URL ของรูป QR code ให้ฝั่งหน้าเว็บนำไปแสดงในแท็ก <img> ได้ทันที
+    res.json({ qrDataUrl });
+  } catch (err) {
+    // ถ้าสร้าง QR code ไม่สำเร็จ (เช่นหมายเลขพร้อมเพย์ผิดรูปแบบ) ให้ตอบกลับ error
+    res.status(500).json({ error: 'สร้าง QR code ไม่สำเร็จ' });
+  }
 });
 
 // ---------- Upload API ----------
@@ -293,11 +342,17 @@ app.get('/api/orders', requireAuth, (req, res) => {
 // เมื่อมีการเรียก POST ที่ /api/orders (ลูกค้ากดยืนยันสั่งซื้อจากตะกร้า)
 app.post('/api/orders', (req, res) => {
   // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body
-  const { customerName, phone, address, items } = req.body;
+  const { customerName, phone, address, items, paymentMethod } = req.body;
   // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่ (ชื่อ, เบอร์โทร, ที่อยู่ และต้องมีรายการสินค้าอย่างน้อย 1 ชิ้น)
   if (!customerName || !phone || !address || !Array.isArray(items) || items.length === 0) {
     // ถ้าข้อมูลไม่ครบ ตอบกลับ error 400
     return res.status(400).json({ error: 'ข้อมูลคำสั่งซื้อไม่ครบถ้วน' });
+  }
+  // รายการวิธีชำระเงินที่อนุญาต: เก็บเงินปลายทาง, โอนผ่านธนาคาร, พร้อมเพย์
+  const allowedPaymentMethods = ['cod', 'bank_transfer', 'promptpay'];
+  // ถ้าไม่ได้ระบุมาให้ default เป็น "เก็บเงินปลายทาง" ถ้าระบุมาแต่ไม่ตรงกับตัวเลือกที่มี ให้ตอบกลับ error
+  if (paymentMethod && !allowedPaymentMethods.includes(paymentMethod)) {
+    return res.status(400).json({ error: 'วิธีชำระเงินไม่ถูกต้อง' });
   }
 
   // อ่านรายการสินค้าทั้งหมด เพื่อใช้ตรวจสอบราคาและชื่อสินค้าจริงจากฐานข้อมูล (ไม่เชื่อราคาที่ฝั่งลูกค้าส่งมาตรง ๆ)
@@ -356,6 +411,8 @@ app.post('/api/orders', (req, res) => {
     address,
     items: orderItems,
     total,
+    // เก็บวิธีชำระเงินที่ลูกค้าเลือกไว้ด้วย ให้ default เป็น "เก็บเงินปลายทาง" (cod) ถ้าไม่ได้ระบุมา
+    paymentMethod: paymentMethod || 'cod',
     status: 'รอดำเนินการ',
     createdAt: new Date().toISOString(),
   };

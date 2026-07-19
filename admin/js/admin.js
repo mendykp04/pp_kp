@@ -402,11 +402,23 @@ async function loadOrders() {
 }
 
 // ฟังก์ชันวาด (render) ตารางแสดงรายการคำสั่งซื้อทั้งหมด
+// ฟังก์ชันแปลงรหัสวิธีชำระเงิน (ที่เก็บไว้ใน order.paymentMethod) ให้เป็นข้อความภาษาไทยอ่านง่าย
+function formatPaymentMethod(method) {
+  // ตารางแปลรหัส -> ข้อความภาษาไทย
+  const labels = {
+    cod: 'เก็บเงินปลายทาง',
+    bank_transfer: 'โอนเงินผ่านธนาคาร',
+    promptpay: 'พร้อมเพย์',
+  };
+  // ถ้าไม่พบรหัสในตาราง (เช่นออเดอร์เก่าก่อนมีฟีเจอร์นี้ ไม่มีค่านี้เก็บไว้) ให้ถือว่าเป็นเก็บเงินปลายทางเป็นค่าเริ่มต้น
+  return labels[method] || labels.cod;
+}
+
 function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
-    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 7 คอลัมน์)
-    orderTableBody.innerHTML = '<tr><td colspan="7">ยังไม่มีคำสั่งซื้อ</td></tr>';
+    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 8 คอลัมน์)
+    orderTableBody.innerHTML = '<tr><td colspan="8">ยังไม่มีคำสั่งซื้อ</td></tr>';
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
@@ -428,6 +440,7 @@ function renderOrderTable() {
       <td>${o.phone}</td>
       <td>${o.items.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')}</td>
       <td>${formatPrice(o.total)}</td>
+      <td>${formatPaymentMethod(o.paymentMethod)}</td>
       <td>
         <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) -->
         <select class="order-status-select" data-id="${o.id}">${optionsHTML}</select>

@@ -6,6 +6,70 @@ const cartSummaryEl = document.getElementById('cartSummary');
 const checkoutSection = document.getElementById('checkoutSection');
 // อ้างอิง element ข้อความแจ้งสั่งซื้อสำเร็จ (แสดงหลังยืนยันคำสั่งซื้อ)
 const successMessage = document.getElementById('successMessage');
+// อ้างอิง element กล่องแสดงเลขบัญชีธนาคาร (โผล่มาตอนเลือก "โอนเงินผ่านธนาคาร")
+const bankTransferDetail = document.getElementById('bankTransferDetail');
+// อ้างอิง element กล่องแสดง QR code พร้อมเพย์ (โผล่มาตอนเลือก "พร้อมเพย์")
+const promptpayDetail = document.getElementById('promptpayDetail');
+
+// ตัวแปรเก็บข้อมูลบัญชีธนาคารที่โหลดมาจาก backend ไว้ (โหลดครั้งเดียวพอ ไม่ต้องยิง API ซ้ำทุกครั้งที่สลับตัวเลือก)
+let cachedPaymentInfo = null;
+
+// ฟังก์ชันแสดง/ซ่อนกล่องรายละเอียดการชำระเงิน ให้ตรงกับตัวเลือกที่ผู้ใช้เลือกอยู่ตอนนี้
+async function updatePaymentMethodDisplay() {
+  // หาว่า radio ตัวไหนถูกเลือกอยู่ตอนนี้ (เก็บเงินปลายทาง / โอนธนาคาร / พร้อมเพย์)
+  const selected = document.querySelector('input[name="paymentMethod"]:checked');
+  // ถ้าหาไม่เจอ (ไม่ควรเกิดขึ้นเพราะมีค่า default checked ไว้แล้ว) ให้หยุดทำงาน
+  if (!selected) return;
+
+  // ซ่อนกล่องรายละเอียดทั้งสองแบบไว้ก่อนเป็นค่าเริ่มต้น แล้วค่อยเปิดเฉพาะอันที่ตรงกับตัวเลือกด้านล่าง
+  bankTransferDetail.style.display = 'none';
+  promptpayDetail.style.display = 'none';
+
+  // ถ้าเลือก "โอนเงินผ่านธนาคาร"
+  if (selected.value === 'bank_transfer') {
+    // แสดงกล่องรายละเอียดบัญชีธนาคาร
+    bankTransferDetail.style.display = 'block';
+    // ถ้ายังไม่เคยโหลดข้อมูลบัญชีธนาคารมาก่อน ให้โหลดครั้งแรก (ใช้ try/catch เผื่อโหลดไม่สำเร็จ)
+    if (!cachedPaymentInfo) {
+      try {
+        const res = await fetch(`${API_BASE}/payment-info`);
+        cachedPaymentInfo = await res.json();
+      } catch (err) {
+        showToast('โหลดข้อมูลบัญชีธนาคารไม่สำเร็จ กรุณาลองใหม่');
+        return;
+      }
+    }
+    // เติมข้อมูลบัญชีธนาคารลงในกล่อง
+    document.getElementById('bankName').textContent = cachedPaymentInfo.bankName;
+    document.getElementById('bankAccountNumber').textContent = cachedPaymentInfo.accountNumber;
+    document.getElementById('bankAccountName').textContent = cachedPaymentInfo.accountName;
+  }
+
+  // ถ้าเลือก "พร้อมเพย์"
+  if (selected.value === 'promptpay') {
+    // แสดงกล่อง QR code
+    promptpayDetail.style.display = 'block';
+    // คำนวณยอดรวมปัจจุบันของตะกร้า เพื่อฝังยอดเงินนี้ลงใน QR code (ให้ลูกค้าสแกนแล้วยอดขึ้นให้อัตโนมัติ ไม่ต้องพิมพ์เอง)
+    const amount = cartTotalPrice();
+    // แสดงยอดเงินที่ต้องชำระกำกับไว้เหนือ QR code ด้วย
+    document.getElementById('promptpayAmount').textContent = formatPrice(amount);
+    // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างขอรูป QR code จาก backend
+    try {
+      // ยิง HTTP GET ไปขอรูป QR code พร้อมเพย์ ตามยอดเงินปัจจุบันของตะกร้า
+      const res = await fetch(`${API_BASE}/payment/promptpay-qr?amount=${amount}`);
+      const data = await res.json();
+      // นำ data URL ของรูป QR code ที่ได้มาใส่ในแท็ก <img>
+      document.getElementById('promptpayQrImage').src = data.qrDataUrl;
+    } catch (err) {
+      showToast('สร้าง QR code ไม่สำเร็จ กรุณาลองใหม่');
+    }
+  }
+}
+
+// เมื่อผู้ใช้เปลี่ยนตัวเลือกวิธีการชำระเงิน (คลิก radio ตัวไหนก็ตามที่ชื่อ paymentMethod) ให้อัปเดตกล่องรายละเอียดทันที
+document.querySelectorAll('input[name="paymentMethod"]').forEach((radio) => {
+  radio.addEventListener('change', updatePaymentMethodDisplay);
+});
 
 // ฟังก์ชันวาด (render) รายการสินค้าทั้งหมดในตะกร้าลงในหน้าเว็บ
 function renderCart() {
@@ -91,6 +155,10 @@ function renderCart() {
       renderCart();
     });
   });
+
+  // อัปเดตกล่องรายละเอียดการชำระเงิน (เช่น ยอดเงินใน QR code พร้อมเพย์) ให้ตรงกับยอดรวมล่าสุดของตะกร้าเสมอ
+  // (เผื่อกรณีผู้ใช้เลือก "พร้อมเพย์" ไว้อยู่แล้ว แล้วมาปรับจำนวนสินค้าเพิ่ม/ลดอีกที ยอดใน QR code ต้องตามให้ทัน)
+  updatePaymentMethodDisplay();
 }
 
 // ผูก event เมื่อผู้ใช้กดปุ่ม "ยืนยันสั่งซื้อ" (submit ฟอร์ม checkout)
@@ -113,6 +181,8 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     // แปลงรายการในตะกร้าให้เหลือเฉพาะข้อมูลที่ backend ต้องใช้ (id สินค้า, ไซส์, จำนวน, และ id ของ Flash Sale ถ้ามี)
     // backend จะตรวจสอบ flashSaleId อีกครั้งว่ายังลดราคาอยู่จริงหรือไม่ ก่อนคิดราคาสุดท้าย (ไม่เชื่อราคาจากฝั่งเว็บตรง ๆ)
     items: cart.map((i) => ({ productId: i.productId, size: i.size, qty: i.qty, flashSaleId: i.flashSaleId })),
+    // อ่านวิธีการชำระเงินที่เลือกไว้ (radio ที่ถูกเลือกอยู่ตอนนี้)
+    paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
   };
 
   // หาปุ่ม submit ภายในฟอร์มที่เพิ่งถูกส่ง เพื่อเปลี่ยนสถานะระหว่างรอผลลัพธ์
@@ -148,6 +218,12 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     successMessage.style.display = 'block';
     // แสดงหมายเลขคำสั่งซื้อ (id) ที่ backend ส่งกลับมา ให้ผู้ใช้เก็บไว้อ้างอิง
     document.getElementById('orderRef').textContent = `หมายเลขคำสั่งซื้อ: ${order.id}`;
+    // ถ้าลูกค้าเลือกวิธีชำระเงินที่ต้องโอนล่วงหน้า (ไม่ใช่เก็บเงินปลายทาง) ให้ย้ำเตือนอีกครั้งว่ายังต้องโอนเงินตามที่แจ้งไว้
+    const paymentReminder = document.getElementById('paymentReminder');
+    if (order.paymentMethod !== 'cod') {
+      paymentReminder.textContent = 'อย่าลืมโอนเงินตามข้อมูลที่แจ้งไว้ก่อนหน้านี้ แล้วเก็บสลิปไว้เป็นหลักฐานนะครับ';
+      paymentReminder.style.display = 'block';
+    }
   } catch (err) {
     // ถ้าเกิดข้อผิดพลาดระหว่างสั่งซื้อ ให้แจ้งเตือนด้วย toast
     showToast('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
