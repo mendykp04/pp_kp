@@ -30,6 +30,8 @@ let products = [];
 let orders = [];
 // ตัวแปรเก็บรายการพนักงานทั้งหมด (หรือผลลัพธ์ที่กรองแล้วจากการค้นหา) ที่โหลดมาจาก API
 let employees = [];
+// ตัวแปรเก็บรายการลูกค้าทั้งหมด (หรือผลลัพธ์ที่กรองแล้วจากการค้นหา) ที่โหลดมาจาก API
+let customers = [];
 // ตัวแปรเก็บรายการสินค้าที่กำลังจะขายในรอบปัจจุบันของหน้า "ขายหน้าร้าน" (ยังไม่บันทึกจนกว่าจะกดปุ่มบันทึก)
 let posCart = [];
 // ตัวแปรเก็บรายการหมวดหมู่สินค้าทั้งหมดที่โหลดมาจาก API
@@ -58,6 +60,17 @@ const employeeModal = document.getElementById('employeeModal');
 const employeeForm = document.getElementById('employeeForm');
 // อ้างอิง element หัวข้อของ modal พนักงาน (เปลี่ยนข้อความระหว่าง "เพิ่ม" กับ "แก้ไข")
 const employeeModalTitle = document.getElementById('employeeModalTitle');
+
+// อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการลูกค้า
+const customerTableBody = document.getElementById('customerTableBody');
+// อ้างอิง element ช่องค้นหาลูกค้า (ค้นจากชื่อ-สกุลหรือเบอร์โทร)
+const customerSearchInput = document.getElementById('customerSearchInput');
+// อ้างอิง element กล่อง modal สำหรับเพิ่ม/แก้ไขลูกค้า
+const customerModal = document.getElementById('customerModal');
+// อ้างอิง element ฟอร์มเพิ่ม/แก้ไขลูกค้าภายใน modal
+const customerForm = document.getElementById('customerForm');
+// อ้างอิง element หัวข้อของ modal ลูกค้า (เปลี่ยนข้อความระหว่าง "เพิ่ม" กับ "แก้ไข")
+const customerModalTitle = document.getElementById('customerModalTitle');
 
 // อ้างอิง element ดรอปดาวน์เลือกพนักงานผู้ขาย ในหน้า "ขายหน้าร้าน"
 const posEmployeeSelect = document.getElementById('posEmployeeSelect');
@@ -155,6 +168,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
       await loadFlashSales();
     }
     if (tab === 'orders') loadOrders();
+    if (tab === 'customers') loadCustomers(customerSearchInput.value.trim());
     if (tab === 'employees') loadEmployees(employeeSearchInput.value.trim());
     if (tab === 'pos') {
       // ต้องรอให้สินค้าและพนักงานโหลดเสร็จก่อน ถึงจะเติมตัวเลือกในดรอปดาวน์ได้ถูกต้อง
@@ -480,6 +494,160 @@ function renderOrderTable() {
     });
   });
 }
+
+// ---------- Customers ----------
+// ส่วนจัดการฐานข้อมูลลูกค้า: โหลด/ค้นหา/แสดง/เพิ่ม/แก้ไข/ลบ พร้อมแสดงประวัติรองเท้าที่เคยสั่ง
+
+// ฟังก์ชัน async โหลดรายการลูกค้าจาก backend รับพารามิเตอร์คำค้นหาได้ (ค่าว่าง = ขอทั้งหมด)
+async function loadCustomers(query = '') {
+  // ถ้ามีคำค้นหา ให้แนบไปเป็น query string ?q=... (encodeURIComponent กันตัวอักษรพิเศษ/ภาษาไทยพังตอนส่งไปกับ URL)
+  const url = query ? `${API_BASE}/customers?q=${encodeURIComponent(query)}` : `${API_BASE}/customers`;
+  // ยิง HTTP GET ไปตาม url ที่กำหนด แล้วรอผลลัพธ์ (backend แนบประวัติการสั่งซื้อมาให้พร้อมแล้ว)
+  const res = await fetch(url);
+  // แปลง response เป็น array ของลูกค้า แล้วเก็บลงตัวแปรกลาง
+  customers = await res.json();
+  // วาดตารางลูกค้าใหม่ตามข้อมูลที่เพิ่งโหลดมา
+  renderCustomerTable();
+}
+
+// ฟังก์ชันวาด (render) ตารางแสดงรายการลูกค้า พร้อมสรุปรองเท้าที่เคยสั่งของแต่ละคน
+function renderCustomerTable() {
+  // ถ้าไม่มีลูกค้าที่ตรงกับเงื่อนไข (หรือยังไม่มีลูกค้าเลย)
+  if (customers.length === 0) {
+    // แสดงข้อความแจ้งว่าไม่พบข้อมูล (ครอบคลุม 5 คอลัมน์)
+    customerTableBody.innerHTML = '<tr><td colspan="5">ไม่พบข้อมูลลูกค้า</td></tr>';
+    return; // ออกจากฟังก์ชันทันที
+  }
+  // วนสร้างแถวตาราง (tr) สำหรับลูกค้าแต่ละคน แล้วรวมเป็นข้อความเดียว
+  customerTableBody.innerHTML = customers
+    .map((c) => {
+      // รวมรายการรองเท้าจากทุกคำสั่งซื้อของลูกค้าคนนี้ให้เป็น array เดียว (แต่ละคำสั่งซื้ออาจมีหลายคู่)
+      const allItems = c.orders.flatMap((o) => o.items);
+      // สร้างข้อความสรุปรองเท้าที่เคยสั่ง ถ้าไม่เคยสั่งเลยให้แสดงขีดกลาง
+      const itemsSummary =
+        allItems.length > 0
+          ? allItems.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')
+          : '-';
+      return `
+    <tr>
+      <td>${c.name}</td>
+      <td>${c.phone}</td>
+      <td>${c.address || '-'}</td>
+      <td>${itemsSummary}</td>
+      <td>
+        <button class="btn-icon" data-action="edit" data-id="${c.id}">แก้ไข</button>
+        <button class="btn-icon danger" data-action="delete" data-id="${c.id}">ลบ</button>
+      </td>
+    </tr>
+  `;
+    })
+    .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
+
+  // ผูก event คลิกให้กับปุ่ม "แก้ไข" และ "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
+  customerTableBody.querySelectorAll('button[data-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      // หาข้อมูลลูกค้าที่ตรงกับ id ของปุ่มที่ถูกคลิก
+      const customer = customers.find((c) => c.id === btn.dataset.id);
+      // ถ้าเป็นปุ่ม "แก้ไข" ให้เปิด modal พร้อมข้อมูลลูกค้าเดิม
+      if (btn.dataset.action === 'edit') openCustomerModal(customer);
+      // ถ้าเป็นปุ่ม "ลบ" ให้เรียกฟังก์ชันลบลูกค้า
+      if (btn.dataset.action === 'delete') deleteCustomer(customer);
+    });
+  });
+}
+
+// ฟังก์ชันเปิด modal สำหรับเพิ่มลูกค้าใหม่ หรือแก้ไขลูกค้าเดิม
+// ถ้าไม่ส่ง customer มา (ค่า default เป็น null) หมายถึงกำลังจะ "เพิ่มลูกค้าใหม่"
+function openCustomerModal(customer = null) {
+  // ล้างค่าทั้งหมดในฟอร์มก่อน (เคลียร์ข้อมูลเก่าที่อาจค้างอยู่)
+  customerForm.reset();
+  // เปลี่ยนหัวข้อ modal ตามโหมด (แก้ไข หรือ เพิ่มใหม่)
+  customerModalTitle.textContent = customer ? 'แก้ไขลูกค้า' : 'เพิ่มลูกค้าใหม่';
+  // เติมค่า id ของลูกค้าเดิมลงในช่องซ่อน (ถ้าเป็นการแก้ไข) หรือเว้นว่างไว้ (ถ้าเพิ่มใหม่)
+  document.getElementById('customerId').value = customer?.id || '';
+  // เติมค่าชื่อ-สกุลลงในช่องกรอก
+  document.getElementById('customerName').value = customer?.name || '';
+  // เติมค่าเบอร์โทรลงในช่องกรอก
+  document.getElementById('customerPhone').value = customer?.phone || '';
+  // เติมค่าที่อยู่ลงในช่องกรอก
+  document.getElementById('customerAddress').value = customer?.address || '';
+  // เพิ่ม class "open" ให้กับ modal เพื่อแสดงหน้าต่างขึ้นมา
+  customerModal.classList.add('open');
+}
+
+// ผูก event ให้กับปุ่ม "+ เพิ่มลูกค้าใหม่" เมื่อคลิกให้เปิด modal แบบไม่ส่งลูกค้าเดิม (โหมดเพิ่มใหม่)
+document.getElementById('addCustomerBtn').addEventListener('click', () => openCustomerModal());
+// ผูก event ให้กับปุ่มกากบาทปิด modal ลูกค้า
+document.getElementById('closeCustomerModal').addEventListener('click', () => {
+  customerModal.classList.remove('open');
+});
+// ผูก event คลิกที่พื้นหลังมืดรอบ modal ถ้าคลิกตรงพื้นหลัง (ไม่ใช่ในกล่อง) ให้ปิด modal ด้วย
+customerModal.addEventListener('click', (e) => {
+  if (e.target === customerModal) customerModal.classList.remove('open');
+});
+
+// ผูก event เมื่อผู้ใช้กดปุ่ม "บันทึกข้อมูลลูกค้า" (submit ฟอร์ม)
+customerForm.addEventListener('submit', async (e) => {
+  // ป้องกันเบราว์เซอร์รีโหลดหน้าตามพฤติกรรมปกติของฟอร์ม
+  e.preventDefault();
+  // อ่านค่า id จากช่องซ่อน เพื่อรู้ว่าเป็นการ "เพิ่มใหม่" (id ว่าง) หรือ "แก้ไข" (มี id)
+  const id = document.getElementById('customerId').value;
+  // รวบรวมค่าจากทุกช่องกรอกในฟอร์ม สร้างเป็น object ที่จะส่งไปให้ backend
+  const payload = {
+    name: document.getElementById('customerName').value.trim(),
+    phone: document.getElementById('customerPhone').value.trim(),
+    address: document.getElementById('customerAddress').value.trim(),
+  };
+
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
+  try {
+    // ถ้ามี id (โหมดแก้ไข) ให้ยิงไปที่ /api/customers/<id> ด้วย method PUT
+    // ถ้าไม่มี id (โหมดเพิ่มใหม่) ให้ยิงไปที่ /api/customers ด้วย method POST
+    const res = await fetch(`${API_BASE}/customers${id ? '/' + id : ''}`, {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    // แปลง response เป็น object ไว้ก่อน เผื่อต้องใช้ข้อความ error จาก backend
+    const data = await res.json();
+    // ถ้า response ไม่สำเร็จ ให้โยน error พร้อมข้อความจาก backend (หรือข้อความ default ถ้าไม่มี)
+    if (!res.ok) throw new Error(data.error || 'บันทึกไม่สำเร็จ');
+    // ปิด modal เพราะบันทึกสำเร็จแล้ว
+    customerModal.classList.remove('open');
+    // แสดงข้อความแจ้งเตือนความสำเร็จ (ข้อความต่างกันตามว่าเป็นการแก้ไขหรือเพิ่มใหม่)
+    showToast(id ? 'แก้ไขข้อมูลลูกค้าเรียบร้อย' : 'เพิ่มลูกค้าเรียบร้อย');
+    // โหลดรายการลูกค้าใหม่ (คงคำค้นหาเดิมไว้ ถ้ามีการค้นหาอยู่ก่อนหน้า)
+    loadCustomers(customerSearchInput.value.trim());
+  } catch (err) {
+    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้ด้วยข้อความ error จริง
+    showToast(err.message);
+  }
+});
+
+// ฟังก์ชัน async สำหรับลบลูกค้า รับพารามิเตอร์เป็น object ลูกค้าที่ต้องการลบ
+async function deleteCustomer(customer) {
+  // แสดงกล่องยืนยันก่อนลบจริง ถ้าผู้ใช้กด "ยกเลิก" ให้หยุดทำงานทันที
+  if (!confirm(`ต้องการลบลูกค้า "${customer.name}" ใช่หรือไม่?`)) return;
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
+  try {
+    // ยิง HTTP DELETE ไปที่ /api/customers/<id> ของลูกค้าที่ต้องการลบ
+    const res = await fetch(`${API_BASE}/customers/${customer.id}`, { method: 'DELETE' });
+    // ถ้า response ไม่สำเร็จ ให้โยน error
+    if (!res.ok) throw new Error('delete failed');
+    // แจ้งเตือนว่าลบสำเร็จ
+    showToast('ลบลูกค้าเรียบร้อย');
+    // โหลดรายการลูกค้าใหม่ (คงคำค้นหาเดิมไว้ ถ้ามี)
+    loadCustomers(customerSearchInput.value.trim());
+  } catch (err) {
+    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }
+}
+
+// ผูก event ให้ค้นหาแบบ real-time ทุกครั้งที่ผู้ใช้พิมพ์ในช่องค้นหาลูกค้า (ค้นจากชื่อ-สกุลหรือเบอร์โทร)
+customerSearchInput.addEventListener('input', () => {
+  loadCustomers(customerSearchInput.value.trim());
+});
 
 // ---------- Employees ----------
 // ส่วนจัดการพนักงาน: โหลด/ค้นหา/แสดง/เพิ่ม/แก้ไข/ลบ
@@ -1258,6 +1426,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   await loadProducts();
   // โหลดข้อมูลคำสั่งซื้อ เพื่อแสดงตารางคำสั่งซื้อตั้งแต่เปิดหน้ามาเช่นกัน
   loadOrders();
+  // โหลดข้อมูลลูกค้า เพื่อให้ตารางลูกค้าพร้อมใช้งานตั้งแต่เปิดหน้ามา
+  loadCustomers();
   // โหลดข้อมูลพนักงาน เพื่อให้ตารางพนักงาน (และตัวเลือกใน POS) พร้อมใช้งานตั้งแต่เปิดหน้ามา
   loadEmployees();
   // โหลดสรุปยอดขายของวันปัจจุบัน เพื่อให้แท็บรายงานพร้อมแสดงผลตั้งแต่เปิดหน้ามา

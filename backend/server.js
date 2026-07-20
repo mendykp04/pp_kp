@@ -32,6 +32,8 @@ const SALES_FILE = path.join(__dirname, 'data', 'sales.json');
 const CATEGORIES_FILE = path.join(__dirname, 'data', 'categories.json');
 // สร้าง path เต็มไปยังไฟล์เก็บข้อมูล Flash Sale (backend/data/flashsales.json)
 const FLASHSALES_FILE = path.join(__dirname, 'data', 'flashsales.json');
+// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลลูกค้า (backend/data/customers.json)
+const CUSTOMERS_FILE = path.join(__dirname, 'data', 'customers.json');
 // สร้าง path เต็มไปยังโฟลเดอร์เก็บไฟล์รูปภาพสินค้าที่อัปโหลดจากหน้า admin
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 // ถ้ายังไม่มีโฟลเดอร์ uploads (เช่นรันครั้งแรก) ให้สร้างขึ้นมาก่อน { recursive: true } กันไม่ให้ error หากมีอยู่แล้ว
@@ -522,6 +524,98 @@ app.delete('/api/employees/:id', requireAuth, (req, res) => {
   // บันทึกรายการพนักงานที่เหลือ (หลังลบ) กลับลงไฟล์
   writeJSON(EMPLOYEES_FILE, employees);
   // ตอบกลับข้อมูลพนักงานที่ถูกลบไป เพื่อยืนยันว่าลบคนไหน
+  res.json(removed[0]);
+});
+
+// ---------- Customers API (ฐานข้อมูลลูกค้า) ----------
+// กลุ่ม API ที่เกี่ยวกับ "ลูกค้า" ทั้งหมด (ดู/ค้นหา/เพิ่ม/แก้/ลบ) พร้อมดึงประวัติการสั่งซื้อมาแสดงด้วย
+
+// ฟังก์ชันช่วยแนบ "ประวัติการสั่งซื้อ" ให้กับข้อมูลลูกค้า 1 คน โดยจับคู่ด้วยเบอร์โทรศัพท์กับรายการคำสั่งซื้อทั้งหมด
+// (ไม่ได้เก็บประวัติซ้ำซ้อนไว้ในไฟล์ลูกค้าเอง แต่คำนวณสดจากไฟล์ orders.json ทุกครั้งที่ขอข้อมูล เพื่อให้ข้อมูลอัปเดตล่าสุดเสมอ)
+function enrichCustomerWithOrders(customer, orders) {
+  // กรองเฉพาะคำสั่งซื้อที่เบอร์โทรตรงกับลูกค้าคนนี้ แล้วเรียงจากใหม่ไปเก่า
+  const customerOrders = orders
+    .filter((o) => o.phone === customer.phone)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // ส่งคืนข้อมูลลูกค้าเดิม รวมกับรายการคำสั่งซื้อที่เจอ (ใช้ดูว่าลูกค้าคนนี้เคยสั่งรองเท้ารุ่นไหนไปบ้าง)
+  return { ...customer, orders: customerOrders };
+}
+
+// เมื่อมีการเรียก GET ที่ /api/customers (ขอรายการลูกค้าทั้งหมด รองรับค้นหาด้วย query string ?q=)
+app.get('/api/customers', requireAuth, (req, res) => {
+  // อ่านข้อมูลลูกค้าทั้งหมดจากไฟล์
+  const customers = readJSON(CUSTOMERS_FILE);
+  // อ่านรายการคำสั่งซื้อทั้งหมด เพื่อใช้จับคู่หาประวัติการสั่งซื้อของแต่ละคน
+  const orders = readJSON(ORDERS_FILE);
+  // ดึงคำค้นหาจาก query string เช่น /api/customers?q=สมชาย แล้วแปลงเป็นตัวพิมพ์เล็กเพื่อเทียบแบบไม่สนตัวพิมพ์ใหญ่เล็ก
+  const q = (req.query.q || '').trim().toLowerCase();
+  // กรองลูกค้าตามคำค้นหา (ถ้ามี) จากชื่อหรือเบอร์โทร ถ้าไม่มีคำค้นหาให้เอาทั้งหมด
+  const filtered = q
+    ? customers.filter(
+        (c) => c.name.toLowerCase().includes(q) || c.phone.includes(q)
+      )
+    : customers;
+  // แนบประวัติการสั่งซื้อให้ลูกค้าแต่ละคนก่อนส่งกลับไป
+  res.json(filtered.map((c) => enrichCustomerWithOrders(c, orders)));
+});
+
+// เมื่อมีการเรียก POST ที่ /api/customers (เพิ่มลูกค้าใหม่)
+app.post('/api/customers', requireAuth, (req, res) => {
+  // ดึงข้อมูลชื่อ-สกุล, เบอร์โทร, ที่อยู่ จาก body ที่ส่งมา
+  const { name, phone, address } = req.body;
+  // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อและเบอร์โทร ถ้าไม่มีให้ตอบกลับ error 400
+  if (!name || !phone) {
+    return res.status(400).json({ error: 'กรุณาระบุชื่อ-สกุลและเบอร์โทร' });
+  }
+  // อ่านรายการลูกค้าทั้งหมดที่มีอยู่แล้ว
+  const customers = readJSON(CUSTOMERS_FILE);
+  // สร้าง object ลูกค้าใหม่ พร้อม id อัตโนมัติ
+  const newCustomer = { id: genId('cus-'), name, phone, address: address || '' };
+  // เพิ่มลูกค้าใหม่เข้าไปท้าย array
+  customers.push(newCustomer);
+  // บันทึกรายการลูกค้าทั้งหมด (รวมของใหม่) กลับลงไฟล์
+  writeJSON(CUSTOMERS_FILE, customers);
+  // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลลูกค้าที่เพิ่งสร้าง (แนบประวัติการสั่งซื้อไปด้วย แม้จะยังว่างเปล่าก็ตาม)
+  res.status(201).json(enrichCustomerWithOrders(newCustomer, readJSON(ORDERS_FILE)));
+});
+
+// เมื่อมีการเรียก PUT ที่ /api/customers/:id (แก้ไขข้อมูลลูกค้าตามรหัส)
+app.put('/api/customers/:id', requireAuth, (req, res) => {
+  // อ่านรายการลูกค้าทั้งหมดจากไฟล์
+  const customers = readJSON(CUSTOMERS_FILE);
+  // หาตำแหน่งของลูกค้าที่ id ตรงกับที่ส่งมาใน URL
+  const idx = customers.findIndex((c) => c.id === req.params.id);
+  // ถ้าไม่เจอลูกค้า ให้ตอบกลับ 404
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบลูกค้า' });
+  // ดึงข้อมูลที่ส่งมาจาก body สำหรับใช้แก้ไข
+  const { name, phone, address } = req.body;
+  const existing = customers[idx];
+  // อัปเดตข้อมูล โดยถ้าไม่ได้ส่งค่าฟิลด์ไหนมา (undefined/null) ให้คงค่าเดิมไว้
+  customers[idx] = {
+    ...existing,
+    name: name ?? existing.name,
+    phone: phone ?? existing.phone,
+    address: address ?? existing.address,
+  };
+  // บันทึกรายการลูกค้าทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
+  writeJSON(CUSTOMERS_FILE, customers);
+  // ตอบกลับข้อมูลลูกค้าที่แก้ไขเสร็จแล้ว (แนบประวัติการสั่งซื้อล่าสุดไปด้วย)
+  res.json(enrichCustomerWithOrders(customers[idx], readJSON(ORDERS_FILE)));
+});
+
+// เมื่อมีการเรียก DELETE ที่ /api/customers/:id (ลบลูกค้าตามรหัส)
+app.delete('/api/customers/:id', requireAuth, (req, res) => {
+  // อ่านรายการลูกค้าทั้งหมดจากไฟล์
+  const customers = readJSON(CUSTOMERS_FILE);
+  // หาตำแหน่งของลูกค้าที่ต้องการลบ
+  const idx = customers.findIndex((c) => c.id === req.params.id);
+  // ถ้าไม่เจอลูกค้า ให้ตอบกลับ 404
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบลูกค้า' });
+  // ลบลูกค้าออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed) — หมายเหตุ: ไม่ได้ลบคำสั่งซื้อเก่าของลูกค้าคนนี้ไปด้วย เพราะประวัติคำสั่งซื้อยังต้องเก็บไว้เป็นหลักฐาน
+  const removed = customers.splice(idx, 1);
+  // บันทึกรายการลูกค้าที่เหลือ (หลังลบ) กลับลงไฟล์
+  writeJSON(CUSTOMERS_FILE, customers);
+  // ตอบกลับข้อมูลลูกค้าที่ถูกลบไป เพื่อยืนยันว่าลบคนไหน
   res.json(removed[0]);
 });
 

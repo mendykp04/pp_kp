@@ -28,6 +28,8 @@
         <button class="nav-btn" data-tab="flashsales">⚡ Flash Sale</button>
         <!-- ปุ่มสลับไปแท็บ "คำสั่งซื้อ" (ออเดอร์จากหน้าร้านค้าออนไลน์) -->
         <button class="nav-btn" data-tab="orders">🧾 คำสั่งซื้อ</button>
+        <!-- ปุ่มสลับไปแท็บ "ฐานข้อมูลลูกค้า" -->
+        <button class="nav-btn" data-tab="customers">🧑‍🤝‍🧑 ลูกค้า</button>
         <!-- ปุ่มสลับไปแท็บ "จัดการพนักงาน" -->
         <button class="nav-btn" data-tab="employees">👤 พนักงาน</button>
         <!-- ปุ่มสลับไปแท็บ "ขายหน้าร้าน" (จุดขาย/รับชำระเงิน) -->
@@ -150,6 +152,37 @@
             <!-- เนื้อหาตารางคำสั่งซื้อจะถูกเติมโดย admin.js -->
             <tbody id="orderTableBody">
               <tr><td colspan="8">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Tab: Customers (ฐานข้อมูลลูกค้า) -->
+      <!-- แท็บจัดการลูกค้า: เพิ่ม/แก้ไข/ลบ + ค้นหาจากชื่อหรือเบอร์โทร + ดูประวัติรองเท้าที่เคยสั่ง -->
+      <section id="tab-customers" class="tab-panel">
+        <div class="panel-header">
+          <h1>ฐานข้อมูลลูกค้า</h1>
+          <!-- ปุ่มเปิด modal สำหรับเพิ่มลูกค้าใหม่ -->
+          <button class="btn" id="addCustomerBtn">+ เพิ่มลูกค้าใหม่</button>
+        </div>
+        <!-- ช่องค้นหาลูกค้า จาก "ชื่อ-สกุล" หรือ "เบอร์โทร" (ค้นแบบ real-time ตามที่พิมพ์) -->
+        <div class="filters">
+          <input type="text" id="customerSearchInput" placeholder="ค้นหาจากชื่อ-สกุล หรือ เบอร์โทร..." />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ชื่อ-สกุล</th>
+                <th>เบอร์โทร</th>
+                <th>ที่อยู่</th>
+                <th>รองเท้าที่เคยสั่ง</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางลูกค้าจะถูกเติมโดย admin.js -->
+            <tbody id="customerTableBody">
+              <tr><td colspan="5">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -383,6 +416,36 @@
         </div>
         <!-- ปุ่ม submit ฟอร์ม -->
         <button type="submit" class="btn btn-block">บันทึกข้อมูลพนักงาน</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal เพิ่ม/แก้ไขลูกค้า -->
+  <div class="modal-overlay" id="customerModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทปิด modal -->
+      <span class="close-btn" id="closeCustomerModal">&times;</span>
+      <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "เพิ่มลูกค้าใหม่" กับ "แก้ไขลูกค้า" โดย JS -->
+      <h3 id="customerModalTitle">เพิ่มลูกค้าใหม่</h3>
+      <!-- ฟอร์มกรอกข้อมูลลูกค้า เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขลูกค้าผ่าน API -->
+      <form id="customerForm">
+        <!-- ช่องซ่อน เก็บ id ของลูกค้า (มีค่า = โหมดแก้ไข, ว่าง = โหมดเพิ่มใหม่) ผู้ใช้มองไม่เห็นช่องนี้ -->
+        <input type="hidden" id="customerId" />
+        <div class="field">
+          <label for="customerName">ชื่อ-สกุล</label>
+          <input type="text" id="customerName" required />
+        </div>
+        <div class="field">
+          <label for="customerPhone">เบอร์โทร</label>
+          <!-- ใช้เบอร์โทรเป็นตัวจับคู่หาประวัติการสั่งซื้อของลูกค้าคนนี้ จึงควรกรอกให้ตรงกับเบอร์ที่ลูกค้าใช้ตอนสั่งซื้อ -->
+          <input type="tel" id="customerPhone" required />
+        </div>
+        <div class="field">
+          <label for="customerAddress">ที่อยู่</label>
+          <input type="text" id="customerAddress" />
+        </div>
+        <!-- ปุ่ม submit ฟอร์ม -->
+        <button type="submit" class="btn btn-block">บันทึกข้อมูลลูกค้า</button>
       </form>
     </div>
   </div>
