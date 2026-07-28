@@ -8,10 +8,13 @@
 sneaker-shop/
 ├── backend/                 Express API server (Node.js)
 │   ├── server.js
+│   ├── db.js                ชั้นเชื่อมต่อฐานข้อมูล SQLite (อ่าน/เขียนทุกตาราง)
+│   ├── migrate.js            สคริปต์ย้ายข้อมูลเดิมจาก *.json เข้า SQLite (รันครั้งเดียว)
 │   ├── package.json
 │   ├── uploads/             รูปภาพสินค้าที่อัปโหลดจากหน้า admin
-│   └── data/                ฐานข้อมูล (ไฟล์ JSON)
-│       ├── products.json
+│   └── data/
+│       ├── sneakershop.db   ฐานข้อมูล SQLite (สร้างอัตโนมัติ ไม่ commit ขึ้น git)
+│       ├── products.json    ไฟล์ข้อมูลตั้งต้น/สำรอง ใช้ตอนรัน migrate.js เท่านั้น
 │       ├── categories.json
 │       ├── flashsales.json
 │       ├── orders.json
@@ -36,8 +39,11 @@ sneaker-shop/
 ```bash
 cd sneaker-shop/backend
 npm install
+npm run migrate   # ครั้งแรกเท่านั้น: สร้างฐานข้อมูล SQLite จากข้อมูลตั้งต้นใน data/*.json
 npm start
 ```
+
+`npm run migrate` สร้างไฟล์ `backend/data/sneakershop.db` และนำเข้าข้อมูลจากไฟล์ `.json` เดิม รันซ้ำได้ปลอดภัย (แต่ละครั้งจะเขียนทับข้อมูลในฐานข้อมูลด้วยข้อมูลจากไฟล์ `.json` ล่าสุดเสมอ) หลังจากรันครั้งแรกแล้ว เซิร์ฟเวอร์จะอ่าน/เขียนข้อมูลทั้งหมดผ่าน `sneakershop.db` ไม่แตะไฟล์ `.json` อีกต่อไป
 
 เปิดเบราว์เซอร์ไปที่:
 
@@ -89,9 +95,7 @@ ADMIN_USERNAME=myshop ADMIN_PASSWORD="รหัสผ่านที่คาด
 
 1. **ตั้งค่า `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET`** ผ่าน environment variable ของแพลตฟอร์ม deploy (ห้ามใช้ค่า default)
 2. **ต้องใช้ HTTPS** เสมอ (แพลตฟอร์มคลาวด์ส่วนใหญ่ทำให้อัตโนมัติ) เพราะข้อมูลล็อกอิน/คำสั่งซื้อส่งผ่านเครือข่ายจริง
-3. **ข้อมูลเก็บเป็นไฟล์ JSON ในเครื่อง (`backend/data/*.json`)** — แพลตฟอร์ม serverless/container บางแห่ง (เช่น Render free tier, Vercel) จะ**ล้างไฟล์ทุกครั้งที่ deploy ใหม่หรือรีสตาร์ท** เพราะไม่มี persistent disk ให้ ถ้าจะใช้งานจริงระยะยาวควร:
-   - เลือกแพลตฟอร์มที่มี persistent disk/volume (เช่น Render พร้อม Persistent Disk, Railway, VPS ธรรมดาอย่าง DigitalOcean/Linode) หรือ
-   - ย้ายไปใช้ฐานข้อมูลจริง เช่น PostgreSQL/MongoDB (ต้องแก้โค้ดเพิ่ม ไม่ได้ทำไว้ในโปรเจกต์นี้)
+3. **ข้อมูลเก็บเป็นไฟล์ฐานข้อมูล SQLite ในเครื่อง (`backend/data/sneakershop.db`)** — แพลตฟอร์ม serverless/container บางแห่ง (เช่น Render free tier, Vercel) จะ**ล้างไฟล์ทุกครั้งที่ deploy ใหม่หรือรีสตาร์ท** เพราะไม่มี persistent disk ให้ ถ้าจะใช้งานจริงระยะยาวควรเลือกแพลตฟอร์มที่มี persistent disk/volume (เช่น Render พร้อม Persistent Disk, Railway, VPS ธรรมดาอย่าง DigitalOcean/Linode) เพื่อให้ไฟล์ `.db` อยู่ถาวรข้าม deploy
 4. โฟลเดอร์ `backend/uploads/` (รูปสินค้าที่อัปโหลด) ก็มีปัญหาเดียวกันกับข้อ 3 — ถ้า deploy บนแพลตฟอร์มที่ไม่มี persistent disk รูปที่อัปโหลดจะหายเมื่อรีสตาร์ท ทางแก้คือใช้ persistent disk เดียวกับข้อ 3 หรือย้ายไปเก็บบน cloud storage (เช่น Cloudinary, S3) ในอนาคต
 5. รัน `npm install` (ไม่ใช่ `npm ci` ถ้าไม่มี lockfile ตรงกัน) บนเซิร์ฟเวอร์ปลายทาง แล้วสั่ง `npm start`
 6. ตรวจสอบว่าพอร์ตที่แพลตฟอร์มกำหนดมาให้ถูกอ่านจาก `process.env.PORT` (โค้ดรองรับอยู่แล้ว)
@@ -120,7 +124,7 @@ ADMIN_USERNAME=myshop ADMIN_PASSWORD="รหัสผ่านที่คาด
 | POST | `/api/auth/logout` | ออกจากระบบ | - |
 | GET | `/api/auth/me` | เช็คสถานะล็อกอินปัจจุบัน | - |
 
-ข้อมูลทั้งหมดถูกเก็บในไฟล์ `backend/data/*.json` — เหมาะสำหรับเริ่มต้น/เดโม ดูข้อควรระวังเรื่องนี้ในหัวข้อ "ก่อนขึ้นออนไลน์" ด้านบน
+ข้อมูลทั้งหมดถูกเก็บในฐานข้อมูล SQLite ที่ `backend/data/sneakershop.db` ดูข้อควรระวังเรื่อง persistent disk ในหัวข้อ "ก่อนขึ้นออนไลน์" ด้านบน
 
 ## หมายเหตุ
 

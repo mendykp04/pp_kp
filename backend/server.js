@@ -14,26 +14,14 @@ const session = require('express-session');
 const generatePromptPayPayload = require('promptpay-qr');
 // เรียกใช้ไลบรารี qrcode เพื่อแปลงข้อความ payload ให้กลายเป็นรูปภาพ QR code จริง ๆ
 const QRCode = require('qrcode');
+// เรียกใช้ชั้นฐานข้อมูล SQLite (backend/db.js) แทนการอ่าน/เขียนไฟล์ .json โดยตรง
+const db = require('./db');
 
 // สร้างแอปพลิเคชัน Express ขึ้นมา 1 ตัว เก็บไว้ในตัวแปร app
 const app = express();
 // กำหนดพอร์ตที่จะรันเซิร์ฟเวอร์ ถ้ามีค่าจาก environment variable ให้ใช้ค่านั้น ถ้าไม่มีใช้ 3000
 const PORT = process.env.PORT || 3000;
 
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลสินค้า (backend/data/products.json)
-const PRODUCTS_FILE = path.join(__dirname, 'data', 'products.json');
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลคำสั่งซื้อ (backend/data/orders.json)
-const ORDERS_FILE = path.join(__dirname, 'data', 'orders.json');
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลพนักงาน (backend/data/employees.json)
-const EMPLOYEES_FILE = path.join(__dirname, 'data', 'employees.json');
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลการขาย/รับชำระเงินหน้าร้าน (backend/data/sales.json)
-const SALES_FILE = path.join(__dirname, 'data', 'sales.json');
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลหมวดหมู่สินค้า (backend/data/categories.json)
-const CATEGORIES_FILE = path.join(__dirname, 'data', 'categories.json');
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูล Flash Sale (backend/data/flashsales.json)
-const FLASHSALES_FILE = path.join(__dirname, 'data', 'flashsales.json');
-// สร้าง path เต็มไปยังไฟล์เก็บข้อมูลลูกค้า (backend/data/customers.json)
-const CUSTOMERS_FILE = path.join(__dirname, 'data', 'customers.json');
 // สร้าง path เต็มไปยังโฟลเดอร์เก็บไฟล์รูปภาพสินค้าที่อัปโหลดจากหน้า admin
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 // ถ้ายังไม่มีโฟลเดอร์ uploads (เช่นรันครั้งแรก) ให้สร้างขึ้นมาก่อน { recursive: true } กันไม่ให้ error หากมีอยู่แล้ว
@@ -109,18 +97,6 @@ const upload = multer({
     else cb(new Error('อนุญาตเฉพาะไฟล์รูปภาพเท่านั้น'));
   },
 });
-
-// ฟังก์ชันช่วยอ่านไฟล์ JSON แล้วแปลงเป็น object/array ของ JavaScript
-function readJSON(file) {
-  // อ่านไฟล์แบบ synchronous (รอจนอ่านเสร็จ) เป็น encoding utf-8 แล้วแปลงข้อความ JSON เป็น object ด้วย JSON.parse
-  return JSON.parse(fs.readFileSync(file, 'utf-8'));
-}
-
-// ฟังก์ชันช่วยเขียนข้อมูล (object/array) ลงไฟล์ JSON
-function writeJSON(file, data) {
-  // แปลง data เป็นข้อความ JSON (เว้นวรรค/ย่อหน้า 2 ช่อง เพื่อให้อ่านง่าย) แล้วเขียนทับไฟล์เดิม
-  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
-}
 
 // ฟังก์ชันสร้างรหัส (id) แบบสุ่ม โดยรับ prefix (เช่น "p" สำหรับสินค้า, "o" สำหรับออเดอร์) มาต่อหน้า
 function genId(prefix) {
@@ -233,7 +209,7 @@ app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/products (ขอรายการสินค้าทั้งหมด)
 app.get('/api/products', (req, res) => {
   // อ่านข้อมูลสินค้าทั้งหมดจากไฟล์ products.json
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // ส่งข้อมูลสินค้ากลับไปเป็น JSON ให้ผู้ที่เรียกมา
   res.json(products);
 });
@@ -241,7 +217,7 @@ app.get('/api/products', (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/products/:id (ขอสินค้าชิ้นเดียวตามรหัส)
 app.get('/api/products/:id', (req, res) => {
   // อ่านข้อมูลสินค้าทั้งหมดจากไฟล์
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // ค้นหาสินค้าที่มี id ตรงกับค่าที่ส่งมาใน URL (req.params.id)
   const product = products.find((p) => p.id === req.params.id);
   // ถ้าไม่เจอสินค้า ให้ตอบกลับสถานะ 404 (ไม่พบ) พร้อมข้อความแจ้งเตือน
@@ -259,7 +235,7 @@ app.post('/api/products', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'กรุณาระบุชื่อสินค้าและราคา' });
   }
   // อ่านรายการสินค้าปัจจุบันทั้งหมดจากไฟล์ เพื่อนำมาต่อท้ายด้วยสินค้าใหม่
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // สร้าง object สินค้าใหม่ โดยกำหนด id อัตโนมัติ และแปลงชนิดข้อมูลให้ถูกต้อง (ราคา/สต็อกเป็นตัวเลข)
   const newProduct = {
     id: genId('p'),
@@ -276,7 +252,7 @@ app.post('/api/products', requireAuth, (req, res) => {
   // เพิ่มสินค้าใหม่เข้าไปท้าย array ของสินค้าทั้งหมด
   products.push(newProduct);
   // บันทึกรายการสินค้าทั้งหมด (รวมของใหม่) กลับลงไฟล์ products.json
-  writeJSON(PRODUCTS_FILE, products);
+  db.writeProducts(products);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลสินค้าที่เพิ่งสร้าง
   res.status(201).json(newProduct);
 });
@@ -284,7 +260,7 @@ app.post('/api/products', requireAuth, (req, res) => {
 // เมื่อมีการเรียก PUT ที่ /api/products/:id (แก้ไขสินค้าตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.put('/api/products/:id', requireAuth, (req, res) => {
   // อ่านรายการสินค้าทั้งหมดจากไฟล์
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // หาตำแหน่ง (index) ของสินค้าที่ id ตรงกับที่ส่งมาใน URL
   const idx = products.findIndex((p) => p.id === req.params.id);
   // ถ้าไม่เจอสินค้าที่ตำแหน่งนั้น (idx เป็น -1) ให้ตอบกลับ 404
@@ -309,7 +285,7 @@ app.put('/api/products/:id', requireAuth, (req, res) => {
     description: description ?? existing.description,
   };
   // บันทึกรายการสินค้าทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
-  writeJSON(PRODUCTS_FILE, products);
+  db.writeProducts(products);
   // ตอบกลับข้อมูลสินค้าที่แก้ไขเสร็จแล้ว
   res.json(products[idx]);
 });
@@ -317,7 +293,7 @@ app.put('/api/products/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก DELETE ที่ /api/products/:id (ลบสินค้าตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.delete('/api/products/:id', requireAuth, (req, res) => {
   // อ่านรายการสินค้าทั้งหมดจากไฟล์
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // หาตำแหน่งของสินค้าที่ต้องการลบ
   const idx = products.findIndex((p) => p.id === req.params.id);
   // ถ้าไม่เจอสินค้า ให้ตอบกลับ 404
@@ -325,7 +301,7 @@ app.delete('/api/products/:id', requireAuth, (req, res) => {
   // ลบสินค้าออกจาก array ด้วย splice (เอาตัวที่ถูกลบเก็บไว้ในตัวแปร removed)
   const removed = products.splice(idx, 1);
   // บันทึกรายการสินค้าที่เหลือ (หลังลบ) กลับลงไฟล์
-  writeJSON(PRODUCTS_FILE, products);
+  db.writeProducts(products);
   // ตอบกลับข้อมูลสินค้าที่ถูกลบไป เพื่อยืนยันว่าลบตัวไหน
   res.json(removed[0]);
 });
@@ -336,7 +312,7 @@ app.delete('/api/products/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/orders (ขอรายการคำสั่งซื้อทั้งหมด สำหรับหน้า admin) — มีข้อมูลลูกค้า (ชื่อ/เบอร์โทร/ที่อยู่) จึงต้องล็อกอินก่อน
 app.get('/api/orders', requireAuth, (req, res) => {
   // อ่านรายการคำสั่งซื้อทั้งหมดจากไฟล์
-  const orders = readJSON(ORDERS_FILE);
+  const orders = db.readOrders();
   // เรียงลำดับคำสั่งซื้อจากใหม่ไปเก่า (เทียบวันที่สร้าง createdAt) แล้วส่งกลับไป
   res.json(orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
 });
@@ -358,9 +334,9 @@ app.post('/api/orders', (req, res) => {
   }
 
   // อ่านรายการสินค้าทั้งหมด เพื่อใช้ตรวจสอบราคาและชื่อสินค้าจริงจากฐานข้อมูล (ไม่เชื่อราคาที่ฝั่งลูกค้าส่งมาตรง ๆ)
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // อ่านรายการ Flash Sale ทั้งหมด เพื่อใช้ตรวจสอบว่าสินค้าชิ้นไหนกำลังลดราคาอยู่จริงหรือไม่
-  const flashSales = readJSON(FLASHSALES_FILE);
+  const flashSales = db.readFlashSales();
   // ตัวแปรเก็บยอดรวมราคาทั้งออเดอร์ เริ่มต้นที่ 0
   let total = 0;
   // ตัวแปรเก็บรายการสินค้าที่ผ่านการตรวจสอบแล้ว (พร้อมชื่อ/ราคาที่ถูกต้อง)
@@ -404,7 +380,7 @@ app.post('/api/orders', (req, res) => {
   }
 
   // อ่านรายการคำสั่งซื้อทั้งหมดที่มีอยู่แล้ว เพื่อนำออเดอร์ใหม่ไปต่อท้าย
-  const orders = readJSON(ORDERS_FILE);
+  const orders = db.readOrders();
   // สร้าง object คำสั่งซื้อใหม่ พร้อม id, สถานะเริ่มต้น และเวลาที่สร้าง
   const newOrder = {
     id: genId('o'),
@@ -421,7 +397,7 @@ app.post('/api/orders', (req, res) => {
   // เพิ่มออเดอร์ใหม่เข้าไปท้าย array
   orders.push(newOrder);
   // บันทึกรายการคำสั่งซื้อทั้งหมด (รวมของใหม่) กลับลงไฟล์ orders.json
-  writeJSON(ORDERS_FILE, orders);
+  db.writeOrders(orders);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลออเดอร์ที่เพิ่งสร้าง ให้ฝั่งลูกค้าเอาไปแสดงเลขที่ออเดอร์
   res.status(201).json(newOrder);
 });
@@ -431,7 +407,7 @@ app.put('/api/orders/:id/status', requireAuth, (req, res) => {
   // ดึงค่าสถานะใหม่จาก body
   const { status } = req.body;
   // อ่านรายการคำสั่งซื้อทั้งหมดจากไฟล์
-  const orders = readJSON(ORDERS_FILE);
+  const orders = db.readOrders();
   // หาตำแหน่งของออเดอร์ที่ id ตรงกับที่ส่งมาใน URL
   const idx = orders.findIndex((o) => o.id === req.params.id);
   // ถ้าไม่เจอออเดอร์ ให้ตอบกลับ 404
@@ -439,7 +415,7 @@ app.put('/api/orders/:id/status', requireAuth, (req, res) => {
   // อัปเดตสถานะของออเดอร์นั้น ถ้าไม่ได้ส่ง status มาให้คงค่าเดิมไว้
   orders[idx].status = status || orders[idx].status;
   // บันทึกรายการคำสั่งซื้อทั้งหมด (ที่อัปเดตแล้ว) กลับลงไฟล์
-  writeJSON(ORDERS_FILE, orders);
+  db.writeOrders(orders);
   // ตอบกลับข้อมูลออเดอร์ที่อัปเดตสถานะแล้ว
   res.json(orders[idx]);
 });
@@ -451,7 +427,7 @@ app.put('/api/orders/:id/status', requireAuth, (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/employees (ขอรายการพนักงาน รองรับค้นหาด้วย query string ?q=) — ข้อมูลพนักงานเป็นข้อมูลภายใน จึงต้องล็อกอินก่อน
 app.get('/api/employees', requireAuth, (req, res) => {
   // อ่านข้อมูลพนักงานทั้งหมดจากไฟล์
-  const employees = readJSON(EMPLOYEES_FILE);
+  const employees = db.readEmployees();
   // ดึงคำค้นหาจาก query string เช่น /api/employees?q=สมชาย แล้วแปลงเป็นตัวพิมพ์เล็กเพื่อเทียบแบบไม่สนตัวพิมพ์ใหญ่เล็ก
   const q = (req.query.q || '').trim().toLowerCase();
   // ถ้าไม่มีคำค้นหา ให้ส่งพนักงานทั้งหมดกลับไปเลย
@@ -473,7 +449,7 @@ app.post('/api/employees', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'กรุณาระบุรหัสพนักงานและชื่อ-สกุล' });
   }
   // อ่านรายการพนักงานทั้งหมดที่มีอยู่แล้ว
-  const employees = readJSON(EMPLOYEES_FILE);
+  const employees = db.readEmployees();
   // ตรวจสอบว่ารหัสพนักงานนี้มีอยู่แล้วหรือไม่ (ห้ามซ้ำ เพราะใช้เป็นตัวระบุตัวตนหลัก)
   if (employees.some((e) => e.id === id)) {
     return res.status(400).json({ error: `รหัสพนักงาน ${id} มีอยู่แล้วในระบบ` });
@@ -483,7 +459,7 @@ app.post('/api/employees', requireAuth, (req, res) => {
   // เพิ่มพนักงานใหม่เข้าไปท้าย array
   employees.push(newEmployee);
   // บันทึกรายการพนักงานทั้งหมด (รวมของใหม่) กลับลงไฟล์
-  writeJSON(EMPLOYEES_FILE, employees);
+  db.writeEmployees(employees);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลพนักงานที่เพิ่งสร้าง
   res.status(201).json(newEmployee);
 });
@@ -491,7 +467,7 @@ app.post('/api/employees', requireAuth, (req, res) => {
 // เมื่อมีการเรียก PUT ที่ /api/employees/:id (แก้ไขข้อมูลพนักงานตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.put('/api/employees/:id', requireAuth, (req, res) => {
   // อ่านรายการพนักงานทั้งหมดจากไฟล์
-  const employees = readJSON(EMPLOYEES_FILE);
+  const employees = db.readEmployees();
   // หาตำแหน่งของพนักงานที่รหัสตรงกับที่ส่งมาใน URL
   const idx = employees.findIndex((e) => e.id === req.params.id);
   // ถ้าไม่เจอพนักงาน ให้ตอบกลับ 404
@@ -506,7 +482,7 @@ app.put('/api/employees/:id', requireAuth, (req, res) => {
     phone: phone ?? existing.phone,
   };
   // บันทึกรายการพนักงานทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
-  writeJSON(EMPLOYEES_FILE, employees);
+  db.writeEmployees(employees);
   // ตอบกลับข้อมูลพนักงานที่แก้ไขเสร็จแล้ว
   res.json(employees[idx]);
 });
@@ -514,7 +490,7 @@ app.put('/api/employees/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก DELETE ที่ /api/employees/:id (ลบพนักงานตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.delete('/api/employees/:id', requireAuth, (req, res) => {
   // อ่านรายการพนักงานทั้งหมดจากไฟล์
-  const employees = readJSON(EMPLOYEES_FILE);
+  const employees = db.readEmployees();
   // หาตำแหน่งของพนักงานที่ต้องการลบ
   const idx = employees.findIndex((e) => e.id === req.params.id);
   // ถ้าไม่เจอพนักงาน ให้ตอบกลับ 404
@@ -522,7 +498,7 @@ app.delete('/api/employees/:id', requireAuth, (req, res) => {
   // ลบพนักงานออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed)
   const removed = employees.splice(idx, 1);
   // บันทึกรายการพนักงานที่เหลือ (หลังลบ) กลับลงไฟล์
-  writeJSON(EMPLOYEES_FILE, employees);
+  db.writeEmployees(employees);
   // ตอบกลับข้อมูลพนักงานที่ถูกลบไป เพื่อยืนยันว่าลบคนไหน
   res.json(removed[0]);
 });
@@ -544,9 +520,9 @@ function enrichCustomerWithOrders(customer, orders) {
 // เมื่อมีการเรียก GET ที่ /api/customers (ขอรายการลูกค้าทั้งหมด รองรับค้นหาด้วย query string ?q=)
 app.get('/api/customers', requireAuth, (req, res) => {
   // อ่านข้อมูลลูกค้าทั้งหมดจากไฟล์
-  const customers = readJSON(CUSTOMERS_FILE);
+  const customers = db.readCustomers();
   // อ่านรายการคำสั่งซื้อทั้งหมด เพื่อใช้จับคู่หาประวัติการสั่งซื้อของแต่ละคน
-  const orders = readJSON(ORDERS_FILE);
+  const orders = db.readOrders();
   // ดึงคำค้นหาจาก query string เช่น /api/customers?q=สมชาย แล้วแปลงเป็นตัวพิมพ์เล็กเพื่อเทียบแบบไม่สนตัวพิมพ์ใหญ่เล็ก
   const q = (req.query.q || '').trim().toLowerCase();
   // กรองลูกค้าตามคำค้นหา (ถ้ามี) จากชื่อหรือเบอร์โทร ถ้าไม่มีคำค้นหาให้เอาทั้งหมด
@@ -568,21 +544,21 @@ app.post('/api/customers', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'กรุณาระบุชื่อ-สกุลและเบอร์โทร' });
   }
   // อ่านรายการลูกค้าทั้งหมดที่มีอยู่แล้ว
-  const customers = readJSON(CUSTOMERS_FILE);
+  const customers = db.readCustomers();
   // สร้าง object ลูกค้าใหม่ พร้อม id อัตโนมัติ
   const newCustomer = { id: genId('cus-'), name, phone, address: address || '' };
   // เพิ่มลูกค้าใหม่เข้าไปท้าย array
   customers.push(newCustomer);
   // บันทึกรายการลูกค้าทั้งหมด (รวมของใหม่) กลับลงไฟล์
-  writeJSON(CUSTOMERS_FILE, customers);
+  db.writeCustomers(customers);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลลูกค้าที่เพิ่งสร้าง (แนบประวัติการสั่งซื้อไปด้วย แม้จะยังว่างเปล่าก็ตาม)
-  res.status(201).json(enrichCustomerWithOrders(newCustomer, readJSON(ORDERS_FILE)));
+  res.status(201).json(enrichCustomerWithOrders(newCustomer, db.readOrders()));
 });
 
 // เมื่อมีการเรียก PUT ที่ /api/customers/:id (แก้ไขข้อมูลลูกค้าตามรหัส)
 app.put('/api/customers/:id', requireAuth, (req, res) => {
   // อ่านรายการลูกค้าทั้งหมดจากไฟล์
-  const customers = readJSON(CUSTOMERS_FILE);
+  const customers = db.readCustomers();
   // หาตำแหน่งของลูกค้าที่ id ตรงกับที่ส่งมาใน URL
   const idx = customers.findIndex((c) => c.id === req.params.id);
   // ถ้าไม่เจอลูกค้า ให้ตอบกลับ 404
@@ -598,15 +574,15 @@ app.put('/api/customers/:id', requireAuth, (req, res) => {
     address: address ?? existing.address,
   };
   // บันทึกรายการลูกค้าทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
-  writeJSON(CUSTOMERS_FILE, customers);
+  db.writeCustomers(customers);
   // ตอบกลับข้อมูลลูกค้าที่แก้ไขเสร็จแล้ว (แนบประวัติการสั่งซื้อล่าสุดไปด้วย)
-  res.json(enrichCustomerWithOrders(customers[idx], readJSON(ORDERS_FILE)));
+  res.json(enrichCustomerWithOrders(customers[idx], db.readOrders()));
 });
 
 // เมื่อมีการเรียก DELETE ที่ /api/customers/:id (ลบลูกค้าตามรหัส)
 app.delete('/api/customers/:id', requireAuth, (req, res) => {
   // อ่านรายการลูกค้าทั้งหมดจากไฟล์
-  const customers = readJSON(CUSTOMERS_FILE);
+  const customers = db.readCustomers();
   // หาตำแหน่งของลูกค้าที่ต้องการลบ
   const idx = customers.findIndex((c) => c.id === req.params.id);
   // ถ้าไม่เจอลูกค้า ให้ตอบกลับ 404
@@ -614,7 +590,7 @@ app.delete('/api/customers/:id', requireAuth, (req, res) => {
   // ลบลูกค้าออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed) — หมายเหตุ: ไม่ได้ลบคำสั่งซื้อเก่าของลูกค้าคนนี้ไปด้วย เพราะประวัติคำสั่งซื้อยังต้องเก็บไว้เป็นหลักฐาน
   const removed = customers.splice(idx, 1);
   // บันทึกรายการลูกค้าที่เหลือ (หลังลบ) กลับลงไฟล์
-  writeJSON(CUSTOMERS_FILE, customers);
+  db.writeCustomers(customers);
   // ตอบกลับข้อมูลลูกค้าที่ถูกลบไป เพื่อยืนยันว่าลบคนไหน
   res.json(removed[0]);
 });
@@ -625,7 +601,7 @@ app.delete('/api/customers/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/sales (ขอรายการขายทั้งหมด รองรับกรองตามวันที่ด้วย query string ?date=YYYY-MM-DD) — ข้อมูลยอดขายเป็นความลับทางธุรกิจ จึงต้องล็อกอินก่อน
 app.get('/api/sales', requireAuth, (req, res) => {
   // อ่านรายการขายทั้งหมดจากไฟล์
-  let sales = readJSON(SALES_FILE);
+  let sales = db.readSales();
   // ถ้ามีการระบุ query string "date" มา (เช่น ตอนดูสรุปยอดขายของวันที่เลือก)
   if (req.query.date) {
     // กรองเฉพาะรายการขายที่ "วันที่" ของ createdAt (ตัดเอาแค่ส่วน YYYY-MM-DD) ตรงกับวันที่ที่ระบุ
@@ -645,12 +621,12 @@ app.post('/api/sales', requireAuth, (req, res) => {
   }
 
   // ตรวจสอบว่ารหัสพนักงานที่ระบุมามีอยู่จริงในระบบหรือไม่
-  const employees = readJSON(EMPLOYEES_FILE);
+  const employees = db.readEmployees();
   const employee = employees.find((e) => e.id === employeeId);
   if (!employee) return res.status(400).json({ error: 'ไม่พบรหัสพนักงานนี้ในระบบ' });
 
   // อ่านรายการสินค้าทั้งหมด เพื่อใช้ตรวจสอบราคาจริงและจำนวนสต็อกคงเหลือ (ไม่เชื่อราคาที่ฝั่งหน้าเว็บส่งมาตรง ๆ)
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // ตัวแปรเก็บยอดรวมราคาสินค้าที่ขาย เริ่มต้นที่ 0
   let total = 0;
   // ตัวแปรเก็บรายการสินค้าที่ผ่านการตรวจสอบแล้ว (พร้อมชื่อ/ราคาที่ถูกต้องจากฐานข้อมูล)
@@ -691,10 +667,10 @@ app.post('/api/sales', requireAuth, (req, res) => {
     product.stock -= item.qty;
   }
   // บันทึกจำนวนสต็อกสินค้าที่อัปเดตแล้วกลับลงไฟล์ products.json
-  writeJSON(PRODUCTS_FILE, products);
+  db.writeProducts(products);
 
   // อ่านรายการขายทั้งหมดที่มีอยู่แล้ว เพื่อนำรายการขายใหม่ไปต่อท้าย
-  const sales = readJSON(SALES_FILE);
+  const sales = db.readSales();
   // สร้าง object รายการขายใหม่ พร้อมคำนวณเงินทอน (จำนวนที่รับมา ลบ ยอดที่ต้องชำระ)
   const newSale = {
     id: genId('s'),
@@ -709,7 +685,7 @@ app.post('/api/sales', requireAuth, (req, res) => {
   // เพิ่มรายการขายใหม่เข้าไปท้าย array
   sales.push(newSale);
   // บันทึกรายการขายทั้งหมด (รวมของใหม่) กลับลงไฟล์ sales.json
-  writeJSON(SALES_FILE, sales);
+  db.writeSales(sales);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลการขาย (รวมยอดชำระ+เงินทอน) ให้พนักงานเห็นผลทันที
   res.status(201).json(newSale);
 });
@@ -720,7 +696,7 @@ app.post('/api/sales', requireAuth, (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/categories (ขอรายการหมวดหมู่ทั้งหมด)
 app.get('/api/categories', (req, res) => {
   // อ่านข้อมูลหมวดหมู่ทั้งหมดจากไฟล์ แล้วส่งกลับไปเลย (มีจำนวนน้อย ไม่จำเป็นต้องกรอง/ค้นหา)
-  res.json(readJSON(CATEGORIES_FILE));
+  res.json(db.readCategories());
 });
 
 // เมื่อมีการเรียก POST ที่ /api/categories (เพิ่มหมวดหมู่ใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (GET ยังเปิดสาธารณะไว้ เพราะหน้าร้านค้าต้องใช้กรองสินค้า)
@@ -730,13 +706,13 @@ app.post('/api/categories', requireAuth, (req, res) => {
   // ตรวจสอบว่าต้องระบุชื่อหมวดหมู่ ถ้าไม่มีให้ตอบกลับ error 400
   if (!name) return res.status(400).json({ error: 'กรุณาระบุชื่อหมวดหมู่' });
   // อ่านรายการหมวดหมู่ทั้งหมดที่มีอยู่แล้ว
-  const categories = readJSON(CATEGORIES_FILE);
+  const categories = db.readCategories();
   // สร้าง object หมวดหมู่ใหม่ พร้อม id อัตโนมัติ
   const newCategory = { id: genId('cat-'), name };
   // เพิ่มหมวดหมู่ใหม่เข้าไปท้าย array
   categories.push(newCategory);
   // บันทึกรายการหมวดหมู่ทั้งหมด (รวมของใหม่) กลับลงไฟล์
-  writeJSON(CATEGORIES_FILE, categories);
+  db.writeCategories(categories);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลหมวดหมู่ที่เพิ่งสร้าง
   res.status(201).json(newCategory);
 });
@@ -744,7 +720,7 @@ app.post('/api/categories', requireAuth, (req, res) => {
 // เมื่อมีการเรียก PUT ที่ /api/categories/:id (แก้ไขชื่อหมวดหมู่ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.put('/api/categories/:id', requireAuth, (req, res) => {
   // อ่านรายการหมวดหมู่ทั้งหมดจากไฟล์
-  const categories = readJSON(CATEGORIES_FILE);
+  const categories = db.readCategories();
   // หาตำแหน่งของหมวดหมู่ที่ id ตรงกับที่ส่งมาใน URL
   const idx = categories.findIndex((c) => c.id === req.params.id);
   // ถ้าไม่เจอหมวดหมู่ ให้ตอบกลับ 404
@@ -752,7 +728,7 @@ app.put('/api/categories/:id', requireAuth, (req, res) => {
   // อัปเดตชื่อหมวดหมู่ ถ้าไม่ได้ส่งชื่อใหม่มาให้คงชื่อเดิมไว้
   categories[idx].name = req.body.name || categories[idx].name;
   // บันทึกรายการหมวดหมู่ทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
-  writeJSON(CATEGORIES_FILE, categories);
+  db.writeCategories(categories);
   // ตอบกลับข้อมูลหมวดหมู่ที่แก้ไขเสร็จแล้ว
   res.json(categories[idx]);
 });
@@ -760,7 +736,7 @@ app.put('/api/categories/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก DELETE ที่ /api/categories/:id (ลบหมวดหมู่ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.delete('/api/categories/:id', requireAuth, (req, res) => {
   // อ่านรายการหมวดหมู่ทั้งหมดจากไฟล์
-  const categories = readJSON(CATEGORIES_FILE);
+  const categories = db.readCategories();
   // หาตำแหน่งของหมวดหมู่ที่ต้องการลบ
   const idx = categories.findIndex((c) => c.id === req.params.id);
   // ถ้าไม่เจอหมวดหมู่ ให้ตอบกลับ 404
@@ -768,9 +744,9 @@ app.delete('/api/categories/:id', requireAuth, (req, res) => {
   // ลบหมวดหมู่ออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed)
   const removed = categories.splice(idx, 1);
   // บันทึกรายการหมวดหมู่ที่เหลือ (หลังลบ) กลับลงไฟล์
-  writeJSON(CATEGORIES_FILE, categories);
+  db.writeCategories(categories);
   // เคลียร์ categoryId ของสินค้าทุกชิ้นที่เคยผูกกับหมวดหมู่นี้ (ป้องกันสินค้าอ้างอิงหมวดหมู่ที่ถูกลบไปแล้ว)
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   let changed = false;
   products.forEach((p) => {
     if (p.categoryId === removed[0].id) {
@@ -779,7 +755,7 @@ app.delete('/api/categories/:id', requireAuth, (req, res) => {
     }
   });
   // บันทึกไฟล์สินค้าใหม่เฉพาะตอนที่มีการเปลี่ยนแปลงจริง (ประหยัดการเขียนไฟล์โดยไม่จำเป็น)
-  if (changed) writeJSON(PRODUCTS_FILE, products);
+  if (changed) db.writeProducts(products);
   // ตอบกลับข้อมูลหมวดหมู่ที่ถูกลบไป เพื่อยืนยันว่าลบตัวไหน
   res.json(removed[0]);
 });
@@ -807,9 +783,9 @@ function enrichFlashSale(sale, products) {
 // เมื่อมีการเรียก GET ที่ /api/flash-sales (ขอรายการ Flash Sale ทั้งหมด สำหรับหน้า admin จัดการ) — รวมรายการที่หมดเวลาไปแล้วด้วย จึงเปิดเฉพาะแอดมิน (หน้าร้านค้าใช้ /active แทน ซึ่งเปิดสาธารณะ)
 app.get('/api/flash-sales', requireAuth, (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
-  const flashSales = readJSON(FLASHSALES_FILE);
+  const flashSales = db.readFlashSales();
   // อ่านรายการสินค้าทั้งหมด เพื่อใช้แนบข้อมูลสินค้าประกอบแต่ละ Flash Sale
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // แนบข้อมูลสินค้า+สถานะ active ให้ทุกรายการ แล้วเรียงจากใหม่ไปเก่า
   const enriched = flashSales
     .map((sale) => enrichFlashSale(sale, products))
@@ -820,9 +796,9 @@ app.get('/api/flash-sales', requireAuth, (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/flash-sales/active (ขอเฉพาะ Flash Sale ที่ "กำลังลดราคาอยู่ตอนนี้" สำหรับโชว์หน้าร้านค้า)
 app.get('/api/flash-sales/active', (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
-  const flashSales = readJSON(FLASHSALES_FILE);
+  const flashSales = db.readFlashSales();
   // อ่านรายการสินค้าทั้งหมด เพื่อใช้แนบข้อมูลสินค้าประกอบแต่ละ Flash Sale
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   // กรองเฉพาะรายการที่กำลัง active อยู่จริง ๆ ตอนนี้ แล้วแนบข้อมูลสินค้าให้แต่ละรายการ
   const active = flashSales
     .filter((sale) => isFlashSaleActive(sale))
@@ -843,7 +819,7 @@ app.post('/api/flash-sales', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'เวลาเริ่มต้องอยู่ก่อนเวลาสิ้นสุด' });
   }
   // ตรวจสอบว่าสินค้าที่ระบุมามีอยู่จริงในระบบหรือไม่
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   const product = products.find((p) => p.id === productId);
   if (!product) return res.status(400).json({ error: 'ไม่พบสินค้านี้ในระบบ' });
   // ตรวจสอบว่าราคาลดต้องถูกกว่าราคาปกติจริง ๆ (ไม่งั้นจะไม่ใช่ "ลดราคา")
@@ -852,7 +828,7 @@ app.post('/api/flash-sales', requireAuth, (req, res) => {
   }
 
   // อ่านรายการ Flash Sale ทั้งหมดที่มีอยู่แล้ว เพื่อนำรายการใหม่ไปต่อท้าย
-  const flashSales = readJSON(FLASHSALES_FILE);
+  const flashSales = db.readFlashSales();
   // สร้าง object Flash Sale ใหม่
   const newSale = {
     id: genId('fs-'),
@@ -865,7 +841,7 @@ app.post('/api/flash-sales', requireAuth, (req, res) => {
   // เพิ่ม Flash Sale ใหม่เข้าไปท้าย array
   flashSales.push(newSale);
   // บันทึกรายการ Flash Sale ทั้งหมด (รวมของใหม่) กลับลงไฟล์
-  writeJSON(FLASHSALES_FILE, flashSales);
+  db.writeFlashSales(flashSales);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูล Flash Sale ที่เพิ่งสร้าง (แนบข้อมูลสินค้าไปด้วย)
   res.status(201).json(enrichFlashSale(newSale, products));
 });
@@ -873,7 +849,7 @@ app.post('/api/flash-sales', requireAuth, (req, res) => {
 // เมื่อมีการเรียก PUT ที่ /api/flash-sales/:id (แก้ไข Flash Sale ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.put('/api/flash-sales/:id', requireAuth, (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
-  const flashSales = readJSON(FLASHSALES_FILE);
+  const flashSales = db.readFlashSales();
   // หาตำแหน่งของ Flash Sale ที่ id ตรงกับที่ส่งมาใน URL
   const idx = flashSales.findIndex((s) => s.id === req.params.id);
   // ถ้าไม่เจอ ให้ตอบกลับ 404
@@ -895,7 +871,7 @@ app.put('/api/flash-sales/:id', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'เวลาเริ่มต้องอยู่ก่อนเวลาสิ้นสุด' });
   }
   // ตรวจสอบว่าสินค้าที่ระบุมามีอยู่จริง และราคาลดยังคงถูกกว่าราคาปกติ
-  const products = readJSON(PRODUCTS_FILE);
+  const products = db.readProducts();
   const product = products.find((p) => p.id === merged.productId);
   if (!product) return res.status(400).json({ error: 'ไม่พบสินค้านี้ในระบบ' });
   if (merged.salePrice <= 0 || merged.salePrice >= product.price) {
@@ -905,7 +881,7 @@ app.put('/api/flash-sales/:id', requireAuth, (req, res) => {
   // บันทึกข้อมูลที่ผ่านการตรวจสอบแล้วกลับเข้าไปในตำแหน่งเดิม
   flashSales[idx] = merged;
   // บันทึกรายการ Flash Sale ทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
-  writeJSON(FLASHSALES_FILE, flashSales);
+  db.writeFlashSales(flashSales);
   // ตอบกลับข้อมูล Flash Sale ที่แก้ไขเสร็จแล้ว (แนบข้อมูลสินค้าไปด้วย)
   res.json(enrichFlashSale(merged, products));
 });
@@ -913,7 +889,7 @@ app.put('/api/flash-sales/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก DELETE ที่ /api/flash-sales/:id (ยกเลิก/ลบ Flash Sale ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.delete('/api/flash-sales/:id', requireAuth, (req, res) => {
   // อ่านรายการ Flash Sale ทั้งหมดจากไฟล์
-  const flashSales = readJSON(FLASHSALES_FILE);
+  const flashSales = db.readFlashSales();
   // หาตำแหน่งของ Flash Sale ที่ต้องการลบ
   const idx = flashSales.findIndex((s) => s.id === req.params.id);
   // ถ้าไม่เจอ ให้ตอบกลับ 404
@@ -921,7 +897,7 @@ app.delete('/api/flash-sales/:id', requireAuth, (req, res) => {
   // ลบออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed)
   const removed = flashSales.splice(idx, 1);
   // บันทึกรายการ Flash Sale ที่เหลือ (หลังลบ) กลับลงไฟล์
-  writeJSON(FLASHSALES_FILE, flashSales);
+  db.writeFlashSales(flashSales);
   // ตอบกลับข้อมูล Flash Sale ที่ถูกลบไป เพื่อยืนยันว่าลบตัวไหน
   res.json(removed[0]);
 });

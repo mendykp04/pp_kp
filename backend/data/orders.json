@@ -60,5 +60,62 @@
     "paymentMethod": "cod",
     "status": "รอดำเนินการ",
     "createdAt": "2026-07-20T03:34:43.669Z"
+  },
+  {
+    "id": "omrsofdk5rzinz",
+    "customerName": "โอม",
+    "phone": "0929929061",
+    "address": "94 หมู่4 ตำบลหมากแข้ง อำเภอเมือง จังหวัดอุดรธานี 41000",
+    "items": [
+      {
+        "productId": "p6",
+        "name": "Old Skool Wave",
+        "price": 1599,
+        "size": 43,
+        "qty": 1
+      }
+    ],
+    "total": 1599,
+    "paymentMethod": "cod",
+    "status": "รอดำเนินการ",
+    "createdAt": "2026-07-20T03:40:14.309Z"
+  },
+  {
+    "id": "omrsohcu0oj0o6",
+    "customerName": "โอม",
+    "phone": "0929929061",
+    "address": "94 หมู่4 ตำบลหมากแข้ง อำเภอเมือง จังหวัดอุดรธานี 41000",
+    "items": [
+      {
+        "productId": "p1",
+        "name": "Air Zoom Runner",
+        "price": 3590,
+        "size": 44,
+        "qty": 1
+      }
+    ],
+    "total": 3590,
+    "paymentMethod": "cod",
+    "status": "รอดำเนินการ",
+    "createdAt": "2026-07-20T03:41:46.680Z"
+  },
+  {
+    "id": "omrsoi9evnuxfl",
+    "customerName": "โอม",
+    "phone": "0929929061",
+    "address": "หลังลุม",
+    "items": [
+      {
+        "productId": "p13",
+        "name": "Waffle Runner",
+        "price": 4190,
+        "size": 44,
+        "qty": 1
+      }
+    ],
+    "total": 4190,
+    "paymentMethod": "cod",
+    "status": "รอดำเนินการ",
+    "createdAt": "2026-07-20T03:42:28.903Z"
   }
 ]
