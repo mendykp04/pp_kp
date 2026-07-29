@@ -184,7 +184,6 @@ const writeFlashSales = db.transaction((flashSales) => {
 
 module.exports = {
   db,
-  DB_FILE,
   readCategories,
   writeCategories,
   readProducts,

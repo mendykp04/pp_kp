@@ -203,11 +203,6 @@ app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
-// เมื่อมีการเรียก GET ที่ /api/db-download (ดาวน์โหลดไฟล์ฐานข้อมูล SQLite ดิบทั้งไฟล์ ไปเปิดดูด้วยโปรแกรมเฉพาะทางอย่าง DB Browser for SQLite) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น เพราะไฟล์นี้มีข้อมูลลูกค้า/ออเดอร์ทั้งหมด
-app.get('/api/db-download', requireAuth, (req, res) => {
-  res.download(db.DB_FILE, 'sneakershop.db');
-});
-
 // ---------- Products API ----------
 // กลุ่ม API ที่เกี่ยวกับ "สินค้า" ทั้งหมด (ดู/เพิ่ม/แก้/ลบ)
 
