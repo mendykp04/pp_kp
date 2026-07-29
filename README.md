@@ -9,17 +9,10 @@ sneaker-shop/
 ├── backend/                 Express API server (Node.js)
 │   ├── server.js
 │   ├── db.js                ชั้นเชื่อมต่อฐานข้อมูล SQLite (อ่าน/เขียนทุกตาราง)
-│   ├── migrate.js            สคริปต์ย้ายข้อมูลเดิมจาก *.json เข้า SQLite (รันครั้งเดียว)
 │   ├── package.json
 │   ├── uploads/             รูปภาพสินค้าที่อัปโหลดจากหน้า admin
 │   └── data/
-│       ├── sneakershop.db   ฐานข้อมูล SQLite (สร้างอัตโนมัติ ไม่ commit ขึ้น git)
-│       ├── products.json    ไฟล์ข้อมูลตั้งต้น/สำรอง ใช้ตอนรัน migrate.js เท่านั้น
-│       ├── categories.json
-│       ├── flashsales.json
-│       ├── orders.json
-│       ├── employees.json
-│       └── sales.json
+│       └── sneakershop.db   ฐานข้อมูล SQLite (สร้างอัตโนมัติตอนรันเซิร์ฟเวอร์ครั้งแรก ไม่ commit ขึ้น git)
 ├── frontend/                หน้าบ้าน (ร้านค้า)
 │   ├── index.html           รายการสินค้า + Flash Sale + กรองหมวดหมู่
 │   ├── cart.html            ตะกร้า + สั่งซื้อ
@@ -39,11 +32,10 @@ sneaker-shop/
 ```bash
 cd sneaker-shop/backend
 npm install
-npm run migrate   # ครั้งแรกเท่านั้น: สร้างฐานข้อมูล SQLite จากข้อมูลตั้งต้นใน data/*.json
 npm start
 ```
 
-`npm run migrate` สร้างไฟล์ `backend/data/sneakershop.db` และนำเข้าข้อมูลจากไฟล์ `.json` เดิม รันซ้ำได้ปลอดภัย (แต่ละครั้งจะเขียนทับข้อมูลในฐานข้อมูลด้วยข้อมูลจากไฟล์ `.json` ล่าสุดเสมอ) หลังจากรันครั้งแรกแล้ว เซิร์ฟเวอร์จะอ่าน/เขียนข้อมูลทั้งหมดผ่าน `sneakershop.db` ไม่แตะไฟล์ `.json` อีกต่อไป
+รันครั้งแรกจะสร้างไฟล์ฐานข้อมูล `backend/data/sneakershop.db` แบบว่างเปล่าให้อัตโนมัติ (ไม่มีข้อมูลตัวอย่างมาให้) จากนั้นกรอกข้อมูลจริง (สินค้า, หมวดหมู่, พนักงาน ฯลฯ) ผ่านหน้า admin ได้เลย
 
 เปิดเบราว์เซอร์ไปที่:
 
