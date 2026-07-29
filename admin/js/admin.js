@@ -178,6 +178,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
       populatePosEmployeeSelect();
     }
     if (tab === 'report') loadReport(reportDateInput.value);
+    if (tab === 'database') loadDbTableList();
   });
 });
 
@@ -1066,6 +1067,84 @@ reportDateInput.addEventListener('change', () => loadReport(reportDateInput.valu
 // ผูก event ให้ปุ่ม "พิมพ์ใบสรุปยอดขาย" เรียกฟังก์ชันสั่งพิมพ์ของเบราว์เซอร์
 // เบราว์เซอร์จะเปิดหน้าต่างพิมพ์ โดยใช้กฎ CSS ใน @media print เพื่อซ่อนส่วนที่ไม่ต้องการ (เช่น แถบเมนู, ปุ่มต่าง ๆ)
 document.getElementById('printReportBtn').addEventListener('click', () => window.print());
+
+// ---------- Database Explorer ----------
+// แท็บดูตารางฐานข้อมูล SQLite ดิบ ๆ สไตล์ phpMyAdmin: ซ้ายเป็นรายชื่อตาราง (พร้อมจำนวนแถว) ขวาเป็นข้อมูลของตารางที่กำลังเลือกดูอยู่
+
+// ตัวแปรจำชื่อตารางที่กำลังเปิดดูอยู่ (ใช้ตอนกดรีเฟรชให้โหลดตารางเดิมซ้ำ)
+let dbExplorerCurrentTable = null;
+
+// ฟังก์ชัน async โหลดรายชื่อตารางทั้งหมด พร้อมจำนวนแถวของแต่ละตาราง มาแสดงเป็นเมนูทางซ้าย
+async function loadDbTableList() {
+  const listEl = document.getElementById('dbTableList');
+  try {
+    const res = await fetch(`${API_BASE}/db-explorer/tables`);
+    if (!res.ok) throw new Error('โหลดรายชื่อตารางไม่สำเร็จ');
+    const tables = await res.json();
+    // สร้างปุ่มสำหรับแต่ละตาราง กดแล้วโหลดข้อมูลของตารางนั้นมาแสดงทางขวา
+    listEl.innerHTML = tables
+      .map(
+        (t) => `<button type="button" data-table="${t.name}" class="${t.name === dbExplorerCurrentTable ? 'active' : ''}">${t.name} <small>(${t.rowCount})</small></button>`
+      )
+      .join('');
+    listEl.querySelectorAll('button[data-table]').forEach((btn) => {
+      btn.addEventListener('click', () => loadDbTableData(btn.dataset.table));
+    });
+    // ถ้ามีตารางที่กำลังเปิดดูอยู่แล้ว (เช่นตอนกดรีเฟรช) ให้โหลดข้อมูลตารางนั้นซ้ำไปด้วยเลย ไม่ต้องรอผู้ใช้กดใหม่
+    if (dbExplorerCurrentTable) loadDbTableData(dbExplorerCurrentTable);
+  } catch (err) {
+    listEl.innerHTML = '<p class="field-hint">โหลดรายชื่อตารางไม่สำเร็จ</p>';
+  }
+}
+
+// ฟังก์ชัน async โหลดข้อมูลดิบทุกแถวของตารางที่ระบุ มาแสดงเป็นตาราง HTML ทางฝั่งขวา
+async function loadDbTableData(tableName) {
+  dbExplorerCurrentTable = tableName;
+  // ไฮไลต์ปุ่มตารางที่กำลังเลือกอยู่ (เอา active ออกจากทุกปุ่มก่อน แล้วใส่เฉพาะปุ่มที่ตรงกับตารางนี้)
+  document.querySelectorAll('#dbTableList button').forEach((b) => {
+    b.classList.toggle('active', b.dataset.table === tableName);
+  });
+
+  const theadRow = document.getElementById('dbTableHead');
+  const tbody = document.getElementById('dbTableBody');
+  tbody.innerHTML = '<tr><td>กำลังโหลด...</td></tr>';
+
+  try {
+    const res = await fetch(`${API_BASE}/db-explorer/tables/${tableName}`);
+    if (!res.ok) throw new Error('โหลดข้อมูลตารางไม่สำเร็จ');
+    const rows = await res.json();
+
+    if (rows.length === 0) {
+      theadRow.innerHTML = '';
+      tbody.innerHTML = '<tr><td>ยังไม่มีข้อมูลในตารางนี้</td></tr>';
+      return;
+    }
+
+    // ใช้ key ของแถวแรกเป็นหัวคอลัมน์ (ทุกแถวในตารางเดียวกันมีโครงสร้าง column เหมือนกันอยู่แล้ว)
+    const columns = Object.keys(rows[0]);
+    theadRow.innerHTML = columns.map((c) => `<th>${c}</th>`).join('');
+    tbody.innerHTML = rows
+      .map(
+        (row) => `
+      <tr>${columns
+        .map((c) => {
+          // ฟิลด์ที่เป็น array/object (เช่น sizes, items) ให้แปลงเป็นข้อความ JSON สั้น ๆ ก่อนแสดง
+          const val = row[c];
+          const text = typeof val === 'object' && val !== null ? JSON.stringify(val) : val;
+          return `<td>${text ?? ''}</td>`;
+        })
+        .join('')}</tr>
+    `
+      )
+      .join('');
+  } catch (err) {
+    theadRow.innerHTML = '';
+    tbody.innerHTML = '<tr><td>โหลดข้อมูลไม่สำเร็จ</td></tr>';
+  }
+}
+
+// ผูก event ให้ปุ่ม "รีเฟรช" โหลดรายชื่อตาราง (และข้อมูลตารางที่เปิดอยู่) ใหม่อีกครั้ง
+document.getElementById('refreshDbBtn').addEventListener('click', loadDbTableList);
 
 // ---------- Categories (หมวดหมู่ราคาสินค้า) ----------
 // ส่วนจัดการหมวดหมู่สินค้า: โหลด/แสดง/เพิ่ม/แก้ไข/ลบ

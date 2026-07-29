@@ -192,6 +192,64 @@ body {
   overflow-x: auto;                  /* ถ้าตารางข้างในกว้างเกิน ให้เลื่อนแนวนอนแทนที่จะบีบอัด */
 }
 
+/* แท็บฐานข้อมูล: จัดรายชื่อตาราง (ซ้าย) กับข้อมูลของตารางที่เลือก (ขวา) ให้อยู่แถวเดียวกันแบบ phpMyAdmin */
+.db-explorer {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+/* กล่องรายชื่อตารางด้านซ้าย ความกว้างคงที่ ไม่ยืด/หดตามเนื้อหา */
+.db-table-list {
+  flex: 0 0 220px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* ปุ่มชื่อตารางแต่ละอัน */
+.db-table-list button {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.db-table-list button:hover {
+  background: var(--bg);
+}
+
+/* ตารางที่กำลังเลือกดูอยู่ ไฮไลต์ให้เห็นชัด */
+.db-table-list button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* กล่องข้อมูลด้านขวา กินพื้นที่ที่เหลือทั้งหมด */
+.db-table-data {
+  flex: 1;
+  min-width: 0;
+}
+
+/* จอเล็ก (มือถือ) ให้ซ้อนกันแนวตั้งแทน */
+@media (max-width: 700px) {
+  .db-explorer {
+    flex-direction: column;
+  }
+  .db-table-list {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
 /* ตัวตารางเอง */
 table {
   width: 100%;             /* กว้างเต็มพื้นที่กล่อง table-wrap */

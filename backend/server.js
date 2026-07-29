@@ -203,6 +203,37 @@ app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+// ---------- Database Explorer API ----------
+// API สำหรับแท็บ "ฐานข้อมูล" ในหน้า admin (ดูตารางฐานข้อมูลดิบทุกแถว/ทุกคอลัมน์แบบ phpMyAdmin เพื่อสาธิต/พรีเซนต์)
+
+// รายชื่อตารางทั้งหมดในฐานข้อมูล ผูกกับฟังก์ชัน db.readX() ที่มีอยู่แล้ว เพื่อกันเผลอเปิดตารางที่ไม่รู้จัก (ป้องกัน SQL injection ผ่านชื่อตาราง)
+const DB_EXPLORER_TABLES = {
+  products: db.readProducts,
+  categories: db.readCategories,
+  orders: db.readOrders,
+  customers: db.readCustomers,
+  employees: db.readEmployees,
+  sales: db.readSales,
+  flashsales: db.readFlashSales,
+};
+
+// เมื่อมีการเรียก GET ที่ /api/db-explorer/tables (ขอรายชื่อตารางทั้งหมด พร้อมจำนวนแถวของแต่ละตาราง) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.get('/api/db-explorer/tables', requireAuth, (req, res) => {
+  const tables = Object.keys(DB_EXPLORER_TABLES).map((name) => ({
+    name,
+    rowCount: DB_EXPLORER_TABLES[name]().length,
+  }));
+  res.json(tables);
+});
+
+// เมื่อมีการเรียก GET ที่ /api/db-explorer/tables/:name (ขอข้อมูลดิบทุกแถวของตารางที่ระบุ) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.get('/api/db-explorer/tables/:name', requireAuth, (req, res) => {
+  const readTable = DB_EXPLORER_TABLES[req.params.name];
+  // ถ้าชื่อตารางที่ขอมาไม่อยู่ในรายชื่อที่รู้จัก ให้ตอบกลับ 404 (กันไม่ให้เดาชื่อตารางมั่ว ๆ)
+  if (!readTable) return res.status(404).json({ error: 'ไม่พบตารางนี้' });
+  res.json(readTable());
+});
+
 // ---------- Products API ----------
 // กลุ่ม API ที่เกี่ยวกับ "สินค้า" ทั้งหมด (ดู/เพิ่ม/แก้/ลบ)
 

@@ -36,6 +36,8 @@
         <button class="nav-btn" data-tab="pos">🧮 ขายหน้าร้าน</button>
         <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" -->
         <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
+        <!-- ปุ่มสลับไปแท็บ "ฐานข้อมูล" หน้าดูตารางฐานข้อมูลดิบทั้งหมดแบบ phpMyAdmin (เลือกตาราง → ดูทุกแถว/ทุกคอลัมน์) -->
+        <button class="nav-btn" data-tab="database">🗄️ ฐานข้อมูล</button>
       </nav>
       <!-- ลิงก์กลับไปหน้าร้านค้าฝั่งลูกค้า -->
       <a href="/" class="back-link">← กลับหน้าร้านค้า</a>
@@ -323,6 +325,33 @@
           <div class="cart-summary">
             <div class="row"><span>จำนวนบิล</span><span id="reportBillCount">0</span></div>
             <div class="row total"><span>ยอดขายรวมทั้งวัน</span><span id="reportTotalRevenue">0 บาท</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Database Explorer -->
+      <!-- แท็บดูตารางฐานข้อมูล SQLite ดิบ ๆ สไตล์ phpMyAdmin: เลือกชื่อตารางทางซ้าย → โชว์ทุกแถวทุกคอลัมน์ทางขวา อ่านอย่างเดียว ไม่มีฟอร์มแก้ไข -->
+      <section id="tab-database" class="tab-panel">
+        <div class="panel-header">
+          <h1>🗄️ ฐานข้อมูล (SQLite)</h1>
+          <!-- กดรีเฟรชเพื่อดึงจำนวนแถวของทุกตารางใหม่ล่าสุด -->
+          <button class="btn" id="refreshDbBtn">🔄 รีเฟรช</button>
+        </div>
+        <div class="db-explorer">
+          <!-- รายชื่อตารางทั้งหมด พร้อมจำนวนแถว จะถูกเติมโดย admin.js กดชื่อตารางเพื่อโหลดข้อมูลมาโชว์ทางขวา -->
+          <div class="db-table-list" id="dbTableList">
+            <p class="field-hint">กำลังโหลดรายชื่อตาราง...</p>
+          </div>
+          <!-- ตารางแสดงข้อมูลดิบของตารางที่เลือกไว้ -->
+          <div class="table-wrap db-table-data">
+            <table>
+              <thead>
+                <tr id="dbTableHead"></tr>
+              </thead>
+              <tbody id="dbTableBody">
+                <tr><td>เลือกตารางทางซ้ายเพื่อดูข้อมูล</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
