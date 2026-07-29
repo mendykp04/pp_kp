@@ -36,8 +36,6 @@
         <button class="nav-btn" data-tab="pos">🧮 ขายหน้าร้าน</button>
         <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" -->
         <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
-        <!-- ปุ่มสลับไปแท็บ "ฐานข้อมูล" (โชว์ข้อมูลดิบทุกตารางแบบสด ๆ เอาไว้สาธิต/พรีเซนต์ว่าข้อมูลที่เพิ่มไปอยู่ในฐานข้อมูลจริง) -->
-        <button class="nav-btn" data-tab="database">🗄️ ฐานข้อมูล</button>
       </nav>
       <!-- ลิงก์กลับไปหน้าร้านค้าฝั่งลูกค้า -->
       <a href="/" class="back-link">← กลับหน้าร้านค้า</a>
@@ -327,19 +325,6 @@
             <div class="row total"><span>ยอดขายรวมทั้งวัน</span><span id="reportTotalRevenue">0 บาท</span></div>
           </div>
         </div>
-      </section>
-
-      <!-- Tab: Database Explorer -->
-      <!-- แท็บโชว์ข้อมูลดิบทุกตารางในฐานข้อมูล SQLite แบบสด ๆ ไม่มีฟอร์มแก้ไขใด ๆ (อ่านอย่างเดียว) ใช้เดโม/พรีเซนต์ว่าข้อมูลที่เพิ่มผ่านแท็บอื่นไปอยู่ตารางไหนจริง ๆ -->
-      <section id="tab-database" class="tab-panel">
-        <div class="panel-header">
-          <h1>🗄️ ฐานข้อมูล (SQLite)</h1>
-          <!-- กดรีเฟรชเพื่อดึงข้อมูลล่าสุดจากฐานข้อมูลอีกครั้ง (เช่น หลังเพิ่งเพิ่มข้อมูลที่แท็บอื่นแล้วอยากมาดูว่าเข้าฐานข้อมูลจริงหรือยัง) -->
-          <button class="btn" id="refreshDbExplorerBtn">🔄 รีเฟรชข้อมูล</button>
-        </div>
-        <p class="field-hint">ข้อมูลทั้งหมดด้านล่างดึงมาจากไฟล์ <code>backend/data/sneakershop.db</code> โดยตรง เพิ่ม/แก้ไขข้อมูลที่แท็บอื่น แล้วกดรีเฟรชที่นี่เพื่อดูว่าข้อมูลถูกบันทึกลงตารางไหนแล้วจริง</p>
-        <!-- แต่ละตารางในฐานข้อมูลจะถูกเติมเป็นกล่อง ๆ ต่อกันโดย admin.js -->
-        <div id="dbExplorerContainer"></div>
       </section>
     </main>
   </div>

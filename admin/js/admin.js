@@ -178,7 +178,6 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
       populatePosEmployeeSelect();
     }
     if (tab === 'report') loadReport(reportDateInput.value);
-    if (tab === 'database') loadDbExplorer();
   });
 });
 
@@ -1067,81 +1066,6 @@ reportDateInput.addEventListener('change', () => loadReport(reportDateInput.valu
 // ผูก event ให้ปุ่ม "พิมพ์ใบสรุปยอดขาย" เรียกฟังก์ชันสั่งพิมพ์ของเบราว์เซอร์
 // เบราว์เซอร์จะเปิดหน้าต่างพิมพ์ โดยใช้กฎ CSS ใน @media print เพื่อซ่อนส่วนที่ไม่ต้องการ (เช่น แถบเมนู, ปุ่มต่าง ๆ)
 document.getElementById('printReportBtn').addEventListener('click', () => window.print());
-
-// ---------- Database Explorer ----------
-// แท็บโชว์ข้อมูลดิบทุกตารางในฐานข้อมูล SQLite แบบอ่านอย่างเดียว ใช้เดโม/พรีเซนต์ว่าข้อมูลเข้าฐานข้อมูลจริง
-
-// ตั้งชื่อตารางเป็นภาษาไทยให้อ่านง่ายตอนแสดงผล เรียงตามลำดับที่อยากให้ขึ้นในหน้าจอ
-const DB_EXPLORER_TABLES = [
-  { key: 'products', label: '📦 products (สินค้า)' },
-  { key: 'categories', label: '🏷️ categories (หมวดหมู่)' },
-  { key: 'orders', label: '🧾 orders (คำสั่งซื้อ)' },
-  { key: 'customers', label: '🧑‍🤝‍🧑 customers (ลูกค้า)' },
-  { key: 'employees', label: '👤 employees (พนักงาน)' },
-  { key: 'sales', label: '🧮 sales (ยอดขายหน้าร้าน)' },
-  { key: 'flashsales', label: '⚡ flashsales' },
-];
-
-// ฟังก์ชัน async โหลดข้อมูลดิบทุกตารางจาก backend มาแสดงในแท็บฐานข้อมูล
-async function loadDbExplorer() {
-  const container = document.getElementById('dbExplorerContainer');
-  // แสดงข้อความ "กำลังโหลด" ไว้ก่อนระหว่างรอผล API
-  container.innerHTML = '<p>กำลังโหลดข้อมูลจากฐานข้อมูล...</p>';
-  try {
-    const res = await fetch(`${API_BASE}/db-explorer`);
-    if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
-    const data = await res.json();
-    // วนสร้างกล่องตารางทีละตาราง ตามลำดับที่กำหนดไว้ใน DB_EXPLORER_TABLES แล้วรวมเป็น HTML เดียว
-    container.innerHTML = DB_EXPLORER_TABLES.map((t) => renderDbTable(t.label, data[t.key] || [])).join('');
-  } catch (err) {
-    // ถ้าเรียก API ไม่สำเร็จ (เช่นหลุด session) ให้แจ้งเตือนแทนที่จะปล่อยหน้าค้าง
-    container.innerHTML = '<p>โหลดข้อมูลไม่สำเร็จ กรุณากดรีเฟรชอีกครั้ง</p>';
-  }
-}
-
-// ฟังก์ชันแปลง array ของ object 1 ตาราง ให้กลายเป็น HTML ตาราง (คอลัมน์ = key ของ object แรกในรายการ)
-function renderDbTable(label, rows) {
-  // ถ้าตารางนี้ยังไม่มีข้อมูลเลย ให้โชว์ข้อความว่างแทนตารางเปล่า
-  if (rows.length === 0) {
-    return `
-      <div class="table-wrap" style="margin-bottom:1.5rem;">
-        <h3>${label} <small>(0 แถว)</small></h3>
-        <p class="field-hint">ยังไม่มีข้อมูลในตารางนี้</p>
-      </div>
-    `;
-  }
-  // ใช้ key ของแถวแรกเป็นหัวตาราง (ทุกแถวในตารางเดียวกันมีโครงสร้าง column เหมือนกันอยู่แล้ว)
-  const columns = Object.keys(rows[0]);
-  return `
-    <div class="table-wrap" style="margin-bottom:1.5rem;">
-      <h3>${label} <small>(${rows.length} แถว)</small></h3>
-      <table>
-        <thead>
-          <tr>${columns.map((c) => `<th>${c}</th>`).join('')}</tr>
-        </thead>
-        <tbody>
-          ${rows
-            .map(
-              (row) => `
-            <tr>${columns
-              .map((c) => {
-                // ฟิลด์ที่เป็น array/object (เช่น sizes, items) ให้แปลงเป็นข้อความ JSON สั้น ๆ ก่อนแสดง
-                const val = row[c];
-                const text = typeof val === 'object' && val !== null ? JSON.stringify(val) : val;
-                return `<td>${text ?? ''}</td>`;
-              })
-              .join('')}</tr>
-          `
-            )
-            .join('')}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-// ผูก event ให้ปุ่ม "รีเฟรชข้อมูล" โหลดข้อมูลทุกตารางใหม่อีกครั้ง
-document.getElementById('refreshDbExplorerBtn').addEventListener('click', loadDbExplorer);
 
 // ---------- Categories (หมวดหมู่ราคาสินค้า) ----------
 // ส่วนจัดการหมวดหมู่สินค้า: โหลด/แสดง/เพิ่ม/แก้ไข/ลบ

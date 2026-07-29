@@ -147,7 +147,13 @@ const writeOrders = db.transaction((orders) => {
     INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, createdAt)
     VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @createdAt)
   `);
-  orders.forEach((o) => insert.run({ ...o, items: JSON.stringify(o.items || []) }));
+  orders.forEach((o) =>
+    insert.run({
+      ...o,
+      items: JSON.stringify(o.items || []),
+      paymentMethod: o.paymentMethod ?? 'cod',
+    })
+  );
 });
 
 // ---------- Sales ----------
