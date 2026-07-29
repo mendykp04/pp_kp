@@ -902,6 +902,23 @@ app.delete('/api/flash-sales/:id', requireAuth, (req, res) => {
   res.json(removed[0]);
 });
 
+// ---------- Database Explorer API ----------
+// API สำหรับหน้า admin แท็บ "ฐานข้อมูล" ใช้โชว์ข้อมูลดิบทุกตารางแบบสด ๆ (เช่น ตอนพรีเซนต์งาน ให้เห็นว่าเพิ่มข้อมูลแล้วไปอยู่ที่ตารางไหนจริง ๆ)
+
+// เมื่อมีการเรียก GET ที่ /api/db-explorer (ขอข้อมูลดิบทุกตารางในฐานข้อมูล) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.get('/api/db-explorer', requireAuth, (req, res) => {
+  // อ่านข้อมูลทุกตารางมาส่งกลับไปพร้อมกันครั้งเดียว ให้หน้า admin นำไปแสดงเป็นตาราง ๆ
+  res.json({
+    products: db.readProducts(),
+    categories: db.readCategories(),
+    orders: db.readOrders(),
+    customers: db.readCustomers(),
+    employees: db.readEmployees(),
+    sales: db.readSales(),
+    flashsales: db.readFlashSales(),
+  });
+});
+
 // Middleware ดักจับข้อผิดพลาดทั้งหมดในแอป (ต้องมี 4 พารามิเตอร์ Express ถึงจะรู้ว่าเป็น error handler)
 // ใช้ดักข้อผิดพลาดจาก multer เช่น ไฟล์ใหญ่เกินไป หรือไฟล์ไม่ใช่รูปภาพ แล้วตอบกลับเป็น JSON แทนหน้า error ปกติ
 app.use((err, req, res, next) => {
