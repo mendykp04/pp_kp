@@ -196,10 +196,11 @@ function renderProductTable() {
       (p) => `
     <tr>
       <td><img src="${p.image}" alt="${p.name}" /></td>
+      <td>${p.code || '-'}</td>
       <td>${p.name}</td>
       <td>${p.brand}</td>
       <td>${formatPrice(p.price)}</td>
-      <td>${p.stock}</td>
+      <td>${p.stock > 0 ? 'พร้อมขาย' : 'ขายแล้ว'}</td>
       <td>${p.sizes.join(', ')}</td>
       <td>
         <button class="btn-icon" data-action="edit" data-id="${p.id}">แก้ไข</button>
@@ -236,10 +237,10 @@ function openProductModal(product = null) {
   document.getElementById('productName').value = product?.name || '';
   // เติมค่าแบรนด์ลงในช่องกรอก
   document.getElementById('productBrand').value = product?.brand || '';
+  // เติมค่ารหัสรองเท้าลงในช่องกรอก (ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน)
+  document.getElementById('productCode').value = product?.code || '';
   // เติมค่าราคาลงในช่องกรอก (ใช้ ?? เพราะราคาอาจเป็น 0 ซึ่งถือเป็นค่าที่ถูกต้อง ไม่ใช่ค่าว่าง)
   document.getElementById('productPrice').value = product?.price ?? '';
-  // เติมค่าจำนวนสต็อกลงในช่องกรอก
-  document.getElementById('productStock').value = product?.stock ?? '';
   // เติมค่าไซส์ทั้งหมด โดยแปลง array ของไซส์ให้เป็นข้อความคั่นด้วยจุลภาค เช่น "40,41,42"
   document.getElementById('productSizes').value = product?.sizes?.join(',') || '';
   // เติมค่า path รูปภาพเดิมลงในช่องซ่อน (ถ้าเป็นการแก้ไขและมีรูปอยู่แล้ว)
@@ -254,6 +255,8 @@ function openProductModal(product = null) {
   }
   // เติมค่ารายละเอียดสินค้าลงในช่องกรอก
   document.getElementById('productDescription').value = product?.description || '';
+  // เติมค่าสภาพ/ตำหนิสินค้าลงในช่องกรอก
+  document.getElementById('productCondition').value = product?.condition || '';
   // เพิ่ม class "open" ให้กับ modal เพื่อแสดงหน้าต่างขึ้นมา
   productModal.classList.add('open');
 }
@@ -328,8 +331,9 @@ productForm.addEventListener('submit', async (e) => {
   const payload = {
     name: document.getElementById('productName').value.trim(),
     brand: document.getElementById('productBrand').value.trim(),
+    // รหัสรองเท้า ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (เช่น A1, A2)
+    code: document.getElementById('productCode').value.trim(),
     price: Number(document.getElementById('productPrice').value),
-    stock: Number(document.getElementById('productStock').value),
     // แปลงข้อความไซส์ (คั่นด้วยจุลภาค) เป็น array ของตัวเลข
     sizes: document
       .getElementById('productSizes')
@@ -338,6 +342,7 @@ productForm.addEventListener('submit', async (e) => {
       .filter((s) => !Number.isNaN(s)), // กรองเอาเฉพาะค่าที่แปลงเป็นตัวเลขได้จริง (ตัดค่าผิดพลาดทิ้ง)
     image: document.getElementById('productImage').value.trim(),
     description: document.getElementById('productDescription').value.trim(),
+    condition: document.getElementById('productCondition').value.trim(),
   };
 
   // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
@@ -800,7 +805,7 @@ function populatePosProductSelect() {
   const available = products.filter((p) => p.stock > 0);
   posProductSelect.innerHTML = available.length
     ? available
-        .map((p) => `<option value="${p.id}">${p.brand} ${p.name} (คงเหลือ ${p.stock})</option>`)
+        .map((p) => `<option value="${p.id}">[${p.code || '-'}] ${p.brand} ${p.name}</option>`)
         .join('')
     : '<option value="">-- ไม่มีสินค้าคงเหลือ --</option>';
   // เติมตัวเลือกไซส์ให้ตรงกับสินค้าตัวแรกที่ถูกเลือกไว้อัตโนมัติ

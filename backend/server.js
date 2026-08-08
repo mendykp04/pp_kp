@@ -259,25 +259,30 @@ app.get('/api/products/:id', (req, res) => {
 // เมื่อมีการเรียก POST ที่ /api/products (เพิ่มสินค้าใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (requireAuth)
 app.post('/api/products', requireAuth, (req, res) => {
   // ดึงข้อมูลฟิลด์ต่าง ๆ ออกจาก body ของ request ที่ส่งมา (ฝั่ง admin ส่งมาเป็น JSON)
-  const { name, brand, price, stock, sizes, image, description, categoryId } = req.body;
+  const { name, brand, code, price, sizes, image, description, condition, categoryId } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อสินค้าและราคา ถ้าไม่มีให้ตอบกลับ error 400 (ข้อมูลไม่ถูกต้อง)
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'กรุณาระบุชื่อสินค้าและราคา' });
   }
   // อ่านรายการสินค้าปัจจุบันทั้งหมดจากไฟล์ เพื่อนำมาต่อท้ายด้วยสินค้าใหม่
   const products = db.readProducts();
-  // สร้าง object สินค้าใหม่ โดยกำหนด id อัตโนมัติ และแปลงชนิดข้อมูลให้ถูกต้อง (ราคา/สต็อกเป็นตัวเลข)
+  // สร้าง object สินค้าใหม่ โดยกำหนด id อัตโนมัติ และแปลงชนิดข้อมูลให้ถูกต้อง (ราคาเป็นตัวเลข)
   const newProduct = {
     id: genId('p'),
     name,
     brand: brand || '',
+    // รหัสรองเท้า ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (สินค้าเป็นของมือสอง แต่ละคู่มีสภาพไม่เหมือนกัน)
+    code: code || '',
     price: Number(price),
     // categoryId คือหมวดหมู่ราคาที่ผูกไว้กับสินค้าชิ้นนี้ (เช่น "ราคาถูก") ถ้าไม่ระบุมาให้เป็นค่าว่าง
     categoryId: categoryId || '',
-    stock: Number(stock) || 0,
+    // สินค้าเป็นของมือสอง แต่ละรายการมีแค่ 1 คู่เสมอ (ไม่มีแนวคิด "จำนวนสต็อก" หลายชิ้นเหมือนสินค้าใหม่) — 1 = ยังไม่ถูกขาย, 0 = ขายไปแล้ว
+    stock: 1,
     sizes: Array.isArray(sizes) ? sizes : [],
     image: image || '',
     description: description || '',
+    // สภาพ/ตำหนิสินค้า แยกจากรายละเอียดสินค้าทั่วไป เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน
+    condition: condition || '',
   };
   // เพิ่มสินค้าใหม่เข้าไปท้าย array ของสินค้าทั้งหมด
   products.push(newProduct);
@@ -297,22 +302,24 @@ app.put('/api/products/:id', requireAuth, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'ไม่พบสินค้า' });
 
   // ดึงข้อมูลที่ส่งมาจาก body สำหรับใช้แก้ไข
-  const { name, brand, price, stock, sizes, image, description, categoryId } = req.body;
+  const { name, brand, code, price, sizes, image, description, condition, categoryId } = req.body;
   // เก็บข้อมูลสินค้าเดิมไว้ในตัวแปร existing เพื่อใช้เป็นค่า default ถ้าไม่ได้ส่งฟิลด์นั้นมาแก้ไข
   const existing = products[idx];
   // สร้าง object สินค้าใหม่ โดยรวมข้อมูลเดิม (...existing) กับข้อมูลใหม่ที่ส่งมา
   // ใช้ ?? (nullish coalescing) คือถ้าค่าที่ส่งมาเป็น undefined/null จะใช้ค่าเดิมแทน
+  // หมายเหตุ: ไม่รับค่า stock จากฟอร์มแก้ไขสินค้าอีกต่อไป (สินค้ามือสองมีแค่ 1 คู่เสมอ สถานะขายแล้ว/ยังไม่ขาย จะถูกอัปเดตจากขั้นตอนสั่งซื้อ/ขายหน้าร้านเท่านั้น) จึงคงค่าเดิมไว้เสมอ
   products[idx] = {
     ...existing,
     name: name ?? existing.name,
     brand: brand ?? existing.brand,
+    code: code ?? existing.code,
     price: price !== undefined ? Number(price) : existing.price,
     // ถ้าไม่ได้ส่ง categoryId มา ให้คงหมวดหมู่เดิมไว้ (categoryId ที่ส่งมาเป็นสตริงว่าง "" ถือว่าตั้งใจล้างหมวดหมู่ จึงต้องเช็ค undefined เท่านั้น)
     categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
-    stock: stock !== undefined ? Number(stock) : existing.stock,
     sizes: Array.isArray(sizes) ? sizes : existing.sizes,
     image: image ?? existing.image,
     description: description ?? existing.description,
+    condition: condition ?? existing.condition,
   };
   // บันทึกรายการสินค้าทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
   db.writeProducts(products);
@@ -371,6 +378,8 @@ app.post('/api/orders', (req, res) => {
   let total = 0;
   // ตัวแปรเก็บรายการสินค้าที่ผ่านการตรวจสอบแล้ว (พร้อมชื่อ/ราคาที่ถูกต้อง)
   const orderItems = [];
+  // ตัวแปรนับจำนวนที่ถูกจองไปแล้วในออเดอร์นี้ ต่อสินค้า 1 ชิ้น (กันกรณีลูกค้าใส่สินค้าเดิมซ้ำหลายแถวในตะกร้า)
+  const reservedQtyByProductId = {};
 
   // วนลูปตรวจสอบสินค้าทีละชิ้นที่ลูกค้าส่งมาในตะกร้า
   for (const item of items) {
@@ -382,6 +391,12 @@ app.post('/api/orders', (req, res) => {
     }
     // แปลงจำนวนที่สั่งซื้อเป็นตัวเลข ถ้าไม่มีค่าให้ default เป็น 1
     const qty = Number(item.qty) || 1;
+    // สินค้าเป็นของมือสอง แต่ละรายการมีแค่ 1 คู่เสมอ ไม่สามารถขายเกินจำนวนที่มีจริงได้ (stock = 0 คือถูกขายไปแล้ว/มีคนอื่นจองไปก่อน)
+    const alreadyReserved = reservedQtyByProductId[product.id] || 0;
+    if (alreadyReserved + qty > product.stock) {
+      return res.status(400).json({ error: `${product.name} คู่นี้ถูกสั่งซื้อไปแล้ว กรุณาเลือกคู่อื่น` });
+    }
+    reservedQtyByProductId[product.id] = alreadyReserved + qty;
 
     // ตั้งราคาเริ่มต้นเป็นราคาปกติของสินค้าไว้ก่อน
     let price = product.price;
@@ -408,6 +423,13 @@ app.post('/api/orders', (req, res) => {
       qty,
     });
   }
+
+  // ตัดสต็อกสินค้าที่ถูกสั่งซื้อออกจากฐานข้อมูลสินค้าจริง (กันไม่ให้ลูกค้าคนอื่นสั่งซื้อคู่เดียวกันซ้ำ)
+  Object.keys(reservedQtyByProductId).forEach((productId) => {
+    const product = products.find((p) => p.id === productId);
+    product.stock -= reservedQtyByProductId[productId];
+  });
+  db.writeProducts(products);
 
   // อ่านรายการคำสั่งซื้อทั้งหมดที่มีอยู่แล้ว เพื่อนำออเดอร์ใหม่ไปต่อท้าย
   const orders = db.readOrders();

@@ -37,8 +37,7 @@ function addToCart(product, size, qty = 1, options = {}) {
     (i) => i.productId === product.id && i.size === size && i.flashSaleId === (options.flashSaleId || null)
   );
   if (existing) {
-    // ถ้ามีอยู่แล้ว แค่บวกจำนวนเพิ่มเข้าไปในรายการเดิม (ไม่สร้างรายการซ้ำ)
-    existing.qty += qty;
+    // สินค้าเป็นของมือสอง แต่ละคู่มีแค่ 1 ชิ้นเสมอ ถ้ากดเพิ่มซ้ำ (คู่นี้อยู่ในตะกร้าอยู่แล้ว) ก็ไม่ต้องทำอะไรเพิ่ม ไม่บวกจำนวนขึ้น
   } else {
     // ถ้ายังไม่มี ให้เพิ่มเป็นรายการใหม่เข้าไปในตะกร้า พร้อมข้อมูลที่จำเป็นสำหรับแสดงผลภายหลัง
     cart.push({
@@ -66,23 +65,6 @@ function removeFromCart(productId, size, flashSaleId = null) {
   );
   // บันทึกตะกร้าที่ลบแล้วกลับลง localStorage
   saveCart(cart);
-}
-
-// ฟังก์ชันอัปเดตจำนวน (qty) ของสินค้าชิ้นหนึ่งในตะกร้า
-function updateCartQty(productId, size, qty, flashSaleId = null) {
-  // ดึงตะกร้าปัจจุบันออกมา
-  const cart = getCart();
-  // หารายการสินค้าที่ตรงกับ productId, size, และ flashSaleId ที่ระบุ
-  const item = cart.find(
-    (i) => i.productId === productId && i.size === size && i.flashSaleId === flashSaleId
-  );
-  // ถ้าเจอรายการนั้น
-  if (item) {
-    // ปรับจำนวนใหม่ โดยใช้ Math.max ป้องกันไม่ให้จำนวนต่ำกว่า 1
-    item.qty = Math.max(1, qty);
-    // บันทึกตะกร้ากลับลง localStorage
-    saveCart(cart);
-  }
 }
 
 // ฟังก์ชันคำนวณจำนวนสินค้ารวมทั้งหมดในตะกร้า (ใช้แสดงตัวเลขบนไอคอนตะกร้า)

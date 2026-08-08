@@ -138,11 +138,13 @@ function renderProducts() {
       <div class="info">
         <span class="brand">${p.brand}</span>
         <span class="name">${p.name}</span>
-        <span class="stock">คงเหลือ ${p.stock} คู่</span>
+        ${p.code ? `<span class="product-code">รหัส: ${p.code}</span>` : ''}
+        ${p.condition ? `<span class="product-condition">สภาพ: ${p.condition}</span>` : ''}
+        <span class="stock">${p.stock > 0 ? 'พร้อมขาย (มีคู่เดียว)' : 'ขายแล้ว'}</span>
         ${priceBlock}
         <button class="btn btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''} ${
         p.stock === 0 ? 'disabled' : ''
-      }>${p.stock === 0 ? 'สินค้าหมด' : 'เพิ่มลงตะกร้า'}</button>
+      }>${p.stock === 0 ? 'ขายแล้ว' : 'เพิ่มลงตะกร้า'}</button>
       </div>
     </div>
   `;

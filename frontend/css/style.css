@@ -307,6 +307,19 @@ img {
   color: var(--text-dim); /* สีจาง ไม่แย่งความสนใจจากชื่อ/ราคา */
 }
 
+/* รหัสรองเท้าบนการ์ด (เช่น "รหัส: A1") ใช้แยกแต่ละคู่ออกจากกันแม้เป็นรุ่นเดียวกัน */
+.product-card .product-code {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: monospace; /* ให้ดูเป็นรหัส/โค้ด อ่านง่ายไม่สับสนกับข้อความอื่น */
+}
+
+/* ข้อความสภาพ/ตำหนิสินค้า (สินค้ามือสอง) ให้เห็นชัดก่อนตัดสินใจซื้อ */
+.product-card .product-condition {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
 /* Flash Sale */
 /* หัวข้อโซน Flash Sale ให้เป็นสีเน้น (ส้ม) เพื่อดึงดูดความสนใจมากกว่าหัวข้อทั่วไป */
 .flash-sale-title {

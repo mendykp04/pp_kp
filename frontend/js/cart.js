@@ -99,15 +99,12 @@ function renderCart() {
         <div><strong>${item.brand} ${item.name}</strong> ${
         item.flashSaleId ? '<span class="flash-countdown">⚡ Flash Sale</span>' : ''
       }</div>
-        <div class="meta">ไซส์ ${item.size} · ${formatPrice(item.price)}</div>
+        <div class="meta">ไซส์ ${item.size} · สินค้ามือสอง มีเพียงคู่เดียว</div>
         <div class="qty-control">
-          <button data-action="dec" data-id="${item.productId}" data-size="${item.size}" data-flash="${flashAttr}">−</button>
-          <span>${item.qty}</span>
-          <button data-action="inc" data-id="${item.productId}" data-size="${item.size}" data-flash="${flashAttr}">+</button>
           <button class="remove-btn" data-action="remove" data-id="${item.productId}" data-size="${item.size}" data-flash="${flashAttr}">ลบ</button>
         </div>
       </div>
-      <div><strong>${formatPrice(item.price * item.qty)}</strong></div>
+      <div><strong>${formatPrice(item.price)}</strong></div>
     </div>
   `;
     })
@@ -140,16 +137,7 @@ function renderCart() {
       // ถ้าไม่เจอรายการนั้น (ไม่ควรเกิดขึ้น) ให้หยุดทำงาน
       if (!item) return;
 
-      // ถ้าปุ่มที่กดคือปุ่ม "+" ให้เพิ่มจำนวนสินค้าอีก 1 ชิ้น
-      if (action === 'inc') updateCartQty(id, numSize, item.qty + 1, flashSaleId);
-      // ถ้าปุ่มที่กดคือปุ่ม "-"
-      if (action === 'dec') {
-        // ถ้าจำนวนปัจจุบันเหลือ 1 ชิ้น การกดลบอีกคือการลบสินค้าออกจากตะกร้าไปเลย
-        if (item.qty <= 1) removeFromCart(id, numSize, flashSaleId);
-        // ถ้ามีมากกว่า 1 ชิ้น ให้ลดจำนวนลง 1
-        else updateCartQty(id, numSize, item.qty - 1, flashSaleId);
-      }
-      // ถ้าปุ่มที่กดคือปุ่ม "ลบ" ให้ลบสินค้ารายการนี้ออกจากตะกร้าทันที
+      // สินค้าเป็นของมือสอง แต่ละคู่มีแค่ 1 ชิ้นเสมอ จึงมีแค่ปุ่ม "ลบ" ให้เอาออกจากตะกร้าเท่านั้น (ไม่มีปุ่มเพิ่ม/ลดจำนวน)
       if (action === 'remove') removeFromCart(id, numSize, flashSaleId);
       // วาดหน้าตะกร้าใหม่ทั้งหมด เพื่อให้ตัวเลข/ยอดรวมอัปเดตตามการเปลี่ยนแปลงล่าสุด
       renderCart();

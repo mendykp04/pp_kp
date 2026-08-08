@@ -60,10 +60,11 @@
             <thead>
               <tr>
                 <th>รูป</th>
+                <th>รหัส</th>
                 <th>ชื่อสินค้า</th>
                 <th>แบรนด์</th>
                 <th>ราคา</th>
-                <th>สต็อก</th>
+                <th>สถานะ</th>
                 <th>ไซส์</th>
                 <th>จัดการ</th>
               </tr>
@@ -351,20 +352,18 @@
           <label for="productBrand">แบรนด์</label>
           <input type="text" id="productBrand" required />
         </div>
-        <!-- จัดราคาและสต็อกให้อยู่แถวเดียวกัน (ดู CSS .field-row) -->
-        <div class="field-row">
-          <div class="field">
-            <label for="productPrice">ราคา (บาท)</label>
-            <!-- type="number" + min="0" บังคับให้กรอกเฉพาะตัวเลขที่ไม่ติดลบ -->
-            <input type="number" id="productPrice" min="0" required />
-          </div>
-          <div class="field">
-            <label for="productStock">จำนวนสต็อก</label>
-            <input type="number" id="productStock" min="0" required />
-          </div>
+        <!-- รหัสรองเท้า: ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (เช่น รุ่นเดียวกันแต่คนละคู่ ใช้ A1, A2) เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน -->
+        <div class="field">
+          <label for="productCode">รหัสรองเท้า (เช่น A1, A2)</label>
+          <input type="text" id="productCode" required />
         </div>
         <div class="field">
-          <label for="productSizes">ไซส์ที่มี (คั่นด้วยจุลภาค เช่น 40,41,42)</label>
+          <label for="productPrice">ราคา (บาท)</label>
+          <!-- type="number" + min="0" บังคับให้กรอกเฉพาะตัวเลขที่ไม่ติดลบ -->
+          <input type="number" id="productPrice" min="0" required />
+        </div>
+        <div class="field">
+          <label for="productSizes">ไซส์ (คั่นด้วยจุลภาคถ้ามีมากกว่า 1 ไซส์ เช่น 40,41,42)</label>
           <input type="text" id="productSizes" required />
         </div>
         <div class="field">
@@ -379,6 +378,11 @@
         <div class="field">
           <label for="productDescription">รายละเอียดสินค้า</label>
           <input type="text" id="productDescription" />
+        </div>
+        <!-- สภาพ/ตำหนิสินค้า: แยกจากรายละเอียดสินค้าด้านบน เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน ต้องระบุให้ลูกค้าเห็นชัดก่อนตัดสินใจซื้อ -->
+        <div class="field">
+          <label for="productCondition">สภาพ/ตำหนิสินค้า (ถ้ามี)</label>
+          <input type="text" id="productCondition" placeholder="เช่น มีรอยขีดข่วนเล็กน้อยที่ส้นรองเท้าด้านขวา" />
         </div>
         <!-- ปุ่ม submit ฟอร์ม -->
         <button type="submit" class="btn btn-block">บันทึกสินค้า</button>

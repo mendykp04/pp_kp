@@ -16,12 +16,14 @@ db.exec(`
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     brand TEXT,
+    code TEXT,
     price REAL NOT NULL,
     categoryId TEXT,
     stock INTEGER NOT NULL DEFAULT 0,
     sizes TEXT,
     image TEXT,
-    description TEXT
+    description TEXT,
+    condition TEXT
   );
   CREATE TABLE IF NOT EXISTS employees (
     id TEXT PRIMARY KEY,
@@ -68,6 +70,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sales_createdAt ON sales(createdAt);
 `);
 
+// Migration: เติมคอลัมน์ code/condition ให้ตาราง products ที่มีอยู่แล้วจากก่อนหน้านี้ (CREATE TABLE IF NOT EXISTS ด้านบนใช้ไม่ได้กับตารางที่มีอยู่แล้ว)
+// ครอบด้วย try/catch เพราะ ALTER TABLE ... ADD COLUMN จะ error ถ้าคอลัมน์นั้นมีอยู่แล้ว (รันซ้ำได้อย่างปลอดภัย)
+const existingProductColumns = db.prepare('PRAGMA table_info(products)').all().map((c) => c.name);
+if (!existingProductColumns.includes('code')) {
+  db.exec('ALTER TABLE products ADD COLUMN code TEXT');
+}
+if (!existingProductColumns.includes('condition')) {
+  db.exec('ALTER TABLE products ADD COLUMN condition TEXT');
+}
+
 // ฟิลด์ sizes/items เก็บเป็น JSON text ในคอลัมน์เดียว (โครงสร้างเดิมเป็น array ซ้อนอยู่แล้ว)
 // ฟังก์ชันเหล่านี้แปลงกลับเป็น array/object ตอนอ่านออกมาใช้งาน
 function rowToProduct(row) {
@@ -87,16 +99,18 @@ function readProducts() {
 const writeProducts = db.transaction((products) => {
   db.prepare('DELETE FROM products').run();
   const insert = db.prepare(`
-    INSERT INTO products (id, name, brand, price, categoryId, stock, sizes, image, description)
-    VALUES (@id, @name, @brand, @price, @categoryId, @stock, @sizes, @image, @description)
+    INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, description, condition)
+    VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @description, @condition)
   `);
   products.forEach((p) =>
     insert.run({
       ...p,
       brand: p.brand ?? '',
+      code: p.code ?? '',
       categoryId: p.categoryId ?? '',
       image: p.image ?? '',
       description: p.description ?? '',
+      condition: p.condition ?? '',
       sizes: JSON.stringify(p.sizes || []),
     })
   );
