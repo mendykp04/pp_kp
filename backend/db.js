@@ -47,16 +47,6 @@ db.exec(`
     status TEXT,
     createdAt TEXT
   );
-  CREATE TABLE IF NOT EXISTS sales (
-    id TEXT PRIMARY KEY,
-    employeeId TEXT,
-    employeeName TEXT,
-    items TEXT,
-    total REAL,
-    amountReceived REAL,
-    change REAL,
-    createdAt TEXT
-  );
   CREATE TABLE IF NOT EXISTS flashsales (
     id TEXT PRIMARY KEY,
     productId TEXT,
@@ -67,7 +57,6 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(phone);
   CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-  CREATE INDEX IF NOT EXISTS idx_sales_createdAt ON sales(createdAt);
 `);
 
 // Migration: เติมคอลัมน์ code/condition ให้ตาราง products ที่มีอยู่แล้วจากก่อนหน้านี้ (CREATE TABLE IF NOT EXISTS ด้านบนใช้ไม่ได้กับตารางที่มีอยู่แล้ว)
@@ -86,9 +75,6 @@ function rowToProduct(row) {
   return { ...row, sizes: row.sizes ? JSON.parse(row.sizes) : [] };
 }
 function rowToOrder(row) {
-  return { ...row, items: row.items ? JSON.parse(row.items) : [] };
-}
-function rowToSale(row) {
   return { ...row, items: row.items ? JSON.parse(row.items) : [] };
 }
 
@@ -155,19 +141,6 @@ const writeOrders = db.transaction((orders) => {
   );
 });
 
-// ---------- Sales ----------
-function readSales() {
-  return db.prepare('SELECT * FROM sales').all().map(rowToSale);
-}
-const writeSales = db.transaction((sales) => {
-  db.prepare('DELETE FROM sales').run();
-  const insert = db.prepare(`
-    INSERT INTO sales (id, employeeId, employeeName, items, total, amountReceived, change, createdAt)
-    VALUES (@id, @employeeId, @employeeName, @items, @total, @amountReceived, @change, @createdAt)
-  `);
-  sales.forEach((s) => insert.run({ ...s, items: JSON.stringify(s.items || []) }));
-});
-
 // ---------- Flash Sales ----------
 function readFlashSales() {
   return db.prepare('SELECT * FROM flashsales').all();
@@ -191,8 +164,6 @@ module.exports = {
   writeCustomers,
   readOrders,
   writeOrders,
-  readSales,
-  writeSales,
   readFlashSales,
   writeFlashSales,
 };

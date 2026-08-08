@@ -192,64 +192,6 @@ body {
   overflow-x: auto;                  /* ถ้าตารางข้างในกว้างเกิน ให้เลื่อนแนวนอนแทนที่จะบีบอัด */
 }
 
-/* แท็บฐานข้อมูล: จัดรายชื่อตาราง (ซ้าย) กับข้อมูลของตารางที่เลือก (ขวา) ให้อยู่แถวเดียวกันแบบ phpMyAdmin */
-.db-explorer {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-/* กล่องรายชื่อตารางด้านซ้าย ความกว้างคงที่ ไม่ยืด/หดตามเนื้อหา */
-.db-table-list {
-  flex: 0 0 220px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-/* ปุ่มชื่อตารางแต่ละอัน */
-.db-table-list button {
-  text-align: left;
-  padding: 0.5rem 0.75rem;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-
-.db-table-list button:hover {
-  background: var(--bg);
-}
-
-/* ตารางที่กำลังเลือกดูอยู่ ไฮไลต์ให้เห็นชัด */
-.db-table-list button.active {
-  background: var(--accent);
-  color: #fff;
-}
-
-/* กล่องข้อมูลด้านขวา กินพื้นที่ที่เหลือทั้งหมด */
-.db-table-data {
-  flex: 1;
-  min-width: 0;
-}
-
-/* จอเล็ก (มือถือ) ให้ซ้อนกันแนวตั้งแทน */
-@media (max-width: 700px) {
-  .db-explorer {
-    flex-direction: column;
-  }
-  .db-table-list {
-    flex: 1 1 auto;
-    width: 100%;
-  }
-}
-
 /* ตัวตารางเอง */
 table {
   width: 100%;             /* กว้างเต็มพื้นที่กล่อง table-wrap */
@@ -419,28 +361,6 @@ td img {
 .filters input[type="text"] {
   flex: 1;          /* ขยายเต็มพื้นที่ที่เหลือ */
   min-width: 220px;  /* ความกว้างขั้นต่ำ ป้องกันแคบเกินไปบนจอเล็ก */
-}
-
-/* แถวเลือกสินค้า+ไซส์+จำนวน ในหน้าขายหน้าร้าน (POS) จัดให้อยู่แถวเดียวกันบนจอกว้าง */
-.pos-add-row {
-  display: flex;              /* จัดแต่ละช่องให้อยู่แถวเดียวกัน */
-  gap: 12px;                    /* ระยะห่างระหว่างแต่ละช่อง */
-  align-items: flex-end;       /* จัดให้ชิดเส้นล่างเดียวกัน (เพราะ label สูงไม่เท่ากับปุ่ม) */
-  flex-wrap: wrap;             /* ถ้าจอแคบเกินไป ให้ขึ้นบรรทัดใหม่ */
-  margin-bottom: 20px;         /* ระยะห่างด้านล่างก่อนตารางรายการขาย */
-}
-
-/* ให้ช่องเลือกสินค้า/ไซส์ขยายพื้นที่มากกว่าช่องจำนวน */
-.pos-add-row .field {
-  flex: 2;             /* ขยายพื้นที่มากกว่าปกติ */
-  min-width: 160px;    /* ความกว้างขั้นต่ำ */
-  margin-bottom: 0;    /* ยกเลิกระยะห่างด้านล่างเดิมของ .field เพราะจัดเรียงแนวนอนแล้ว */
-}
-
-/* ช่องกรอกจำนวนให้แคบกว่าช่องอื่น เพราะเป็นแค่ตัวเลขหลักเดียว/สองหลัก */
-.pos-qty-field {
-  flex: 0 0 90px !important; /* ความกว้างคงที่ 90px ไม่ขยาย/ไม่หด (!important ทับ flex: 2 ของ .pos-add-row .field ด้านบน) */
-  min-width: 90px !important;
 }
 
 /* หัวกระดาษที่แสดงเฉพาะตอนพิมพ์ใบสรุปยอดขาย (ชื่อร้าน + วันที่) */

@@ -32,8 +32,6 @@ let orders = [];
 let employees = [];
 // ตัวแปรเก็บรายการลูกค้าทั้งหมด (หรือผลลัพธ์ที่กรองแล้วจากการค้นหา) ที่โหลดมาจาก API
 let customers = [];
-// ตัวแปรเก็บรายการสินค้าที่กำลังจะขายในรอบปัจจุบันของหน้า "ขายหน้าร้าน" (ยังไม่บันทึกจนกว่าจะกดปุ่มบันทึก)
-let posCart = [];
 // ตัวแปรเก็บรายการ Flash Sale ทั้งหมดที่โหลดมาจาก API
 let flashSales = [];
 
@@ -69,27 +67,6 @@ const customerModal = document.getElementById('customerModal');
 const customerForm = document.getElementById('customerForm');
 // อ้างอิง element หัวข้อของ modal ลูกค้า (เปลี่ยนข้อความระหว่าง "เพิ่ม" กับ "แก้ไข")
 const customerModalTitle = document.getElementById('customerModalTitle');
-
-// อ้างอิง element ดรอปดาวน์เลือกพนักงานผู้ขาย ในหน้า "ขายหน้าร้าน"
-const posEmployeeSelect = document.getElementById('posEmployeeSelect');
-// อ้างอิง element ดรอปดาวน์เลือกรองเท้าที่จะขาย
-const posProductSelect = document.getElementById('posProductSelect');
-// อ้างอิง element ดรอปดาวน์เลือกไซส์ของรองเท้าที่เลือกไว้
-const posSizeSelect = document.getElementById('posSizeSelect');
-// อ้างอิง element ช่องกรอกจำนวนที่จะขาย
-const posQtyInput = document.getElementById('posQtyInput');
-// อ้างอิง element ปุ่ม "+ เพิ่มรายการ" เพื่อใส่รองเท้าที่เลือกไว้ลงตะกร้าขาย
-const posAddItemBtn = document.getElementById('posAddItemBtn');
-// อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการที่อยู่ในตะกร้าขายรอบนี้
-const posCartBody = document.getElementById('posCartBody');
-// อ้างอิง element ที่แสดงยอดชำระรวมทั้งหมด
-const posTotal = document.getElementById('posTotal');
-// อ้างอิง element ช่องกรอกจำนวนเงินที่ได้รับจากลูกค้า
-const posAmountReceived = document.getElementById('posAmountReceived');
-// อ้างอิง element ที่แสดงเงินทอน (คำนวณอัตโนมัติ)
-const posChange = document.getElementById('posChange');
-// อ้างอิง element ปุ่ม "บันทึกการชำระเงิน"
-const posSaveBtn = document.getElementById('posSaveBtn');
 
 // อ้างอิง element ช่องเลือกวันที่ในหน้ารายงานสรุปยอดขาย
 const reportDateInput = document.getElementById('reportDateInput');
@@ -147,7 +124,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
     document.getElementById(`tab-${tab}`).classList.add('active');
 
     // โหลดข้อมูลของแท็บนั้น ๆ ใหม่ทุกครั้งที่สลับเข้ามา เพื่อให้เห็นข้อมูลล่าสุดเสมอ
-    // (เช่น สต็อกสินค้าหลังขายของใน POS, พนักงานที่เพิ่งเพิ่ม/แก้ไข)
+    // (เช่น พนักงานที่เพิ่งเพิ่ม/แก้ไข, ยอดขายที่เพิ่งเปลี่ยนจากคำสั่งซื้อใหม่/ที่ถูกลบ)
     if (tab === 'products') loadProducts();
     if (tab === 'flashsales') {
       // ตารางแสดงชื่อสินค้าของแต่ละ Flash Sale จึงต้องรอให้สินค้าโหลดเสร็จก่อนด้วย
@@ -157,15 +134,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
     if (tab === 'orders') loadOrders();
     if (tab === 'customers') loadCustomers(customerSearchInput.value.trim());
     if (tab === 'employees') loadEmployees(employeeSearchInput.value.trim());
-    if (tab === 'pos') {
-      // ต้องรอให้สินค้าและพนักงานโหลดเสร็จก่อน ถึงจะเติมตัวเลือกในดรอปดาวน์ได้ถูกต้อง
-      await loadProducts();
-      await loadEmployees();
-      populatePosProductSelect();
-      populatePosEmployeeSelect();
-    }
     if (tab === 'report') loadReport(reportDateInput.value);
-    if (tab === 'database') loadDbTableList();
   });
 });
 
@@ -417,8 +386,8 @@ function formatPaymentMethod(method) {
 function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
-    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 8 คอลัมน์)
-    orderTableBody.innerHTML = '<tr><td colspan="8">ยังไม่มีคำสั่งซื้อ</td></tr>';
+    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 9 คอลัมน์)
+    orderTableBody.innerHTML = '<tr><td colspan="9">ยังไม่มีคำสั่งซื้อ</td></tr>';
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
@@ -446,10 +415,19 @@ function renderOrderTable() {
         <select class="order-status-select" data-id="${o.id}">${optionsHTML}</select>
       </td>
       <td>${new Date(o.createdAt).toLocaleString('th-TH')}</td>
+      <td>
+        <!-- ลบคำสั่งซื้อ: ลบแล้วยอดขายในสรุปยอดขายประจำวันของวันนั้นจะหายไปตามด้วย เพราะสรุปยอดขายคำนวณจากคำสั่งซื้อโดยตรง ไม่ได้เก็บแยกไว้ต่างหาก -->
+        <button class="btn-icon danger" data-action="delete" data-id="${o.id}">ลบ</button>
+      </td>
     </tr>
   `;
     })
     .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
+
+  // ผูก event ให้ปุ่ม "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
+  orderTableBody.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteOrder(btn.dataset.id));
+  });
 
   // ผูก event ให้ทุกดรอปดาวน์สถานะที่เพิ่งวาดใหม่ เมื่อเปลี่ยนตัวเลือกให้ยิง API อัปเดตสถานะทันที
   orderTableBody.querySelectorAll('.order-status-select').forEach((select) => {
@@ -479,6 +457,28 @@ function renderOrderTable() {
       }
     });
   });
+}
+
+// ฟังก์ชัน async สำหรับลบคำสั่งซื้อ รับพารามิเตอร์เป็นรหัสออเดอร์ที่ต้องการลบ
+// หมายเหตุ: สรุปยอดขายประจำวัน (แท็บ "สรุปยอดขาย") คำนวณสดจากคำสั่งซื้อโดยตรง ไม่ได้เก็บยอดขายแยกไว้ต่างหาก
+// ดังนั้นพอลบคำสั่งซื้อสำเร็จ ยอดขายของวันนั้นจะลดลงตามราคาคำสั่งซื้อที่หายไปโดยอัตโนมัติ ไม่ต้องอัปเดตอะไรเพิ่ม
+async function deleteOrder(orderId) {
+  // แสดงกล่องยืนยันก่อนลบจริง เพราะลบแล้วกู้คืนไม่ได้ และกระทบยอดขายในสรุปยอดขายประจำวันด้วย
+  if (!confirm('ต้องการลบคำสั่งซื้อนี้ใช่หรือไม่?\nยอดขายในสรุปยอดขายประจำวันของวันนี้จะลดลงตามราคาคำสั่งซื้อนี้ด้วย')) return;
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
+  try {
+    // ยิง HTTP DELETE ไปที่ /api/orders/<id>
+    const res = await fetch(`${API_BASE}/orders/${orderId}`, { method: 'DELETE' });
+    // ถ้า response ไม่สำเร็จ ให้โยน error
+    if (!res.ok) throw new Error('delete failed');
+    // แจ้งเตือนว่าลบสำเร็จ
+    showToast('ลบคำสั่งซื้อเรียบร้อย');
+    // โหลดรายการคำสั่งซื้อใหม่ทั้งหมด เพื่อให้ตารางไม่แสดงรายการที่ถูกลบไปแล้ว
+    loadOrders();
+  } catch (err) {
+    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }
 }
 
 // ---------- Customers ----------
@@ -788,202 +788,6 @@ employeeSearchInput.addEventListener('input', () => {
   loadEmployees(employeeSearchInput.value.trim());
 });
 
-// ---------- POS (ขายหน้าร้าน / รับชำระเงิน) ----------
-// ส่วนสำหรับพนักงาน: เลือกรองเท้าที่จะขาย คำนวณยอดชำระ+เงินทอน แล้วบันทึกรายการขายจริง
-
-// ฟังก์ชันเติมตัวเลือกพนักงานทั้งหมดลงในดรอปดาวน์ "พนักงานผู้ขาย"
-function populatePosEmployeeSelect() {
-  // ถ้าไม่มีพนักงานในระบบเลย ให้แสดงข้อความเตือนแทนตัวเลือก
-  posEmployeeSelect.innerHTML = employees.length
-    ? employees.map((e) => `<option value="${e.id}">${e.id} - ${e.name}</option>`).join('')
-    : '<option value="">-- ยังไม่มีพนักงานในระบบ --</option>';
-}
-
-// ฟังก์ชันเติมตัวเลือกสินค้าลงในดรอปดาวน์ "รองเท้า" (แสดงเฉพาะสินค้าที่ยังมีสต็อกเหลือ)
-function populatePosProductSelect() {
-  // กรองเอาเฉพาะสินค้าที่สต็อกมากกว่า 0 เพราะสินค้าหมดแล้วไม่ควรเลือกมาขายซ้ำ
-  const available = products.filter((p) => p.stock > 0);
-  posProductSelect.innerHTML = available.length
-    ? available
-        .map((p) => `<option value="${p.id}">[${p.code || '-'}] ${p.brand} ${p.name}</option>`)
-        .join('')
-    : '<option value="">-- ไม่มีสินค้าคงเหลือ --</option>';
-  // เติมตัวเลือกไซส์ให้ตรงกับสินค้าตัวแรกที่ถูกเลือกไว้อัตโนมัติ
-  populatePosSizeSelect();
-}
-
-// ฟังก์ชันเติมตัวเลือกไซส์ลงในดรอปดาวน์ "ไซส์" ตามสินค้าที่กำลังถูกเลือกอยู่ในดรอปดาวน์ "รองเท้า"
-function populatePosSizeSelect() {
-  // หาข้อมูลสินค้าที่ตรงกับตัวเลือกปัจจุบันของดรอปดาวน์สินค้า
-  const product = products.find((p) => p.id === posProductSelect.value);
-  // ถ้าเจอสินค้า ให้เติมไซส์ทั้งหมดของสินค้านั้น ถ้าไม่เจอ (เช่นไม่มีสินค้าเหลือเลย) ให้เว้นว่างไว้
-  posSizeSelect.innerHTML = product
-    ? product.sizes.map((s) => `<option value="${s}">${s}</option>`).join('')
-    : '';
-}
-
-// เมื่อผู้ใช้เปลี่ยนสินค้าที่เลือกในดรอปดาวน์ "รองเท้า" ให้เติมไซส์ใหม่ให้ตรงกับสินค้าตัวนั้น
-posProductSelect.addEventListener('change', populatePosSizeSelect);
-
-// ผูก event ให้ปุ่ม "+ เพิ่มรายการ" นำสินค้า+ไซส์+จำนวนที่เลือกไว้ ใส่ลงในตะกร้าขายรอบนี้
-posAddItemBtn.addEventListener('click', () => {
-  // หาข้อมูลสินค้าที่กำลังถูกเลือกอยู่
-  const product = products.find((p) => p.id === posProductSelect.value);
-  // ถ้าไม่มีสินค้าให้เลือก (เช่นสต็อกหมดทั้งร้าน) ให้แจ้งเตือนแล้วหยุด
-  if (!product) {
-    showToast('กรุณาเลือกรองเท้าก่อน');
-    return;
-  }
-  // แปลงไซส์ที่เลือกเป็นตัวเลข
-  const size = Number(posSizeSelect.value);
-  // แปลงจำนวนที่กรอกเป็นตัวเลข ถ้ากรอกไม่ถูกต้องให้ default เป็น 1
-  const qty = Number(posQtyInput.value) || 1;
-  // ป้องกันการกรอกจำนวนที่น้อยกว่า 1
-  if (qty < 1) {
-    showToast('กรุณาระบุจำนวนอย่างน้อย 1');
-    return;
-  }
-
-  // ตรวจสอบว่าสินค้า+ไซส์เดียวกันนี้มีอยู่ในตะกร้าแล้วหรือไม่ (ถ้ามี จะรวมจำนวนเข้าด้วยกันแทนการเพิ่มแถวใหม่)
-  const existing = posCart.find((i) => i.productId === product.id && i.size === size);
-  // จำนวนที่มีอยู่แล้วในตะกร้า (0 ถ้ายังไม่เคยเพิ่ม)
-  const currentQtyInCart = existing ? existing.qty : 0;
-  // ตรวจสอบว่าจำนวนรวม (ที่มีอยู่แล้ว + ที่กำลังจะเพิ่ม) เกินสต็อกจริงหรือไม่ ป้องกันขายเกินของที่มี
-  if (currentQtyInCart + qty > product.stock) {
-    showToast(`สต็อก ${product.name} เหลือเพียง ${product.stock} คู่`);
-    return;
-  }
-
-  // ถ้ามีรายการเดิมอยู่แล้ว ให้บวกจำนวนเพิ่มเข้าไป
-  if (existing) {
-    existing.qty += qty;
-  } else {
-    // ถ้ายังไม่มี ให้เพิ่มเป็นรายการใหม่เข้าไปในตะกร้า
-    posCart.push({ productId: product.id, name: product.name, price: product.price, size, qty });
-  }
-  // วาดตะกร้าขายใหม่ให้แสดงรายการล่าสุด
-  renderPosCart();
-  // แจ้งเตือนว่าเพิ่มรายการสำเร็จ
-  showToast('เพิ่มรายการแล้ว');
-});
-
-// ฟังก์ชันวาด (render) ตารางแสดงรายการสินค้าที่อยู่ในตะกร้าขายรอบนี้
-function renderPosCart() {
-  // ถ้ายังไม่มีรายการในตะกร้าเลย
-  if (posCart.length === 0) {
-    // แสดงข้อความแจ้งเตือนแทนตาราง (ครอบคลุม 6 คอลัมน์)
-    posCartBody.innerHTML =
-      '<tr><td colspan="6">ยังไม่มีรายการ กรุณาเลือกรองเท้าด้านบนแล้วกด "+ เพิ่มรายการ"</td></tr>';
-  } else {
-    // วนสร้างแถวตาราง (tr) สำหรับสินค้าแต่ละชิ้นในตะกร้า พร้อมเลข index (ตำแหน่งใน array) ไว้ใช้ตอนลบ
-    posCartBody.innerHTML = posCart
-      .map(
-        (item, index) => `
-      <tr>
-        <td>${item.name}</td>
-        <td>${item.size}</td>
-        <td>${formatPrice(item.price)}</td>
-        <td>${item.qty}</td>
-        <td>${formatPrice(item.price * item.qty)}</td>
-        <td><button class="btn-icon danger" data-index="${index}">ลบ</button></td>
-      </tr>
-    `
-      )
-      .join('');
-    // ผูก event คลิกให้กับปุ่ม "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
-    posCartBody.querySelectorAll('button[data-index]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        // ลบรายการออกจากตะกร้าตามตำแหน่ง (index) ที่เก็บไว้ในปุ่ม
-        posCart.splice(Number(btn.dataset.index), 1);
-        // วาดตะกร้าใหม่อีกครั้งหลังลบ
-        renderPosCart();
-      });
-    });
-  }
-  // อัปเดตยอดรวม/เงินทอน ทุกครั้งที่ตะกร้ามีการเปลี่ยนแปลง
-  updatePosTotals();
-}
-
-// ฟังก์ชันคำนวณยอดรวมราคาสินค้าทั้งหมดในตะกร้าขายรอบนี้
-function posCartTotal() {
-  // ใช้ reduce วนคูณราคา x จำนวน ของแต่ละรายการ แล้วรวมกัน เริ่มจาก 0
-  return posCart.reduce((sum, item) => sum + item.price * item.qty, 0);
-}
-
-// ฟังก์ชันอัปเดตยอดชำระรวมและเงินทอนที่แสดงบนหน้าจอ
-function updatePosTotals() {
-  // คำนวณยอดชำระรวมจากตะกร้าปัจจุบัน
-  const total = posCartTotal();
-  // แสดงยอดชำระรวมในรูปแบบสกุลเงินบาท
-  posTotal.textContent = formatPrice(total);
-  // อ่านจำนวนเงินที่พนักงานกรอกว่าได้รับจากลูกค้า (ถ้ายังไม่กรอกหรือกรอกไม่ถูกต้อง ให้ถือเป็น 0)
-  const received = Number(posAmountReceived.value) || 0;
-  // คำนวณเงินทอน = เงินที่ได้รับ - ยอดชำระรวม
-  const change = received - total;
-  // แสดงเงินทอน โดยถ้าติดลบ (จ่ายเงินไม่พอ) ให้แสดงเป็น 0 แทนเลขติดลบที่สร้างความสับสน
-  posChange.textContent = formatPrice(change < 0 ? 0 : change);
-  // ถ้าจ่ายเงินไม่พอ (change ติดลบ) ให้เปลี่ยนสีตัวเลขเงินทอนเป็นสีแดงเพื่อเตือนพนักงาน
-  posChange.style.color = change < 0 ? '#e5484d' : '';
-}
-
-// เมื่อพนักงานพิมพ์จำนวนเงินที่ได้รับจากลูกค้า ให้คำนวณเงินทอนใหม่ทันที (real-time)
-posAmountReceived.addEventListener('input', updatePosTotals);
-
-// ผูก event ให้ปุ่ม "บันทึกการชำระเงิน" ส่งข้อมูลการขายไปบันทึกที่ backend จริง
-posSaveBtn.addEventListener('click', async () => {
-  // ตรวจสอบว่าเลือกพนักงานผู้ขายแล้วหรือยัง
-  if (!posEmployeeSelect.value) {
-    showToast('กรุณาเลือกพนักงานผู้ขาย');
-    return;
-  }
-  // ตรวจสอบว่ามีรายการสินค้าในตะกร้าอย่างน้อย 1 ชิ้นแล้วหรือยัง
-  if (posCart.length === 0) {
-    showToast('กรุณาเพิ่มรายการรองเท้าก่อน');
-    return;
-  }
-  // คำนวณยอดชำระรวมและจำนวนเงินที่ได้รับ เพื่อตรวจสอบก่อนส่งไป backend
-  const total = posCartTotal();
-  const received = Number(posAmountReceived.value) || 0;
-  // ตรวจสอบว่าเงินที่ได้รับต้องไม่น้อยกว่ายอดที่ต้องชำระ
-  if (received < total) {
-    showToast('จำนวนเงินที่ได้รับน้อยกว่ายอดที่ต้องชำระ');
-    return;
-  }
-
-  // รวบรวมข้อมูลการขายที่จะส่งไปบันทึกที่ backend
-  const payload = {
-    employeeId: posEmployeeSelect.value,
-    items: posCart.map((i) => ({ productId: i.productId, size: i.size, qty: i.qty })),
-    amountReceived: received,
-  };
-
-  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
-  try {
-    // ยิง HTTP POST ไปที่ /api/sales พร้อมข้อมูลการขาย
-    const res = await fetch(`${API_BASE}/sales`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    // แปลง response เป็น object ไว้ก่อน (ใช้ทั้งตอนสำเร็จเพื่อดูเงินทอน และตอนผิดพลาดเพื่อดูข้อความ error)
-    const data = await res.json();
-    // ถ้า response ไม่สำเร็จ (เช่น สต็อกไม่พอ) ให้โยน error พร้อมข้อความจาก backend
-    if (!res.ok) throw new Error(data.error || 'บันทึกการขายไม่สำเร็จ');
-    // แจ้งเตือนว่าบันทึกสำเร็จ พร้อมบอกจำนวนเงินทอนที่ต้องทอนให้ลูกค้า
-    showToast(`บันทึกการขายสำเร็จ เงินทอน ${formatPrice(data.change)}`);
-    // ล้างตะกร้าและช่องรับเงิน เพื่อเริ่มรายการขายรอบถัดไป
-    posCart = [];
-    posAmountReceived.value = '';
-    renderPosCart();
-    // โหลดรายการสินค้าใหม่เพื่ออัปเดตจำนวนสต็อกล่าสุด (ลดลงตามที่เพิ่งขายไป) แล้วเติมดรอปดาวน์สินค้าใน POS ใหม่
-    await loadProducts();
-    populatePosProductSelect();
-  } catch (err) {
-    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้ด้วยข้อความ error จริง (เช่น สต็อกไม่พอ)
-    showToast(err.message);
-  }
-});
-
 // ---------- Report (สรุปยอดขายประจำวัน) ----------
 // ส่วนแสดงและพิมพ์สรุปยอดขายของแต่ละวัน
 
@@ -1001,45 +805,45 @@ function todayDateString() {
   return `${year}-${month}-${day}`;
 }
 
-// ฟังก์ชัน async โหลดรายการขายของวันที่ระบุจาก backend มาแสดงในตารางรายงาน
+// ฟังก์ชัน async โหลดรายการคำสั่งซื้อของวันที่ระบุจาก backend มาแสดงในตารางรายงาน
+// สรุปยอดขายคำนวณสดจากคำสั่งซื้อโดยตรง (ไม่ได้เก็บยอดขายแยกต่างหากอีกต่อไป) ดังนั้นลบ/แก้ไขคำสั่งซื้อที่แท็บ "คำสั่งซื้อ" จะสะท้อนมาที่นี่ทันที
 async function loadReport(date) {
-  // ยิง HTTP GET ไปที่ /api/sales พร้อมระบุวันที่ต้องการดูผ่าน query string
-  const res = await fetch(`${API_BASE}/sales?date=${date}`);
-  // แปลง response เป็น array ของรายการขาย
-  const sales = await res.json();
+  // ยิง HTTP GET ไปที่ /api/orders พร้อมระบุวันที่ต้องการดูผ่าน query string
+  const res = await fetch(`${API_BASE}/orders?date=${date}`);
+  // แปลง response เป็น array ของคำสั่งซื้อ
+  const dayOrders = await res.json();
   // วาดตารางรายงานตามข้อมูลที่เพิ่งโหลดมา
-  renderReportTable(sales);
+  renderReportTable(dayOrders);
   // แสดงวันที่ที่กำลังดูอยู่บนหัวกระดาษของใบสรุป (ใช้ตอนพิมพ์ด้วย)
   document.getElementById('reportDateLabel').textContent = date;
 }
 
-// ฟังก์ชันวาด (render) ตารางรายการขาย พร้อมสรุปจำนวนบิลและยอดขายรวมทั้งวัน
-function renderReportTable(sales) {
-  // ถ้าไม่มีรายการขายเลยในวันที่เลือก
-  if (sales.length === 0) {
-    // แสดงข้อความแจ้งว่าไม่มีรายการขาย (ครอบคลุม 6 คอลัมน์)
-    reportTableBody.innerHTML = '<tr><td colspan="6">ไม่มีรายการขายในวันที่เลือก</td></tr>';
+// ฟังก์ชันวาด (render) ตารางคำสั่งซื้อของวันนั้น พร้อมสรุปจำนวนคำสั่งซื้อและยอดขายรวมทั้งวัน
+function renderReportTable(dayOrders) {
+  // ถ้าไม่มีคำสั่งซื้อเลยในวันที่เลือก
+  if (dayOrders.length === 0) {
+    // แสดงข้อความแจ้งว่าไม่มีคำสั่งซื้อ (ครอบคลุม 5 คอลัมน์)
+    reportTableBody.innerHTML = '<tr><td colspan="5">ไม่มีคำสั่งซื้อในวันที่เลือก</td></tr>';
   } else {
-    // วนสร้างแถวตาราง (tr) สำหรับรายการขายแต่ละบิล แล้วรวมเป็นข้อความเดียว
-    reportTableBody.innerHTML = sales
+    // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
+    reportTableBody.innerHTML = dayOrders
       .map(
-        (s) => `
+        (o) => `
       <tr>
-        <td>${new Date(s.createdAt).toLocaleTimeString('th-TH')}</td>
-        <td>${s.employeeName}</td>
-        <td>${s.items.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')}</td>
-        <td>${formatPrice(s.amountReceived)}</td>
-        <td>${formatPrice(s.change)}</td>
-        <td>${formatPrice(s.total)}</td>
+        <td>${new Date(o.createdAt).toLocaleTimeString('th-TH')}</td>
+        <td>${o.customerName}</td>
+        <td>${o.items.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')}</td>
+        <td>${formatPaymentMethod(o.paymentMethod)}</td>
+        <td>${formatPrice(o.total)}</td>
       </tr>
     `
       )
       .join('');
   }
-  // คำนวณยอดขายรวมทั้งวัน โดยรวมยอด total ของทุกบิล
-  const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
-  // แสดงจำนวนบิลทั้งหมดของวันนั้น
-  document.getElementById('reportBillCount').textContent = sales.length;
+  // คำนวณยอดขายรวมทั้งวัน โดยรวมยอด total ของทุกคำสั่งซื้อ
+  const totalRevenue = dayOrders.reduce((sum, o) => sum + o.total, 0);
+  // แสดงจำนวนคำสั่งซื้อทั้งหมดของวันนั้น
+  document.getElementById('reportBillCount').textContent = dayOrders.length;
   // แสดงยอดขายรวมทั้งวันในรูปแบบสกุลเงินบาท
   document.getElementById('reportTotalRevenue').textContent = formatPrice(totalRevenue);
 }
@@ -1052,84 +856,6 @@ reportDateInput.addEventListener('change', () => loadReport(reportDateInput.valu
 // ผูก event ให้ปุ่ม "พิมพ์ใบสรุปยอดขาย" เรียกฟังก์ชันสั่งพิมพ์ของเบราว์เซอร์
 // เบราว์เซอร์จะเปิดหน้าต่างพิมพ์ โดยใช้กฎ CSS ใน @media print เพื่อซ่อนส่วนที่ไม่ต้องการ (เช่น แถบเมนู, ปุ่มต่าง ๆ)
 document.getElementById('printReportBtn').addEventListener('click', () => window.print());
-
-// ---------- Database Explorer ----------
-// แท็บดูตารางฐานข้อมูล SQLite ดิบ ๆ สไตล์ phpMyAdmin: ซ้ายเป็นรายชื่อตาราง (พร้อมจำนวนแถว) ขวาเป็นข้อมูลของตารางที่กำลังเลือกดูอยู่
-
-// ตัวแปรจำชื่อตารางที่กำลังเปิดดูอยู่ (ใช้ตอนกดรีเฟรชให้โหลดตารางเดิมซ้ำ)
-let dbExplorerCurrentTable = null;
-
-// ฟังก์ชัน async โหลดรายชื่อตารางทั้งหมด พร้อมจำนวนแถวของแต่ละตาราง มาแสดงเป็นเมนูทางซ้าย
-async function loadDbTableList() {
-  const listEl = document.getElementById('dbTableList');
-  try {
-    const res = await fetch(`${API_BASE}/db-explorer/tables`);
-    if (!res.ok) throw new Error('โหลดรายชื่อตารางไม่สำเร็จ');
-    const tables = await res.json();
-    // สร้างปุ่มสำหรับแต่ละตาราง กดแล้วโหลดข้อมูลของตารางนั้นมาแสดงทางขวา
-    listEl.innerHTML = tables
-      .map(
-        (t) => `<button type="button" data-table="${t.name}" class="${t.name === dbExplorerCurrentTable ? 'active' : ''}">${t.name} <small>(${t.rowCount})</small></button>`
-      )
-      .join('');
-    listEl.querySelectorAll('button[data-table]').forEach((btn) => {
-      btn.addEventListener('click', () => loadDbTableData(btn.dataset.table));
-    });
-    // ถ้ามีตารางที่กำลังเปิดดูอยู่แล้ว (เช่นตอนกดรีเฟรช) ให้โหลดข้อมูลตารางนั้นซ้ำไปด้วยเลย ไม่ต้องรอผู้ใช้กดใหม่
-    if (dbExplorerCurrentTable) loadDbTableData(dbExplorerCurrentTable);
-  } catch (err) {
-    listEl.innerHTML = '<p class="field-hint">โหลดรายชื่อตารางไม่สำเร็จ</p>';
-  }
-}
-
-// ฟังก์ชัน async โหลดข้อมูลดิบทุกแถวของตารางที่ระบุ มาแสดงเป็นตาราง HTML ทางฝั่งขวา
-async function loadDbTableData(tableName) {
-  dbExplorerCurrentTable = tableName;
-  // ไฮไลต์ปุ่มตารางที่กำลังเลือกอยู่ (เอา active ออกจากทุกปุ่มก่อน แล้วใส่เฉพาะปุ่มที่ตรงกับตารางนี้)
-  document.querySelectorAll('#dbTableList button').forEach((b) => {
-    b.classList.toggle('active', b.dataset.table === tableName);
-  });
-
-  const theadRow = document.getElementById('dbTableHead');
-  const tbody = document.getElementById('dbTableBody');
-  tbody.innerHTML = '<tr><td>กำลังโหลด...</td></tr>';
-
-  try {
-    const res = await fetch(`${API_BASE}/db-explorer/tables/${tableName}`);
-    if (!res.ok) throw new Error('โหลดข้อมูลตารางไม่สำเร็จ');
-    const rows = await res.json();
-
-    if (rows.length === 0) {
-      theadRow.innerHTML = '';
-      tbody.innerHTML = '<tr><td>ยังไม่มีข้อมูลในตารางนี้</td></tr>';
-      return;
-    }
-
-    // ใช้ key ของแถวแรกเป็นหัวคอลัมน์ (ทุกแถวในตารางเดียวกันมีโครงสร้าง column เหมือนกันอยู่แล้ว)
-    const columns = Object.keys(rows[0]);
-    theadRow.innerHTML = columns.map((c) => `<th>${c}</th>`).join('');
-    tbody.innerHTML = rows
-      .map(
-        (row) => `
-      <tr>${columns
-        .map((c) => {
-          // ฟิลด์ที่เป็น array/object (เช่น sizes, items) ให้แปลงเป็นข้อความ JSON สั้น ๆ ก่อนแสดง
-          const val = row[c];
-          const text = typeof val === 'object' && val !== null ? JSON.stringify(val) : val;
-          return `<td>${text ?? ''}</td>`;
-        })
-        .join('')}</tr>
-    `
-      )
-      .join('');
-  } catch (err) {
-    theadRow.innerHTML = '';
-    tbody.innerHTML = '<tr><td>โหลดข้อมูลไม่สำเร็จ</td></tr>';
-  }
-}
-
-// ผูก event ให้ปุ่ม "รีเฟรช" โหลดรายชื่อตาราง (และข้อมูลตารางที่เปิดอยู่) ใหม่อีกครั้ง
-document.getElementById('refreshDbBtn').addEventListener('click', loadDbTableList);
 
 // ---------- Flash Sale ----------
 // ส่วนจัดการ Flash Sale ที่หลังบ้าน: โหลด/แสดง/ตั้งค่าใหม่/แก้ไข/ยกเลิก
@@ -1340,7 +1066,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   loadOrders();
   // โหลดข้อมูลลูกค้า เพื่อให้ตารางลูกค้าพร้อมใช้งานตั้งแต่เปิดหน้ามา
   loadCustomers();
-  // โหลดข้อมูลพนักงาน เพื่อให้ตารางพนักงาน (และตัวเลือกใน POS) พร้อมใช้งานตั้งแต่เปิดหน้ามา
+  // โหลดข้อมูลพนักงาน เพื่อให้ตารางพนักงานพร้อมใช้งานตั้งแต่เปิดหน้ามา
   loadEmployees();
   // โหลดสรุปยอดขายของวันปัจจุบัน เพื่อให้แท็บรายงานพร้อมแสดงผลตั้งแต่เปิดหน้ามา
   loadReport(reportDateInput.value);

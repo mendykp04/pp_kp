@@ -30,12 +30,8 @@
         <button class="nav-btn" data-tab="customers">🧑‍🤝‍🧑 ลูกค้า</button>
         <!-- ปุ่มสลับไปแท็บ "จัดการพนักงาน" -->
         <button class="nav-btn" data-tab="employees">👤 พนักงาน</button>
-        <!-- ปุ่มสลับไปแท็บ "ขายหน้าร้าน" (จุดขาย/รับชำระเงิน) -->
-        <button class="nav-btn" data-tab="pos">🧮 ขายหน้าร้าน</button>
-        <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" -->
+        <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" (คำนวณจากคำสั่งซื้อโดยตรง) -->
         <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
-        <!-- ปุ่มสลับไปแท็บ "ฐานข้อมูล" หน้าดูตารางฐานข้อมูลดิบทั้งหมดแบบ phpMyAdmin (เลือกตาราง → ดูทุกแถว/ทุกคอลัมน์) -->
-        <button class="nav-btn" data-tab="database">🗄️ ฐานข้อมูล</button>
       </nav>
       <!-- ลิงก์กลับไปหน้าร้านค้าฝั่งลูกค้า -->
       <a href="/" class="back-link">← กลับหน้าร้านค้า</a>
@@ -123,11 +119,12 @@
                 <th>วิธีชำระเงิน</th>
                 <th>สถานะ</th>
                 <th>วันที่</th>
+                <th>จัดการ</th>
               </tr>
             </thead>
             <!-- เนื้อหาตารางคำสั่งซื้อจะถูกเติมโดย admin.js -->
             <tbody id="orderTableBody">
-              <tr><td colspan="8">กำลังโหลด...</td></tr>
+              <tr><td colspan="9">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -194,70 +191,6 @@
         </div>
       </section>
 
-      <!-- Tab: POS (ขายหน้าร้าน / รับชำระเงิน) -->
-      <section id="tab-pos" class="tab-panel">
-        <div class="panel-header">
-          <h1>ขายหน้าร้าน / รับชำระเงิน</h1>
-        </div>
-
-        <!-- เลือกพนักงานผู้ทำรายการขายนี้ -->
-        <div class="field">
-          <label for="posEmployeeSelect">พนักงานผู้ขาย</label>
-          <select id="posEmployeeSelect"></select>
-        </div>
-
-        <!-- แถวสำหรับเลือกสินค้า+ไซส์+จำนวน แล้วกดเพิ่มเข้ารายการขาย -->
-        <div class="pos-add-row">
-          <div class="field">
-            <label for="posProductSelect">รองเท้า</label>
-            <select id="posProductSelect"></select>
-          </div>
-          <div class="field">
-            <label for="posSizeSelect">ไซส์</label>
-            <select id="posSizeSelect"></select>
-          </div>
-          <div class="field pos-qty-field">
-            <label for="posQtyInput">จำนวน</label>
-            <input type="number" id="posQtyInput" min="1" value="1" />
-          </div>
-          <!-- ปุ่มเพิ่มรองเท้าที่เลือกไว้ด้านบนลงในรายการขายด้านล่าง -->
-          <button type="button" class="btn" id="posAddItemBtn">+ เพิ่มรายการ</button>
-        </div>
-
-        <!-- ตารางแสดงรายการรองเท้าที่กำลังจะขายในรอบนี้ -->
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>รองเท้า</th>
-                <th>ไซส์</th>
-                <th>ราคา/คู่</th>
-                <th>จำนวน</th>
-                <th>รวม</th>
-                <th></th>
-              </tr>
-            </thead>
-            <!-- รายการสินค้าที่เพิ่มไว้ในตะกร้าขายรอบนี้ จะถูกเติมโดย admin.js -->
-            <tbody id="posCartBody">
-              <tr><td colspan="6">ยังไม่มีรายการ กรุณาเลือกรองเท้าด้านบนแล้วกด "+ เพิ่มรายการ"</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- กล่องสรุปยอดชำระ + รับเงิน + เงินทอน -->
-        <div class="cart-summary">
-          <div class="row"><span>ยอดชำระทั้งหมด</span><span id="posTotal">0 บาท</span></div>
-          <div class="field">
-            <label for="posAmountReceived">จำนวนเงินที่ได้รับจากลูกค้า</label>
-            <!-- เมื่อพิมพ์จำนวนเงิน จะคำนวณเงินทอนให้ทันทีด้วย JavaScript -->
-            <input type="number" id="posAmountReceived" min="0" placeholder="0" />
-          </div>
-          <div class="row total"><span>เงินทอน</span><span id="posChange">0 บาท</span></div>
-          <!-- ปุ่มบันทึกรายการขาย จะยิง API ไปสร้างรายการขายจริง พร้อมตัดสต็อกสินค้า -->
-          <button class="btn btn-block" id="posSaveBtn" style="margin-top:16px;">บันทึกการชำระเงิน</button>
-        </div>
-      </section>
-
       <!-- Tab: รายงานสรุปยอดขายประจำวัน -->
       <section id="tab-report" class="tab-panel">
         <div class="panel-header">
@@ -282,50 +215,22 @@
               <thead>
                 <tr>
                   <th>เวลา</th>
-                  <th>พนักงาน</th>
+                  <th>ลูกค้า</th>
                   <th>รายการ</th>
-                  <th>รับเงิน</th>
-                  <th>เงินทอน</th>
-                  <th>ยอดขาย</th>
+                  <th>วิธีชำระเงิน</th>
+                  <th>ยอดสั่งซื้อ</th>
                 </tr>
               </thead>
-              <!-- รายการขายของวันที่เลือกจะถูกเติมโดย admin.js -->
+              <!-- รายการคำสั่งซื้อของวันที่เลือกจะถูกเติมโดย admin.js -->
               <tbody id="reportTableBody">
-                <tr><td colspan="6">กำลังโหลด...</td></tr>
+                <tr><td colspan="5">กำลังโหลด...</td></tr>
               </tbody>
             </table>
           </div>
           <!-- สรุปยอดขายรวมทั้งวัน -->
           <div class="cart-summary">
-            <div class="row"><span>จำนวนบิล</span><span id="reportBillCount">0</span></div>
+            <div class="row"><span>จำนวนคำสั่งซื้อ</span><span id="reportBillCount">0</span></div>
             <div class="row total"><span>ยอดขายรวมทั้งวัน</span><span id="reportTotalRevenue">0 บาท</span></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab: Database Explorer -->
-      <!-- แท็บดูตารางฐานข้อมูล SQLite ดิบ ๆ สไตล์ phpMyAdmin: เลือกชื่อตารางทางซ้าย → โชว์ทุกแถวทุกคอลัมน์ทางขวา อ่านอย่างเดียว ไม่มีฟอร์มแก้ไข -->
-      <section id="tab-database" class="tab-panel">
-        <div class="panel-header">
-          <h1>🗄️ ฐานข้อมูล (SQLite)</h1>
-          <!-- กดรีเฟรชเพื่อดึงจำนวนแถวของทุกตารางใหม่ล่าสุด -->
-          <button class="btn" id="refreshDbBtn">🔄 รีเฟรช</button>
-        </div>
-        <div class="db-explorer">
-          <!-- รายชื่อตารางทั้งหมด พร้อมจำนวนแถว จะถูกเติมโดย admin.js กดชื่อตารางเพื่อโหลดข้อมูลมาโชว์ทางขวา -->
-          <div class="db-table-list" id="dbTableList">
-            <p class="field-hint">กำลังโหลดรายชื่อตาราง...</p>
-          </div>
-          <!-- ตารางแสดงข้อมูลดิบของตารางที่เลือกไว้ -->
-          <div class="table-wrap db-table-data">
-            <table>
-              <thead>
-                <tr id="dbTableHead"></tr>
-              </thead>
-              <tbody id="dbTableBody">
-                <tr><td>เลือกตารางทางซ้ายเพื่อดูข้อมูล</td></tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </section>

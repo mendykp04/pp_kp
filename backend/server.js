@@ -203,36 +203,6 @@ app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
-// ---------- Database Explorer API ----------
-// API สำหรับแท็บ "ฐานข้อมูล" ในหน้า admin (ดูตารางฐานข้อมูลดิบทุกแถว/ทุกคอลัมน์แบบ phpMyAdmin เพื่อสาธิต/พรีเซนต์)
-
-// รายชื่อตารางทั้งหมดในฐานข้อมูล ผูกกับฟังก์ชัน db.readX() ที่มีอยู่แล้ว เพื่อกันเผลอเปิดตารางที่ไม่รู้จัก (ป้องกัน SQL injection ผ่านชื่อตาราง)
-const DB_EXPLORER_TABLES = {
-  products: db.readProducts,
-  orders: db.readOrders,
-  customers: db.readCustomers,
-  employees: db.readEmployees,
-  sales: db.readSales,
-  flashsales: db.readFlashSales,
-};
-
-// เมื่อมีการเรียก GET ที่ /api/db-explorer/tables (ขอรายชื่อตารางทั้งหมด พร้อมจำนวนแถวของแต่ละตาราง) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
-app.get('/api/db-explorer/tables', requireAuth, (req, res) => {
-  const tables = Object.keys(DB_EXPLORER_TABLES).map((name) => ({
-    name,
-    rowCount: DB_EXPLORER_TABLES[name]().length,
-  }));
-  res.json(tables);
-});
-
-// เมื่อมีการเรียก GET ที่ /api/db-explorer/tables/:name (ขอข้อมูลดิบทุกแถวของตารางที่ระบุ) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
-app.get('/api/db-explorer/tables/:name', requireAuth, (req, res) => {
-  const readTable = DB_EXPLORER_TABLES[req.params.name];
-  // ถ้าชื่อตารางที่ขอมาไม่อยู่ในรายชื่อที่รู้จัก ให้ตอบกลับ 404 (กันไม่ให้เดาชื่อตารางมั่ว ๆ)
-  if (!readTable) return res.status(404).json({ error: 'ไม่พบตารางนี้' });
-  res.json(readTable());
-});
-
 // ---------- Products API ----------
 // กลุ่ม API ที่เกี่ยวกับ "สินค้า" ทั้งหมด (ดู/เพิ่ม/แก้/ลบ)
 
@@ -349,7 +319,12 @@ app.delete('/api/products/:id', requireAuth, (req, res) => {
 // เมื่อมีการเรียก GET ที่ /api/orders (ขอรายการคำสั่งซื้อทั้งหมด สำหรับหน้า admin) — มีข้อมูลลูกค้า (ชื่อ/เบอร์โทร/ที่อยู่) จึงต้องล็อกอินก่อน
 app.get('/api/orders', requireAuth, (req, res) => {
   // อ่านรายการคำสั่งซื้อทั้งหมดจากไฟล์
-  const orders = db.readOrders();
+  let orders = db.readOrders();
+  // ถ้ามีการระบุ query string "date" มา (เช่น ตอนดูสรุปยอดขายของวันที่เลือกในแท็บ "สรุปยอดขาย")
+  if (req.query.date) {
+    // กรองเฉพาะคำสั่งซื้อที่ "วันที่" ของ createdAt (ตัดเอาแค่ส่วน YYYY-MM-DD) ตรงกับวันที่ที่ระบุ
+    orders = orders.filter((o) => o.createdAt.slice(0, 10) === req.query.date);
+  }
   // เรียงลำดับคำสั่งซื้อจากใหม่ไปเก่า (เทียบวันที่สร้าง createdAt) แล้วส่งกลับไป
   res.json(orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
 });
@@ -470,6 +445,34 @@ app.put('/api/orders/:id/status', requireAuth, (req, res) => {
   db.writeOrders(orders);
   // ตอบกลับข้อมูลออเดอร์ที่อัปเดตสถานะแล้ว
   res.json(orders[idx]);
+});
+
+// เมื่อมีการเรียก DELETE ที่ /api/orders/:id (ลบคำสั่งซื้อตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+// หมายเหตุ: แท็บ "สรุปยอดขาย" คำนวณยอดขายสดจากคำสั่งซื้อโดยตรง จึงไม่ต้องอัปเดตยอดขายแยกต่างหาก — ลบคำสั่งซื้อแล้วยอดขายของวันนั้นจะลดลงตามราคาที่หายไปทันที
+app.delete('/api/orders/:id', requireAuth, (req, res) => {
+  // อ่านรายการคำสั่งซื้อทั้งหมดจากไฟล์
+  const orders = db.readOrders();
+  // หาตำแหน่งของออเดอร์ที่ต้องการลบ
+  const idx = orders.findIndex((o) => o.id === req.params.id);
+  // ถ้าไม่เจอออเดอร์ ให้ตอบกลับ 404
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ' });
+  // ลบออเดอร์ออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed)
+  const removed = orders.splice(idx, 1)[0];
+  // บันทึกรายการคำสั่งซื้อที่เหลือ (หลังลบ) กลับลงไฟล์
+  db.writeOrders(orders);
+  // คืนสต็อกสินค้าที่อยู่ในคำสั่งซื้อนี้กลับเป็น "พร้อมขาย" (สินค้ามือสองแต่ละคู่มีแค่ 1 ชิ้น การลบออเดอร์แปลว่าคู่นั้นยังไม่ถูกขายจริง)
+  const products = db.readProducts();
+  let changed = false;
+  removed.items.forEach((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    if (product) {
+      product.stock += item.qty;
+      changed = true;
+    }
+  });
+  if (changed) db.writeProducts(products);
+  // ตอบกลับข้อมูลคำสั่งซื้อที่ถูกลบไป เพื่อยืนยันว่าลบรายการไหน
+  res.json(removed);
 });
 
 // ---------- Employees API ----------
@@ -645,101 +648,6 @@ app.delete('/api/customers/:id', requireAuth, (req, res) => {
   db.writeCustomers(customers);
   // ตอบกลับข้อมูลลูกค้าที่ถูกลบไป เพื่อยืนยันว่าลบคนไหน
   res.json(removed[0]);
-});
-
-// ---------- Sales API (ระบบขายหน้าร้าน / รับชำระเงิน) ----------
-// กลุ่ม API สำหรับพนักงานหน้าร้าน: เลือกสินค้า คำนวณยอดชำระ+เงินทอน แล้วบันทึกรายการขาย
-
-// เมื่อมีการเรียก GET ที่ /api/sales (ขอรายการขายทั้งหมด รองรับกรองตามวันที่ด้วย query string ?date=YYYY-MM-DD) — ข้อมูลยอดขายเป็นความลับทางธุรกิจ จึงต้องล็อกอินก่อน
-app.get('/api/sales', requireAuth, (req, res) => {
-  // อ่านรายการขายทั้งหมดจากไฟล์
-  let sales = db.readSales();
-  // ถ้ามีการระบุ query string "date" มา (เช่น ตอนดูสรุปยอดขายของวันที่เลือก)
-  if (req.query.date) {
-    // กรองเฉพาะรายการขายที่ "วันที่" ของ createdAt (ตัดเอาแค่ส่วน YYYY-MM-DD) ตรงกับวันที่ที่ระบุ
-    sales = sales.filter((s) => s.createdAt.slice(0, 10) === req.query.date);
-  }
-  // เรียงลำดับรายการขายจากใหม่ไปเก่า แล้วส่งกลับไป
-  res.json(sales.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-});
-
-// เมื่อมีการเรียก POST ที่ /api/sales (พนักงานกดบันทึกการรับชำระเงินที่หน้าร้าน) — ต้องล็อกอินหลังบ้านก่อนถึงจะขายผ่านระบบ POS ได้
-app.post('/api/sales', requireAuth, (req, res) => {
-  // ดึงข้อมูลที่ส่งมา: รหัสพนักงานที่ขาย, รายการสินค้าที่ขาย, จำนวนเงินที่ลูกค้าจ่ายมา
-  const { employeeId, items, amountReceived } = req.body;
-  // ตรวจสอบข้อมูลขั้นต่ำ: ต้องระบุพนักงาน, มีรายการสินค้าอย่างน้อย 1 ชิ้น, และระบุจำนวนเงินที่รับมา
-  if (!employeeId || !Array.isArray(items) || items.length === 0 || amountReceived === undefined) {
-    return res.status(400).json({ error: 'ข้อมูลการขายไม่ครบถ้วน' });
-  }
-
-  // ตรวจสอบว่ารหัสพนักงานที่ระบุมามีอยู่จริงในระบบหรือไม่
-  const employees = db.readEmployees();
-  const employee = employees.find((e) => e.id === employeeId);
-  if (!employee) return res.status(400).json({ error: 'ไม่พบรหัสพนักงานนี้ในระบบ' });
-
-  // อ่านรายการสินค้าทั้งหมด เพื่อใช้ตรวจสอบราคาจริงและจำนวนสต็อกคงเหลือ (ไม่เชื่อราคาที่ฝั่งหน้าเว็บส่งมาตรง ๆ)
-  const products = db.readProducts();
-  // ตัวแปรเก็บยอดรวมราคาสินค้าที่ขาย เริ่มต้นที่ 0
-  let total = 0;
-  // ตัวแปรเก็บรายการสินค้าที่ผ่านการตรวจสอบแล้ว (พร้อมชื่อ/ราคาที่ถูกต้องจากฐานข้อมูล)
-  const saleItems = [];
-
-  // วนลูปตรวจสอบสินค้าทีละชิ้นที่พนักงานเลือกขาย
-  for (const item of items) {
-    // ค้นหาสินค้าจริงในฐานข้อมูลด้วย productId
-    const product = products.find((p) => p.id === item.productId);
-    // ถ้าไม่พบสินค้า ให้ตอบกลับ error ทันที
-    if (!product) return res.status(400).json({ error: `ไม่พบสินค้ารหัส ${item.productId}` });
-    // แปลงจำนวนที่ขายเป็นตัวเลข ถ้าไม่มีค่าให้ default เป็น 1
-    const qty = Number(item.qty) || 1;
-    // ถ้าสต็อกคงเหลือไม่พอกับจำนวนที่จะขาย ให้ตอบกลับ error พร้อมบอกจำนวนคงเหลือจริง
-    if (product.stock < qty) {
-      return res.status(400).json({ error: `${product.name} เหลือสต็อกเพียง ${product.stock} คู่` });
-    }
-    // บวกราคาสินค้า x จำนวน เข้าไปในยอดรวม
-    total += product.price * qty;
-    // เก็บรายละเอียดสินค้าชิ้นนี้ (ใช้ราคา/ชื่อจากฐานข้อมูลจริง) ไว้ใน saleItems
-    saleItems.push({
-      productId: product.id,
-      name: product.name,
-      price: product.price,
-      size: item.size || null,
-      qty,
-    });
-  }
-
-  // ตรวจสอบว่าจำนวนเงินที่ลูกค้าจ่ายมาต้องไม่น้อยกว่ายอดรวมที่ต้องชำระ
-  if (Number(amountReceived) < total) {
-    return res.status(400).json({ error: 'จำนวนเงินที่ได้รับน้อยกว่ายอดที่ต้องชำระ' });
-  }
-
-  // ตัดสต็อกสินค้าที่ขายออกจากฐานข้อมูลสินค้าจริง (ลดจำนวนคงเหลือลงตามจำนวนที่ขายไป)
-  for (const item of saleItems) {
-    const product = products.find((p) => p.id === item.productId);
-    product.stock -= item.qty;
-  }
-  // บันทึกจำนวนสต็อกสินค้าที่อัปเดตแล้วกลับลงไฟล์ products.json
-  db.writeProducts(products);
-
-  // อ่านรายการขายทั้งหมดที่มีอยู่แล้ว เพื่อนำรายการขายใหม่ไปต่อท้าย
-  const sales = db.readSales();
-  // สร้าง object รายการขายใหม่ พร้อมคำนวณเงินทอน (จำนวนที่รับมา ลบ ยอดที่ต้องชำระ)
-  const newSale = {
-    id: genId('s'),
-    employeeId: employee.id,
-    employeeName: employee.name,
-    items: saleItems,
-    total,
-    amountReceived: Number(amountReceived),
-    change: Number(amountReceived) - total,
-    createdAt: new Date().toISOString(),
-  };
-  // เพิ่มรายการขายใหม่เข้าไปท้าย array
-  sales.push(newSale);
-  // บันทึกรายการขายทั้งหมด (รวมของใหม่) กลับลงไฟล์ sales.json
-  db.writeSales(sales);
-  // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลการขาย (รวมยอดชำระ+เงินทอน) ให้พนักงานเห็นผลทันที
-  res.status(201).json(newSale);
 });
 
 // ---------- Flash Sale API ----------
