@@ -12,10 +12,6 @@ db.pragma('journal_mode = WAL');
 
 // สร้างตารางทั้งหมด (ถ้ายังไม่มี) — โครงสร้างตรงกับข้อมูลที่เคยเก็บในไฟล์ .json เดิมทุกฟิลด์
 db.exec(`
-  CREATE TABLE IF NOT EXISTS categories (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL
-  );
   CREATE TABLE IF NOT EXISTS products (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -83,17 +79,6 @@ function rowToOrder(row) {
 function rowToSale(row) {
   return { ...row, items: row.items ? JSON.parse(row.items) : [] };
 }
-
-// ---------- Categories ----------
-function readCategories() {
-  return db.prepare('SELECT * FROM categories').all();
-}
-// เขียนทับตารางทั้งหมดด้วยรายการที่ส่งมา (ทำใน transaction เดียว จึงเป็น atomic — ไม่มีทางเหลือข้อมูลค้างครึ่ง ๆ กลาง ๆ ถ้าเซิร์ฟเวอร์ล่มกลางคัน)
-const writeCategories = db.transaction((categories) => {
-  db.prepare('DELETE FROM categories').run();
-  const insert = db.prepare('INSERT INTO categories (id, name) VALUES (@id, @name)');
-  categories.forEach((c) => insert.run(c));
-});
 
 // ---------- Products ----------
 function readProducts() {
@@ -184,8 +169,6 @@ const writeFlashSales = db.transaction((flashSales) => {
 
 module.exports = {
   db,
-  readCategories,
-  writeCategories,
   readProducts,
   writeProducts,
   readEmployees,

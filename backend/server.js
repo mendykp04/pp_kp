@@ -209,7 +209,6 @@ app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
 // รายชื่อตารางทั้งหมดในฐานข้อมูล ผูกกับฟังก์ชัน db.readX() ที่มีอยู่แล้ว เพื่อกันเผลอเปิดตารางที่ไม่รู้จัก (ป้องกัน SQL injection ผ่านชื่อตาราง)
 const DB_EXPLORER_TABLES = {
   products: db.readProducts,
-  categories: db.readCategories,
   orders: db.readOrders,
   customers: db.readCustomers,
   employees: db.readEmployees,
@@ -719,76 +718,6 @@ app.post('/api/sales', requireAuth, (req, res) => {
   db.writeSales(sales);
   // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลการขาย (รวมยอดชำระ+เงินทอน) ให้พนักงานเห็นผลทันที
   res.status(201).json(newSale);
-});
-
-// ---------- Categories API (หมวดหมู่ราคาสินค้า เช่น ราคาถูก / ราคากลาง / ราคาแพง) ----------
-// กลุ่ม API ที่เกี่ยวกับ "หมวดหมู่สินค้า" ทั้งหมด (ดู/เพิ่ม/แก้/ลบ)
-
-// เมื่อมีการเรียก GET ที่ /api/categories (ขอรายการหมวดหมู่ทั้งหมด)
-app.get('/api/categories', (req, res) => {
-  // อ่านข้อมูลหมวดหมู่ทั้งหมดจากไฟล์ แล้วส่งกลับไปเลย (มีจำนวนน้อย ไม่จำเป็นต้องกรอง/ค้นหา)
-  res.json(db.readCategories());
-});
-
-// เมื่อมีการเรียก POST ที่ /api/categories (เพิ่มหมวดหมู่ใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (GET ยังเปิดสาธารณะไว้ เพราะหน้าร้านค้าต้องใช้กรองสินค้า)
-app.post('/api/categories', requireAuth, (req, res) => {
-  // ดึงชื่อหมวดหมู่จาก body ที่ส่งมา
-  const { name } = req.body;
-  // ตรวจสอบว่าต้องระบุชื่อหมวดหมู่ ถ้าไม่มีให้ตอบกลับ error 400
-  if (!name) return res.status(400).json({ error: 'กรุณาระบุชื่อหมวดหมู่' });
-  // อ่านรายการหมวดหมู่ทั้งหมดที่มีอยู่แล้ว
-  const categories = db.readCategories();
-  // สร้าง object หมวดหมู่ใหม่ พร้อม id อัตโนมัติ
-  const newCategory = { id: genId('cat-'), name };
-  // เพิ่มหมวดหมู่ใหม่เข้าไปท้าย array
-  categories.push(newCategory);
-  // บันทึกรายการหมวดหมู่ทั้งหมด (รวมของใหม่) กลับลงไฟล์
-  db.writeCategories(categories);
-  // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลหมวดหมู่ที่เพิ่งสร้าง
-  res.status(201).json(newCategory);
-});
-
-// เมื่อมีการเรียก PUT ที่ /api/categories/:id (แก้ไขชื่อหมวดหมู่ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
-app.put('/api/categories/:id', requireAuth, (req, res) => {
-  // อ่านรายการหมวดหมู่ทั้งหมดจากไฟล์
-  const categories = db.readCategories();
-  // หาตำแหน่งของหมวดหมู่ที่ id ตรงกับที่ส่งมาใน URL
-  const idx = categories.findIndex((c) => c.id === req.params.id);
-  // ถ้าไม่เจอหมวดหมู่ ให้ตอบกลับ 404
-  if (idx === -1) return res.status(404).json({ error: 'ไม่พบหมวดหมู่' });
-  // อัปเดตชื่อหมวดหมู่ ถ้าไม่ได้ส่งชื่อใหม่มาให้คงชื่อเดิมไว้
-  categories[idx].name = req.body.name || categories[idx].name;
-  // บันทึกรายการหมวดหมู่ทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
-  db.writeCategories(categories);
-  // ตอบกลับข้อมูลหมวดหมู่ที่แก้ไขเสร็จแล้ว
-  res.json(categories[idx]);
-});
-
-// เมื่อมีการเรียก DELETE ที่ /api/categories/:id (ลบหมวดหมู่ตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
-app.delete('/api/categories/:id', requireAuth, (req, res) => {
-  // อ่านรายการหมวดหมู่ทั้งหมดจากไฟล์
-  const categories = db.readCategories();
-  // หาตำแหน่งของหมวดหมู่ที่ต้องการลบ
-  const idx = categories.findIndex((c) => c.id === req.params.id);
-  // ถ้าไม่เจอหมวดหมู่ ให้ตอบกลับ 404
-  if (idx === -1) return res.status(404).json({ error: 'ไม่พบหมวดหมู่' });
-  // ลบหมวดหมู่ออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed)
-  const removed = categories.splice(idx, 1);
-  // บันทึกรายการหมวดหมู่ที่เหลือ (หลังลบ) กลับลงไฟล์
-  db.writeCategories(categories);
-  // เคลียร์ categoryId ของสินค้าทุกชิ้นที่เคยผูกกับหมวดหมู่นี้ (ป้องกันสินค้าอ้างอิงหมวดหมู่ที่ถูกลบไปแล้ว)
-  const products = db.readProducts();
-  let changed = false;
-  products.forEach((p) => {
-    if (p.categoryId === removed[0].id) {
-      p.categoryId = '';
-      changed = true;
-    }
-  });
-  // บันทึกไฟล์สินค้าใหม่เฉพาะตอนที่มีการเปลี่ยนแปลงจริง (ประหยัดการเขียนไฟล์โดยไม่จำเป็น)
-  if (changed) db.writeProducts(products);
-  // ตอบกลับข้อมูลหมวดหมู่ที่ถูกลบไป เพื่อยืนยันว่าลบตัวไหน
-  res.json(removed[0]);
 });
 
 // ---------- Flash Sale API ----------

@@ -22,8 +22,6 @@
       <nav>
         <!-- ปุ่มสลับไปแท็บ "จัดการสินค้า" เริ่มต้นเป็นแท็บที่ active (เปิดอยู่) data-tab ใช้บอก JS ว่าปุ่มนี้คู่กับแท็บไหน -->
         <button class="nav-btn active" data-tab="products">📦 จัดการสินค้า</button>
-        <!-- ปุ่มสลับไปแท็บ "หมวดหมู่สินค้า" (เช่น ราคาถูก/กลาง/แพง) -->
-        <button class="nav-btn" data-tab="categories">🏷️ หมวดหมู่สินค้า</button>
         <!-- ปุ่มสลับไปแท็บ "Flash Sale" -->
         <button class="nav-btn" data-tab="flashsales">⚡ Flash Sale</button>
         <!-- ปุ่มสลับไปแท็บ "คำสั่งซื้อ" (ออเดอร์จากหน้าร้านค้าออนไลน์) -->
@@ -64,7 +62,6 @@
                 <th>รูป</th>
                 <th>ชื่อสินค้า</th>
                 <th>แบรนด์</th>
-                <th>หมวดหมู่</th>
                 <th>ราคา</th>
                 <th>สต็อก</th>
                 <th>ไซส์</th>
@@ -74,30 +71,6 @@
             <!-- เนื้อหาตาราง (แถวข้อมูลสินค้า) จะถูกเติมโดย admin.js ตอนแรกยังไม่มีข้อมูลจึงขึ้น "กำลังโหลด..." -->
             <tbody id="productTableBody">
               <tr><td colspan="8">กำลังโหลด...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Tab: Categories (หมวดหมู่ราคาสินค้า) -->
-      <section id="tab-categories" class="tab-panel">
-        <div class="panel-header">
-          <h1>หมวดหมู่สินค้า</h1>
-          <!-- ปุ่มเปิด modal สำหรับเพิ่มหมวดหมู่ใหม่ -->
-          <button class="btn" id="addCategoryBtn">+ เพิ่มหมวดหมู่ใหม่</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ชื่อหมวดหมู่</th>
-                <th>จำนวนสินค้าในหมวดหมู่</th>
-                <th>จัดการ</th>
-              </tr>
-            </thead>
-            <!-- เนื้อหาตารางหมวดหมู่จะถูกเติมโดย admin.js -->
-            <tbody id="categoryTableBody">
-              <tr><td colspan="3">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -395,13 +368,6 @@
           <input type="text" id="productSizes" required />
         </div>
         <div class="field">
-          <label for="productCategory">หมวดหมู่ราคา</label>
-          <!-- ตัวเลือกในดรอปดาวน์นี้จะถูกเติมโดย admin.js จากรายการหมวดหมู่ที่จัดการไว้ในแท็บ "หมวดหมู่สินค้า" -->
-          <select id="productCategory">
-            <option value="">-- ไม่ระบุหมวดหมู่ --</option>
-          </select>
-        </div>
-        <div class="field">
           <label for="productImageFile">รูปภาพสินค้า (อัปโหลดจากเครื่อง)</label>
           <!-- ช่องเลือกไฟล์รูปภาพจากเครื่อง accept="image/*" กรองให้เลือกได้เฉพาะไฟล์รูปภาพในหน้าต่างเลือกไฟล์ -->
           <input type="file" id="productImageFile" accept="image/*" />
@@ -475,27 +441,6 @@
         </div>
         <!-- ปุ่ม submit ฟอร์ม -->
         <button type="submit" class="btn btn-block">บันทึกข้อมูลลูกค้า</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal เพิ่ม/แก้ไขหมวดหมู่สินค้า -->
-  <div class="modal-overlay" id="categoryModal">
-    <div class="modal">
-      <!-- ปุ่มกากบาทปิด modal -->
-      <span class="close-btn" id="closeCategoryModal">&times;</span>
-      <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "เพิ่มหมวดหมู่ใหม่" กับ "แก้ไขหมวดหมู่" โดย JS -->
-      <h3 id="categoryModalTitle">เพิ่มหมวดหมู่ใหม่</h3>
-      <!-- ฟอร์มกรอกชื่อหมวดหมู่ เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขหมวดหมู่ผ่าน API -->
-      <form id="categoryForm">
-        <!-- ช่องซ่อน เก็บ id ของหมวดหมู่ (มีค่า = โหมดแก้ไข, ว่าง = โหมดเพิ่มใหม่) -->
-        <input type="hidden" id="categoryId" />
-        <div class="field">
-          <label for="categoryName">ชื่อหมวดหมู่ (เช่น ราคาถูก, ราคากลาง, ราคาแพง)</label>
-          <input type="text" id="categoryName" required />
-        </div>
-        <!-- ปุ่ม submit ฟอร์ม -->
-        <button type="submit" class="btn btn-block">บันทึกหมวดหมู่</button>
       </form>
     </div>
   </div>

@@ -34,8 +34,6 @@ let employees = [];
 let customers = [];
 // ตัวแปรเก็บรายการสินค้าที่กำลังจะขายในรอบปัจจุบันของหน้า "ขายหน้าร้าน" (ยังไม่บันทึกจนกว่าจะกดปุ่มบันทึก)
 let posCart = [];
-// ตัวแปรเก็บรายการหมวดหมู่สินค้าทั้งหมดที่โหลดมาจาก API
-let categories = [];
 // ตัวแปรเก็บรายการ Flash Sale ทั้งหมดที่โหลดมาจาก API
 let flashSales = [];
 
@@ -98,16 +96,6 @@ const reportDateInput = document.getElementById('reportDateInput');
 // อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการขายของวันที่เลือก
 const reportTableBody = document.getElementById('reportTableBody');
 
-// อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการหมวดหมู่สินค้า
-const categoryTableBody = document.getElementById('categoryTableBody');
-// อ้างอิง element กล่อง modal สำหรับเพิ่ม/แก้ไขหมวดหมู่
-const categoryModal = document.getElementById('categoryModal');
-// อ้างอิง element ฟอร์มเพิ่ม/แก้ไขหมวดหมู่ภายใน modal
-const categoryForm = document.getElementById('categoryForm');
-// อ้างอิง element หัวข้อของ modal หมวดหมู่ (เปลี่ยนข้อความระหว่าง "เพิ่ม" กับ "แก้ไข")
-const categoryModalTitle = document.getElementById('categoryModalTitle');
-// อ้างอิง element ดรอปดาวน์เลือกหมวดหมู่ในฟอร์มเพิ่ม/แก้ไขสินค้า
-const productCategorySelect = document.getElementById('productCategory');
 
 // อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการ Flash Sale
 const flashSaleTableBody = document.getElementById('flashSaleTableBody');
@@ -161,7 +149,6 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
     // โหลดข้อมูลของแท็บนั้น ๆ ใหม่ทุกครั้งที่สลับเข้ามา เพื่อให้เห็นข้อมูลล่าสุดเสมอ
     // (เช่น สต็อกสินค้าหลังขายของใน POS, พนักงานที่เพิ่งเพิ่ม/แก้ไข)
     if (tab === 'products') loadProducts();
-    if (tab === 'categories') loadCategories();
     if (tab === 'flashsales') {
       // ตารางแสดงชื่อสินค้าของแต่ละ Flash Sale จึงต้องรอให้สินค้าโหลดเสร็จก่อนด้วย
       await loadProducts();
@@ -200,20 +187,17 @@ function renderProductTable() {
   // ถ้าไม่มีสินค้าเลย
   if (products.length === 0) {
     // แสดงข้อความแจ้งว่ายังไม่มีสินค้า (ในแถวเดียว ครอบคลุม 8 คอลัมน์)
-    productTableBody.innerHTML = '<tr><td colspan="8">ยังไม่มีสินค้า</td></tr>';
+    productTableBody.innerHTML = '<tr><td colspan="7">ยังไม่มีสินค้า</td></tr>';
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับสินค้าแต่ละชิ้น แล้วรวมเป็นข้อความเดียว
   productTableBody.innerHTML = products
-    .map((p) => {
-      // หาชื่อหมวดหมู่ของสินค้าชิ้นนี้จากรายการหมวดหมู่ทั้งหมด (ถ้าไม่มี categoryId หรือหาไม่เจอ ให้แสดงขีดกลาง)
-      const categoryName = categories.find((c) => c.id === p.categoryId)?.name || '-';
-      return `
+    .map(
+      (p) => `
     <tr>
       <td><img src="${p.image}" alt="${p.name}" /></td>
       <td>${p.name}</td>
       <td>${p.brand}</td>
-      <td>${categoryName}</td>
       <td>${formatPrice(p.price)}</td>
       <td>${p.stock}</td>
       <td>${p.sizes.join(', ')}</td>
@@ -222,8 +206,8 @@ function renderProductTable() {
         <button class="btn-icon danger" data-action="delete" data-id="${p.id}">ลบ</button>
       </td>
     </tr>
-  `;
-    })
+  `
+    )
     .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
 
   // ผูก event คลิกให้กับปุ่ม "แก้ไข" และ "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
@@ -258,8 +242,6 @@ function openProductModal(product = null) {
   document.getElementById('productStock').value = product?.stock ?? '';
   // เติมค่าไซส์ทั้งหมด โดยแปลง array ของไซส์ให้เป็นข้อความคั่นด้วยจุลภาค เช่น "40,41,42"
   document.getElementById('productSizes').value = product?.sizes?.join(',') || '';
-  // เติมตัวเลือกหมวดหมู่ทั้งหมดลงในดรอปดาวน์ก่อน (เผื่อรายการหมวดหมู่เพิ่งถูกโหลด/เปลี่ยนแปลงมา) แล้วเลือกหมวดหมู่ของสินค้านี้ไว้
-  populateProductCategorySelect(product?.categoryId || '');
   // เติมค่า path รูปภาพเดิมลงในช่องซ่อน (ถ้าเป็นการแก้ไขและมีรูปอยู่แล้ว)
   document.getElementById('productImage').value = product?.image || '';
   // ถ้าสินค้ามีรูปภาพอยู่แล้ว ให้แสดงรูปตัวอย่าง ถ้าไม่มีให้ซ่อนกล่องรูปตัวอย่างไว้
@@ -356,8 +338,6 @@ productForm.addEventListener('submit', async (e) => {
       .filter((s) => !Number.isNaN(s)), // กรองเอาเฉพาะค่าที่แปลงเป็นตัวเลขได้จริง (ตัดค่าผิดพลาดทิ้ง)
     image: document.getElementById('productImage').value.trim(),
     description: document.getElementById('productDescription').value.trim(),
-    // หมวดหมู่ราคาที่เลือกไว้ (ค่าว่างหมายถึงไม่ระบุหมวดหมู่)
-    categoryId: productCategorySelect.value,
   };
 
   // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
@@ -1146,156 +1126,6 @@ async function loadDbTableData(tableName) {
 // ผูก event ให้ปุ่ม "รีเฟรช" โหลดรายชื่อตาราง (และข้อมูลตารางที่เปิดอยู่) ใหม่อีกครั้ง
 document.getElementById('refreshDbBtn').addEventListener('click', loadDbTableList);
 
-// ---------- Categories (หมวดหมู่ราคาสินค้า) ----------
-// ส่วนจัดการหมวดหมู่สินค้า: โหลด/แสดง/เพิ่ม/แก้ไข/ลบ
-
-// ฟังก์ชัน async โหลดรายการหมวดหมู่ทั้งหมดจาก backend
-async function loadCategories() {
-  // ยิง HTTP GET ไปที่ /api/categories แล้วรอผลลัพธ์
-  const res = await fetch(`${API_BASE}/categories`);
-  // แปลง response เป็น array ของหมวดหมู่ แล้วเก็บลงตัวแปรกลาง
-  categories = await res.json();
-  // วาดตารางหมวดหมู่ใหม่ตามข้อมูลที่เพิ่งโหลดมา
-  renderCategoryTable();
-  // เติมตัวเลือกหมวดหมู่ในฟอร์มเพิ่ม/แก้ไขสินค้าให้ตรงกับข้อมูลล่าสุดเสมอ (คงตัวเลือกเดิมที่เลือกอยู่ไว้ ถ้ามี)
-  populateProductCategorySelect(productCategorySelect.value);
-}
-
-// ฟังก์ชันวาด (render) ตารางแสดงรายการหมวดหมู่ พร้อมจำนวนสินค้าที่อยู่ในแต่ละหมวดหมู่
-function renderCategoryTable() {
-  // ถ้ายังไม่มีหมวดหมู่เลย
-  if (categories.length === 0) {
-    // แสดงข้อความแจ้งว่ายังไม่มีหมวดหมู่ (ครอบคลุม 3 คอลัมน์)
-    categoryTableBody.innerHTML = '<tr><td colspan="3">ยังไม่มีหมวดหมู่</td></tr>';
-    return; // ออกจากฟังก์ชันทันที
-  }
-  // วนสร้างแถวตาราง (tr) สำหรับหมวดหมู่แต่ละอัน แล้วรวมเป็นข้อความเดียว
-  categoryTableBody.innerHTML = categories
-    .map((c) => {
-      // นับจำนวนสินค้าที่ผูกอยู่กับหมวดหมู่นี้ (เทียบ categoryId ของสินค้าแต่ละชิ้น)
-      const productCount = products.filter((p) => p.categoryId === c.id).length;
-      return `
-    <tr>
-      <td>${c.name}</td>
-      <td>${productCount}</td>
-      <td>
-        <button class="btn-icon" data-action="edit" data-id="${c.id}">แก้ไข</button>
-        <button class="btn-icon danger" data-action="delete" data-id="${c.id}">ลบ</button>
-      </td>
-    </tr>
-  `;
-    })
-    .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
-
-  // ผูก event คลิกให้กับปุ่ม "แก้ไข" และ "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
-  categoryTableBody.querySelectorAll('button[data-action]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // หาข้อมูลหมวดหมู่ที่ตรงกับ id ของปุ่มที่ถูกคลิก
-      const category = categories.find((c) => c.id === btn.dataset.id);
-      // ถ้าเป็นปุ่ม "แก้ไข" ให้เปิด modal พร้อมข้อมูลหมวดหมู่เดิม
-      if (btn.dataset.action === 'edit') openCategoryModal(category);
-      // ถ้าเป็นปุ่ม "ลบ" ให้เรียกฟังก์ชันลบหมวดหมู่
-      if (btn.dataset.action === 'delete') deleteCategory(category);
-    });
-  });
-}
-
-// ฟังก์ชันเปิด modal สำหรับเพิ่มหมวดหมู่ใหม่ หรือแก้ไขหมวดหมู่เดิม
-function openCategoryModal(category = null) {
-  // ล้างค่าทั้งหมดในฟอร์มก่อน
-  categoryForm.reset();
-  // เปลี่ยนหัวข้อ modal ตามโหมด (แก้ไข หรือ เพิ่มใหม่)
-  categoryModalTitle.textContent = category ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่ใหม่';
-  // เติมค่า id ของหมวดหมู่เดิมลงในช่องซ่อน (ถ้าเป็นการแก้ไข) หรือเว้นว่างไว้ (ถ้าเพิ่มใหม่)
-  document.getElementById('categoryId').value = category?.id || '';
-  // เติมค่าชื่อหมวดหมู่เดิมลงในช่องกรอก
-  document.getElementById('categoryName').value = category?.name || '';
-  // เพิ่ม class "open" ให้กับ modal เพื่อแสดงหน้าต่างขึ้นมา
-  categoryModal.classList.add('open');
-}
-
-// ผูก event ให้กับปุ่ม "+ เพิ่มหมวดหมู่ใหม่"
-document.getElementById('addCategoryBtn').addEventListener('click', () => openCategoryModal());
-// ผูก event ให้กับปุ่มกากบาทปิด modal หมวดหมู่
-document.getElementById('closeCategoryModal').addEventListener('click', () => {
-  categoryModal.classList.remove('open');
-});
-// ผูก event คลิกที่พื้นหลังมืดรอบ modal ถ้าคลิกตรงพื้นหลัง ให้ปิด modal ด้วย
-categoryModal.addEventListener('click', (e) => {
-  if (e.target === categoryModal) categoryModal.classList.remove('open');
-});
-
-// ผูก event เมื่อผู้ใช้กดปุ่ม "บันทึกหมวดหมู่" (submit ฟอร์ม)
-categoryForm.addEventListener('submit', async (e) => {
-  // ป้องกันเบราว์เซอร์รีโหลดหน้าตามพฤติกรรมปกติของฟอร์ม
-  e.preventDefault();
-  // อ่านค่า id จากช่องซ่อน เพื่อรู้ว่าเป็นการ "เพิ่มใหม่" (id ว่าง) หรือ "แก้ไข" (มี id)
-  const id = document.getElementById('categoryId').value;
-  // รวบรวมชื่อหมวดหมู่ที่กรอกไว้
-  const payload = { name: document.getElementById('categoryName').value.trim() };
-
-  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
-  try {
-    // ถ้ามี id (โหมดแก้ไข) ให้ยิงไปที่ /api/categories/<id> ด้วย method PUT
-    // ถ้าไม่มี id (โหมดเพิ่มใหม่) ให้ยิงไปที่ /api/categories ด้วย method POST
-    const res = await fetch(`${API_BASE}/categories${id ? '/' + id : ''}`, {
-      method: id ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    // ถ้า response ไม่สำเร็จ ให้โยน error
-    if (!res.ok) throw new Error('save failed');
-    // ปิด modal เพราะบันทึกสำเร็จแล้ว
-    categoryModal.classList.remove('open');
-    // แสดงข้อความแจ้งเตือนความสำเร็จ
-    showToast(id ? 'แก้ไขหมวดหมู่เรียบร้อย' : 'เพิ่มหมวดหมู่เรียบร้อย');
-    // โหลดรายการหมวดหมู่ใหม่ทั้งหมด เพื่อให้ตารางแสดงข้อมูลล่าสุด
-    loadCategories();
-  } catch (err) {
-    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
-    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
-  }
-});
-
-// ฟังก์ชัน async สำหรับลบหมวดหมู่ รับพารามิเตอร์เป็น object หมวดหมู่ที่ต้องการลบ
-async function deleteCategory(category) {
-  // แสดงกล่องยืนยันก่อนลบจริง พร้อมอธิบายผลกระทบว่าสินค้าในหมวดหมู่นี้จะกลายเป็น "ไม่ระบุหมวดหมู่"
-  if (
-    !confirm(
-      `ต้องการลบหมวดหมู่ "${category.name}" ใช่หรือไม่?\nสินค้าที่อยู่ในหมวดหมู่นี้จะถูกเปลี่ยนเป็น "ไม่ระบุหมวดหมู่"`
-    )
-  )
-    return;
-  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
-  try {
-    // ยิง HTTP DELETE ไปที่ /api/categories/<id> ของหมวดหมู่ที่ต้องการลบ
-    const res = await fetch(`${API_BASE}/categories/${category.id}`, { method: 'DELETE' });
-    // ถ้า response ไม่สำเร็จ ให้โยน error
-    if (!res.ok) throw new Error('delete failed');
-    // แจ้งเตือนว่าลบสำเร็จ
-    showToast('ลบหมวดหมู่เรียบร้อย');
-    // โหลดรายการสินค้าใหม่ด้วย เพราะ backend อาจล้าง categoryId ของสินค้าบางชิ้นที่เคยผูกกับหมวดหมู่นี้ไปแล้ว
-    await loadProducts();
-    // โหลดรายการหมวดหมู่ใหม่ทั้งหมด เพื่อให้ตารางไม่แสดงหมวดหมู่ที่ถูกลบไปแล้ว
-    loadCategories();
-  } catch (err) {
-    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
-    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
-  }
-}
-
-// ฟังก์ชันเติมตัวเลือกหมวดหมู่ทั้งหมดลงในดรอปดาวน์ของฟอร์มเพิ่ม/แก้ไขสินค้า
-// รับพารามิเตอร์ selectedId เพื่อเลือกหมวดหมู่ที่ต้องการไว้ล่วงหน้า (ใช้ตอนเปิด modal แก้ไขสินค้า)
-function populateProductCategorySelect(selectedId = '') {
-  productCategorySelect.innerHTML =
-    '<option value="">-- ไม่ระบุหมวดหมู่ --</option>' +
-    categories
-      .map(
-        (c) => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.name}</option>`
-      )
-      .join('');
-}
-
 // ---------- Flash Sale ----------
 // ส่วนจัดการ Flash Sale ที่หลังบ้าน: โหลด/แสดง/ตั้งค่าใหม่/แก้ไข/ยกเลิก
 
@@ -1499,9 +1329,7 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   const isAuthenticated = await checkAuth();
   if (!isAuthenticated) return;
 
-  // โหลดหมวดหมู่ก่อน เพราะตารางสินค้าต้องใช้ชื่อหมวดหมู่มาแสดงในคอลัมน์ "หมวดหมู่"
-  await loadCategories();
-  // โหลดสินค้าต่อ เพื่อแสดงตารางสินค้าตั้งแต่เปิดหน้ามา (ตอนนี้มีชื่อหมวดหมู่ให้แสดงแล้ว)
+  // โหลดสินค้า เพื่อแสดงตารางสินค้าตั้งแต่เปิดหน้ามา
   await loadProducts();
   // โหลดข้อมูลคำสั่งซื้อ เพื่อแสดงตารางคำสั่งซื้อตั้งแต่เปิดหน้ามาเช่นกัน
   loadOrders();
