@@ -1,7 +1,5 @@
 // ตัวแปรเก็บสินค้าทั้งหมดที่โหลดมาจาก API (เก็บไว้ในหน่วยความจำ เพื่อใช้กรอง/เรียงโดยไม่ต้องยิง API ซ้ำ)
 let allProducts = [];
-// ตัวแปรเก็บหมวดหมู่ทั้งหมดที่โหลดมาจาก API (ใช้เติม dropdown กรองหมวดหมู่)
-let allCategories = [];
 // ตัวแปรเก็บรายการ Flash Sale ที่กำลังลดราคาอยู่ตอนนี้ ที่โหลดมาจาก API
 let activeFlashSales = [];
 // ตัวแปรเก็บไซส์ที่ผู้ใช้เลือกไว้ในหน้าต่าง (modal) เลือกไซส์
@@ -17,8 +15,8 @@ const productGrid = document.getElementById('productGrid');
 const searchInput = document.getElementById('searchInput');
 // อ้างอิง element dropdown เลือกกรองตามแบรนด์
 const brandFilter = document.getElementById('brandFilter');
-// อ้างอิง element dropdown เลือกกรองตามหมวดหมู่ราคา
-const categoryFilter = document.getElementById('categoryFilter');
+// อ้างอิง element dropdown เลือกกรองตามช่วงราคา (เช่น 0-5,000 / 5,001-10,000)
+const priceRangeFilter = document.getElementById('priceRangeFilter');
 // อ้างอิง element dropdown เลือกการเรียงลำดับ (ราคา น้อย->มาก / มาก->น้อย)
 const sortFilter = document.getElementById('sortFilter');
 // อ้างอิง element กล่อง modal สำหรับเลือกไซส์
@@ -67,27 +65,6 @@ function populateBrandFilter() {
   });
 }
 
-// ฟังก์ชัน async โหลดรายการหมวดหมู่ทั้งหมดจาก backend แล้วเติมลงใน dropdown กรองหมวดหมู่
-async function loadCategories() {
-  // ใช้ try/catch ดักจับข้อผิดพลาด เผื่อกรณีเซิร์ฟเวอร์ล่มหรือเน็ตหลุด (ไม่ให้หน้าเว็บพังทั้งหน้าถ้าหมวดหมู่โหลดไม่ได้)
-  try {
-    // ยิง HTTP GET ไปที่ /api/categories แล้วรอผลลัพธ์
-    const res = await fetch(`${API_BASE}/categories`);
-    // แปลง response เป็น array ของหมวดหมู่ แล้วเก็บลงตัวแปรกลาง
-    allCategories = await res.json();
-    // วนลูปแต่ละหมวดหมู่ เพื่อสร้าง <option> แล้วเพิ่มเข้าไปใน dropdown
-    allCategories.forEach((c) => {
-      const opt = document.createElement('option');
-      // ใช้ id ของหมวดหมู่เป็นค่า value เพื่อนำไปเทียบกับ categoryId ของสินค้าตอนกรอง
-      opt.value = c.id;
-      opt.textContent = c.name;
-      categoryFilter.appendChild(opt);
-    });
-  } catch (err) {
-    // ถ้าโหลดหมวดหมู่ไม่สำเร็จ ปล่อยให้ dropdown เหลือแค่ตัวเลือก "ทุกหมวดหมู่" ไปก่อน ไม่ต้องหยุดการทำงานของหน้าเว็บ
-  }
-}
-
 // ฟังก์ชันคำนวณรายการสินค้าที่ผ่านการค้นหา/กรอง/เรียงลำดับ ตามค่าปัจจุบันของ input ต่าง ๆ
 function getFilteredProducts() {
   // คัดลอก array สินค้าทั้งหมดมาไว้ในตัวแปรใหม่ (ไม่แก้ของเดิม)
@@ -106,10 +83,14 @@ function getFilteredProducts() {
     // กรองเฉพาะสินค้าที่แบรนด์ตรงกับที่เลือก
     list = list.filter((p) => p.brand === brandFilter.value);
   }
-  // ถ้ามีการเลือกหมวดหมู่ใน dropdown (ไม่ใช่ค่าว่าง "ทุกหมวดหมู่")
-  if (categoryFilter.value) {
-    // กรองเฉพาะสินค้าที่หมวดหมู่ตรงกับที่เลือก
-    list = list.filter((p) => p.categoryId === categoryFilter.value);
+  // ถ้ามีการเลือกช่วงราคาใน dropdown (ไม่ใช่ค่าว่าง "ทุกช่วงราคา")
+  if (priceRangeFilter.value) {
+    // แยกค่า value ของ option (เช่น "5001-10000" หรือ "20001-") ออกเป็นขอบเขตล่างกับขอบเขตบน
+    const [minStr, maxStr] = priceRangeFilter.value.split('-');
+    const min = Number(minStr);
+    // ถ้าไม่มีขอบเขตบน (เช่น "20001 บาทขึ้นไป") ให้ใช้ Infinity แทน
+    const max = maxStr ? Number(maxStr) : Infinity;
+    list = list.filter((p) => p.price >= min && p.price <= max);
   }
   // ถ้าเลือกเรียงลำดับราคาน้อยไปมาก
   if (sortFilter.value === 'price-asc') {
@@ -257,8 +238,8 @@ document.getElementById('confirmAddToCart').addEventListener('click', () => {
 searchInput.addEventListener('input', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกแบรนด์ ให้วาดรายการสินค้าใหม่ตามแบรนด์ที่เลือก
 brandFilter.addEventListener('change', renderProducts);
-// เมื่อผู้ใช้เปลี่ยนตัวเลือกหมวดหมู่ ให้วาดรายการสินค้าใหม่ตามหมวดหมู่ที่เลือก
-categoryFilter.addEventListener('change', renderProducts);
+// เมื่อผู้ใช้เปลี่ยนตัวเลือกช่วงราคา ให้วาดรายการสินค้าใหม่ตามช่วงราคาที่เลือก
+priceRangeFilter.addEventListener('change', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกการเรียงลำดับ ให้วาดรายการสินค้าใหม่ตามลำดับที่เลือก
 sortFilter.addEventListener('change', renderProducts);
 
@@ -362,6 +343,5 @@ function updateFlashCountdowns() {
 setInterval(updateFlashCountdowns, 1000);
 
 // เรียกฟังก์ชันโหลดสินค้าและข้อมูลที่เกี่ยวข้องทันทีที่ไฟล์นี้ถูกโหลด (เริ่มต้นการทำงานของหน้าเว็บ)
-loadCategories();
 loadProducts();
 loadFlashSales();
