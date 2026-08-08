@@ -323,8 +323,11 @@ productForm.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    // ถ้า response ไม่สำเร็จ ให้โยน error เพื่อให้ตกไปที่ catch
-    if (!res.ok) throw new Error('save failed');
+    // ถ้า response ไม่สำเร็จ (เช่น รหัสสินค้าซ้ำ) ให้อ่านข้อความ error จริงจาก backend มาโยนต่อ เพื่อให้ catch ด้านล่างแสดงข้อความที่อธิบายสาเหตุจริง ๆ ให้ผู้ใช้เห็น
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'save failed');
+    }
     // ปิด modal เพราะบันทึกสำเร็จแล้ว
     productModal.classList.remove('open');
     // แสดงข้อความแจ้งเตือนความสำเร็จ (ข้อความต่างกันตามว่าเป็นการแก้ไขหรือเพิ่มใหม่)
@@ -332,8 +335,8 @@ productForm.addEventListener('submit', async (e) => {
     // โหลดรายการสินค้าใหม่ทั้งหมด เพื่อให้ตารางแสดงข้อมูลล่าสุด (รวมของที่เพิ่ง เพิ่ม/แก้ไข)
     loadProducts();
   } catch (err) {
-    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
-    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้ด้วยข้อความจริงจาก backend (เช่น "รหัสสินค้า A1 มีอยู่แล้วในระบบ") ถ้ามี ไม่งั้นแสดงข้อความทั่วไป
+    showToast(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
   }
 });
 

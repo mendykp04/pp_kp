@@ -236,13 +236,19 @@ app.post('/api/products', requireAuth, (req, res) => {
   }
   // อ่านรายการสินค้าปัจจุบันทั้งหมดจากไฟล์ เพื่อนำมาต่อท้ายด้วยสินค้าใหม่
   const products = db.readProducts();
+  // ตัดช่องว่างหัวท้ายของรหัสสินค้าที่ส่งมา (เผื่อพิมพ์เว้นวรรคเกินมาโดยไม่ตั้งใจ)
+  const trimmedCode = (code || '').trim();
+  // ตรวจสอบว่ารหัสสินค้านี้มีอยู่แล้วในระบบหรือไม่ (เทียบแบบไม่สนตัวพิมพ์ใหญ่/เล็ก เพื่อกัน A1 กับ a1 ซ้ำกัน) — รหัสว่างไม่ต้องเช็คซ้ำเพราะไม่ได้ใช้อ้างอิงตัวไหน
+  if (trimmedCode && products.some((p) => (p.code || '').toLowerCase() === trimmedCode.toLowerCase())) {
+    return res.status(400).json({ error: `รหัสสินค้า "${trimmedCode}" มีอยู่แล้วในระบบ กรุณาใช้รหัสอื่น` });
+  }
   // สร้าง object สินค้าใหม่ โดยกำหนด id อัตโนมัติ และแปลงชนิดข้อมูลให้ถูกต้อง (ราคาเป็นตัวเลข)
   const newProduct = {
     id: genId('p'),
     name,
     brand: brand || '',
     // รหัสรองเท้า ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (สินค้าเป็นของมือสอง แต่ละคู่มีสภาพไม่เหมือนกัน)
-    code: code || '',
+    code: trimmedCode,
     price: Number(price),
     // categoryId คือหมวดหมู่ราคาที่ผูกไว้กับสินค้าชิ้นนี้ (เช่น "ราคาถูก") ถ้าไม่ระบุมาให้เป็นค่าว่าง
     categoryId: categoryId || '',
@@ -275,6 +281,15 @@ app.put('/api/products/:id', requireAuth, (req, res) => {
   const { name, brand, code, price, sizes, image, description, condition, categoryId } = req.body;
   // เก็บข้อมูลสินค้าเดิมไว้ในตัวแปร existing เพื่อใช้เป็นค่า default ถ้าไม่ได้ส่งฟิลด์นั้นมาแก้ไข
   const existing = products[idx];
+  // ถ้ามีการส่งรหัสสินค้าใหม่มา (ไม่ใช่ undefined) และรหัสนั้นเปลี่ยนไปจากเดิมจริง ๆ ให้ตรวจสอบว่าซ้ำกับสินค้าชิ้นอื่นหรือไม่
+  const trimmedCode = code !== undefined ? code.trim() : undefined;
+  if (
+    trimmedCode &&
+    trimmedCode.toLowerCase() !== (existing.code || '').toLowerCase() &&
+    products.some((p) => p.id !== existing.id && (p.code || '').toLowerCase() === trimmedCode.toLowerCase())
+  ) {
+    return res.status(400).json({ error: `รหัสสินค้า "${trimmedCode}" มีอยู่แล้วในระบบ กรุณาใช้รหัสอื่น` });
+  }
   // สร้าง object สินค้าใหม่ โดยรวมข้อมูลเดิม (...existing) กับข้อมูลใหม่ที่ส่งมา
   // ใช้ ?? (nullish coalescing) คือถ้าค่าที่ส่งมาเป็น undefined/null จะใช้ค่าเดิมแทน
   // หมายเหตุ: ไม่รับค่า stock จากฟอร์มแก้ไขสินค้าอีกต่อไป (สินค้ามือสองมีแค่ 1 คู่เสมอ สถานะขายแล้ว/ยังไม่ขาย จะถูกอัปเดตจากขั้นตอนสั่งซื้อ/ขายหน้าร้านเท่านั้น) จึงคงค่าเดิมไว้เสมอ
@@ -282,7 +297,7 @@ app.put('/api/products/:id', requireAuth, (req, res) => {
     ...existing,
     name: name ?? existing.name,
     brand: brand ?? existing.brand,
-    code: code ?? existing.code,
+    code: trimmedCode ?? existing.code,
     price: price !== undefined ? Number(price) : existing.price,
     // ถ้าไม่ได้ส่ง categoryId มา ให้คงหมวดหมู่เดิมไว้ (categoryId ที่ส่งมาเป็นสตริงว่าง "" ถือว่าตั้งใจล้างหมวดหมู่ จึงต้องเช็ค undefined เท่านั้น)
     categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
