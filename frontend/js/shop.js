@@ -17,8 +17,6 @@ const searchInput = document.getElementById('searchInput');
 const brandFilter = document.getElementById('brandFilter');
 // อ้างอิง element dropdown เลือกกรองตามช่วงราคา (เช่น 0-5,000 / 5,001-10,000)
 const priceRangeFilter = document.getElementById('priceRangeFilter');
-// อ้างอิง element dropdown เลือกการเรียงลำดับ (ราคา น้อย->มาก / มาก->น้อย)
-const sortFilter = document.getElementById('sortFilter');
 // อ้างอิง element กล่อง modal สำหรับเลือกไซส์
 const sizeModal = document.getElementById('sizeModal');
 // อ้างอิง element ที่แสดงปุ่มไซส์ทั้งหมดภายใน modal
@@ -92,15 +90,7 @@ function getFilteredProducts() {
     const max = maxStr ? Number(maxStr) : Infinity;
     list = list.filter((p) => p.price >= min && p.price <= max);
   }
-  // ถ้าเลือกเรียงลำดับราคาน้อยไปมาก
-  if (sortFilter.value === 'price-asc') {
-    // เรียง array โดยเปรียบเทียบราคา a ลบ b (ผลลัพธ์ติดลบ = a มาก่อน)
-    list.sort((a, b) => a.price - b.price);
-  } else if (sortFilter.value === 'price-desc') {
-    // เรียงลำดับราคามากไปน้อย (สลับด้าน b ลบ a)
-    list.sort((a, b) => b.price - a.price);
-  }
-  // คืนค่ารายการสินค้าที่ผ่านการกรอง/เรียงแล้ว
+  // คืนค่ารายการสินค้าที่ผ่านการกรองแล้ว
   return list;
 }
 
@@ -242,8 +232,6 @@ searchInput.addEventListener('input', renderProducts);
 brandFilter.addEventListener('change', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกช่วงราคา ให้วาดรายการสินค้าใหม่ตามช่วงราคาที่เลือก
 priceRangeFilter.addEventListener('change', renderProducts);
-// เมื่อผู้ใช้เปลี่ยนตัวเลือกการเรียงลำดับ ให้วาดรายการสินค้าใหม่ตามลำดับที่เลือก
-sortFilter.addEventListener('change', renderProducts);
 
 // ---------- Flash Sale ----------
 // ส่วนโหลดและแสดงผลสินค้าที่กำลังลดราคาแบบ Flash Sale อยู่ตอนนี้ (ตั้งค่าไว้จากหลังบ้าน)
