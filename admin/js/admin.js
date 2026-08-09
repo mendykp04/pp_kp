@@ -212,16 +212,9 @@ function openProductModal(product = null) {
   document.getElementById('productPrice').value = product?.price ?? '';
   // เติมค่าไซส์ทั้งหมด โดยแปลง array ของไซส์ให้เป็นข้อความคั่นด้วยจุลภาค เช่น "40,41,42"
   document.getElementById('productSizes').value = product?.sizes?.join(',') || '';
-  // เติมค่า path รูปภาพเดิมลงในช่องซ่อน (ถ้าเป็นการแก้ไขและมีรูปอยู่แล้ว)
-  document.getElementById('productImage').value = product?.image || '';
-  // ถ้าสินค้ามีรูปภาพอยู่แล้ว ให้แสดงรูปตัวอย่าง ถ้าไม่มีให้ซ่อนกล่องรูปตัวอย่างไว้
-  const preview = document.getElementById('productImagePreview');
-  if (product?.image) {
-    preview.src = product.image;
-    preview.style.display = 'block';
-  } else {
-    preview.style.display = 'none';
-  }
+  // เติมค่ารูปภาพเดิมทั้งหมดลงในตัวแปรกลาง (ถ้าเป็นการแก้ไขและมีรูปอยู่แล้ว) แล้ววาดแถบรูปตัวอย่างใหม่
+  currentProductImages = product?.images ? [...product.images] : [];
+  renderImagesPreview();
   // เติมค่ารายละเอียดสินค้าลงในช่องกรอก
   document.getElementById('productDescription').value = product?.description || '';
   // เติมค่าสภาพ/ตำหนิสินค้าลงในช่องกรอก
@@ -248,31 +241,57 @@ async function uploadProductImage(file) {
   return data.url;
 }
 
-// ผูก event เมื่อผู้ใช้เลือกไฟล์รูปภาพใหม่จากช่อง input type="file"
-document.getElementById('productImageFile').addEventListener('change', async (e) => {
-  // ดึงไฟล์แรกที่ผู้ใช้เลือก (input ตัวนี้เลือกได้ทีละ 1 ไฟล์)
-  const file = e.target.files[0];
-  // ถ้าผู้ใช้กดยกเลิกตอนเลือกไฟล์ (ไม่มีไฟล์) ให้หยุดทำงาน
-  if (!file) return;
+// ตัวแปรเก็บ path รูปภาพทั้งหมดของสินค้าที่กำลังเพิ่ม/แก้ไขอยู่ในฟอร์ม (เรียงตามลำดับ รูปแรก = รูปปกที่จะโชว์ในตาราง/หน้าร้านค้า)
+let currentProductImages = [];
 
-  const preview = document.getElementById('productImagePreview');
+// ฟังก์ชันวาด (render) แถบรูปตัวอย่างทั้งหมดใน currentProductImages พร้อมปุ่มลบของแต่ละรูป
+function renderImagesPreview() {
+  const container = document.getElementById('productImagesPreview');
+  container.innerHTML = currentProductImages
+    .map(
+      (url, idx) => `
+    <div class="thumb">
+      <img src="${url}" alt="รูปสินค้า ${idx + 1}" />
+      <button type="button" class="remove-thumb" data-index="${idx}" title="ลบรูปนี้">&times;</button>
+    </div>
+  `
+    )
+    .join('');
+  // ผูก event ให้ปุ่มลบทุกปุ่มที่เพิ่งวาดใหม่ กดแล้วเอารูปตัวนั้นออกจาก currentProductImages แล้ววาดใหม่
+  container.querySelectorAll('.remove-thumb').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      currentProductImages.splice(Number(btn.dataset.index), 1);
+      renderImagesPreview();
+    });
+  });
+}
+
+// ผูก event เมื่อผู้ใช้เลือกไฟล์รูปภาพใหม่จากช่อง input type="file" (เลือกได้หลายไฟล์พร้อมกัน)
+document.getElementById('productImageFile').addEventListener('change', async (e) => {
+  // ดึงไฟล์ทั้งหมดที่ผู้ใช้เลือกไว้รอบนี้
+  const files = Array.from(e.target.files);
+  // ถ้าผู้ใช้กดยกเลิกตอนเลือกไฟล์ (ไม่มีไฟล์) ให้หยุดทำงาน
+  if (files.length === 0) return;
+
   // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างอัปโหลด
   try {
     // แจ้งผู้ใช้ว่ากำลังอัปโหลดอยู่ ระหว่างรอผลลัพธ์จาก backend
-    showToast('กำลังอัปโหลดรูปภาพ...');
-    // เรียกฟังก์ชันอัปโหลดไฟล์ แล้วรอ path ของรูปที่บันทึกสำเร็จ
-    const imageUrl = await uploadProductImage(file);
-    // เก็บ path ของรูปที่อัปโหลดสำเร็จไว้ในช่องซ่อน เพื่อนำไปส่งพร้อมข้อมูลสินค้าตอนบันทึก
-    document.getElementById('productImage').value = imageUrl;
-    // แสดงรูปตัวอย่างจาก path ที่เพิ่งอัปโหลดสำเร็จ
-    preview.src = imageUrl;
-    preview.style.display = 'block';
+    showToast(`กำลังอัปโหลดรูปภาพ ${files.length} รูป...`);
+    // อัปโหลดทีละไฟล์เรียงตามลำดับ (ไม่ยิงพร้อมกันทั้งหมด กันเซิร์ฟเวอร์โดนถล่มพร้อมกันหลายไฟล์ใหญ่)
+    for (const file of files) {
+      const imageUrl = await uploadProductImage(file);
+      // เพิ่ม path รูปที่อัปโหลดสำเร็จเข้าไปต่อท้ายรายการรูปทั้งหมด
+      currentProductImages.push(imageUrl);
+    }
+    // วาดแถบรูปตัวอย่างใหม่ให้เห็นรูปที่เพิ่งอัปโหลดเพิ่มเข้ามา
+    renderImagesPreview();
     // แจ้งผู้ใช้ว่าอัปโหลดสำเร็จแล้ว
     showToast('อัปโหลดรูปภาพสำเร็จ');
   } catch (err) {
     // ถ้าอัปโหลดไม่สำเร็จ ให้แจ้งเตือนผู้ใช้ด้วยข้อความ error ที่ได้จาก backend
     showToast(err.message);
-    // เคลียร์ค่าที่เลือกไว้ในช่อง input เพื่อให้ผู้ใช้เลือกไฟล์ใหม่ได้อีกครั้ง
+  } finally {
+    // เคลียร์ค่าที่เลือกไว้ในช่อง input เสมอ ไม่ว่าอัปโหลดสำเร็จหรือไม่ เพื่อให้เลือกไฟล์ซ้ำชื่อเดิมได้อีกครั้งถ้าต้องการ
     e.target.value = '';
   }
 });
@@ -309,7 +328,7 @@ productForm.addEventListener('submit', async (e) => {
       .value.split(',') // แยกข้อความออกเป็นชิ้น ๆ ตามจุลภาค
       .map((s) => Number(s.trim())) // ตัดช่องว่างแต่ละชิ้นแล้วแปลงเป็นตัวเลข
       .filter((s) => !Number.isNaN(s)), // กรองเอาเฉพาะค่าที่แปลงเป็นตัวเลขได้จริง (ตัดค่าผิดพลาดทิ้ง)
-    image: document.getElementById('productImage').value.trim(),
+    images: currentProductImages,
     description: document.getElementById('productDescription').value.trim(),
     condition: document.getElementById('productCondition').value.trim(),
   };

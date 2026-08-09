@@ -124,7 +124,7 @@ function renderProducts() {
         : `<span class="price">${formatPrice(p.price)}</span>`;
       return `
     <div class="${cardClass}">
-      <div class="img-wrap"><img src="${p.image}" alt="${p.name}" loading="lazy" /></div>
+      <div class="img-wrap" data-detail-id="${p.id}"><img src="${p.image}" alt="${p.name}" loading="lazy" /></div>
       <div class="info">
         <span class="brand">${p.brand}</span>
         <span class="name">${p.name}</span>
@@ -151,6 +151,10 @@ function renderProducts() {
       // เปิด modal เลือกไซส์ โดยส่ง id ของสินค้าและข้อมูล Flash Sale (ถ้ามี) ไปด้วย
       openSizeModal(btn.dataset.id, sale);
     });
+  });
+  // ผูก event คลิกที่รูปสินค้าทุกใบที่เพิ่งวาดใหม่ กดแล้วเปิด modal ดูรูปแบบเต็ม (เลื่อนดูได้หลายรูป)
+  productGrid.querySelectorAll('.img-wrap[data-detail-id]').forEach((el) => {
+    el.addEventListener('click', () => openProductDetailModal(el.dataset.detailId));
   });
   // อัปเดตตัวนับถอยหลังทันทีหลังวาดการ์ดเสร็จ (การ์ดที่มี Flash Sale ในตารางสินค้าทั้งหมดก็ต้องเห็นเวลานับถอยหลังทันที ไม่ต้องรอรอบ setInterval แรก)
   updateFlashCountdowns();
@@ -226,6 +230,89 @@ document.getElementById('confirmAddToCart').addEventListener('click', () => {
   showToast(`เพิ่ม ${activeProduct.name} (ไซส์ ${selectedSize}) ลงตะกร้าแล้ว`);
 });
 
+// ---------- Product Detail (ดูรูปสินค้าแบบเต็ม เลื่อนดูได้หลายรูป) ----------
+
+// อ้างอิง element ต่าง ๆ ของ modal ดูรายละเอียด/รูปสินค้า
+const productDetailModal = document.getElementById('productDetailModal');
+const detailMainImage = document.getElementById('detailMainImage');
+const detailThumbs = document.getElementById('detailThumbs');
+const detailPrevBtn = document.getElementById('detailPrevBtn');
+const detailNextBtn = document.getElementById('detailNextBtn');
+
+// ตัวแปรเก็บรายการรูปทั้งหมดของสินค้าที่กำลังเปิดดูอยู่ และรูปที่กำลังแสดงอยู่ตอนนี้ (ตำแหน่งใน array)
+let detailImages = [];
+let detailIndex = 0;
+
+// ฟังก์ชันเปิด modal ดูรายละเอียด/รูปสินค้าแบบเต็ม รับ id ของสินค้าที่ถูกคลิก
+function openProductDetailModal(productId) {
+  // หาสินค้าจาก allProducts ที่โหลดไว้แล้วในหน่วยความจำ (ไม่ต้องยิง API ซ้ำ)
+  const product = allProducts.find((p) => p.id === productId);
+  if (!product) return;
+
+  // ถ้าสินค้ามีหลายรูป (images) ให้ใช้ทั้งหมด ถ้าไม่มีเลย (ข้อมูลเก่า) ให้ใช้รูปเดียวจาก image แทน กันจอว่างเปล่า
+  detailImages = product.images && product.images.length > 0 ? product.images : [product.image];
+  detailIndex = 0;
+
+  // เติมข้อมูลสินค้า (ชื่อ, แบรนด์, ราคา, รหัส, สภาพ) ลงใน modal
+  document.getElementById('detailBrand').textContent = product.brand;
+  document.getElementById('detailName').textContent = product.name;
+  document.getElementById('detailCode').textContent = product.code ? `รหัส: ${product.code}` : '';
+  document.getElementById('detailCondition').textContent = product.condition ? `สภาพ: ${product.condition}` : '';
+  document.getElementById('detailPrice').textContent = formatPrice(product.price);
+
+  // วาดรูปใหญ่ + แถบรูปย่อตามรูปแรก แล้วเปิด modal ขึ้นมา
+  renderProductDetailGallery();
+  productDetailModal.classList.add('open');
+}
+
+// ฟังก์ชันวาด (render) รูปใหญ่ + แถบรูปย่อ ตามตำแหน่ง detailIndex ปัจจุบัน
+function renderProductDetailGallery() {
+  // แสดงรูปใหญ่ตามตำแหน่งที่เลือกอยู่ตอนนี้
+  detailMainImage.src = detailImages[detailIndex];
+
+  // ถ้ามีรูปเดียว ไม่ต้องมีปุ่มลูกศรเลื่อนดูรูปอื่น (ซ่อนไปเลย)
+  const hasMultiple = detailImages.length > 1;
+  detailPrevBtn.classList.toggle('hidden', !hasMultiple);
+  detailNextBtn.classList.toggle('hidden', !hasMultiple);
+
+  // วาดแถบรูปย่อทั้งหมด (ซ่อนไปเลยถ้ามีรูปเดียว ไม่มีประโยชน์ต้องเลือก)
+  detailThumbs.innerHTML = hasMultiple
+    ? detailImages
+        .map(
+          (url, idx) =>
+            `<img src="${url}" data-index="${idx}" class="${idx === detailIndex ? 'active' : ''}" alt="รูปที่ ${idx + 1}" />`
+        )
+        .join('')
+    : '';
+  // ผูก event คลิกให้รูปย่อทุกรูป กดแล้วเปลี่ยนไปแสดงรูปนั้นในรูปใหญ่ทันที
+  detailThumbs.querySelectorAll('img').forEach((img) => {
+    img.addEventListener('click', () => {
+      detailIndex = Number(img.dataset.index);
+      renderProductDetailGallery();
+    });
+  });
+}
+
+// ผูก event ให้ปุ่มลูกศรซ้าย เลื่อนไปรูปก่อนหน้า (วนกลับไปรูปสุดท้ายถ้าอยู่รูปแรกอยู่แล้ว)
+detailPrevBtn.addEventListener('click', () => {
+  detailIndex = (detailIndex - 1 + detailImages.length) % detailImages.length;
+  renderProductDetailGallery();
+});
+// ผูก event ให้ปุ่มลูกศรขวา เลื่อนไปรูปถัดไป (วนกลับไปรูปแรกถ้าอยู่รูปสุดท้ายอยู่แล้ว)
+detailNextBtn.addEventListener('click', () => {
+  detailIndex = (detailIndex + 1) % detailImages.length;
+  renderProductDetailGallery();
+});
+
+// ผูก event ให้ปุ่มกากบาทปิด modal ดูรายละเอียด/รูปสินค้า
+document.getElementById('closeDetailModal').addEventListener('click', () => {
+  productDetailModal.classList.remove('open');
+});
+// ผูก event คลิกที่พื้นหลังมืดรอบ modal ถ้าคลิกตรงพื้นหลัง (ไม่ใช่ในกล่อง) ให้ปิด modal ด้วย
+productDetailModal.addEventListener('click', (e) => {
+  if (e.target === productDetailModal) productDetailModal.classList.remove('open');
+});
+
 // เมื่อผู้ใช้พิมพ์ในช่องค้นหา (ทุกครั้งที่ตัวอักษรเปลี่ยน) ให้วาดรายการสินค้าใหม่ตามคำค้นหา
 searchInput.addEventListener('input', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกแบรนด์ ให้วาดรายการสินค้าใหม่ตามแบรนด์ที่เลือก
@@ -268,7 +355,7 @@ function renderFlashSales() {
     .map(
       (s) => `
     <div class="product-card flash-card">
-      <div class="img-wrap"><img src="${s.productImage}" alt="${s.productName}" loading="lazy" /></div>
+      <div class="img-wrap" data-detail-id="${s.productId}"><img src="${s.productImage}" alt="${s.productName}" loading="lazy" /></div>
       <div class="info">
         <span class="brand">${s.productBrand}</span>
         <span class="name">${s.productName}</span>
@@ -295,6 +382,10 @@ function renderFlashSales() {
       // เปิด modal เลือกไซส์ พร้อมแนบข้อมูล Flash Sale ไปด้วย เพื่อให้ใช้ราคาลดตอนเพิ่มลงตะกร้า
       openSizeModal(btn.dataset.id, sale);
     });
+  });
+  // ผูก event คลิกที่รูปสินค้าทุกใบในโซน Flash Sale ที่เพิ่งวาดใหม่ กดแล้วเปิด modal ดูรูปแบบเต็ม
+  flashSaleGrid.querySelectorAll('.img-wrap[data-detail-id]').forEach((el) => {
+    el.addEventListener('click', () => openProductDetailModal(el.dataset.detailId));
   });
   // อัปเดตตัวนับถอยหลังทันทีหลังวาดการ์ดเสร็จ (ไม่ต้องรอรอบ setInterval แรก ผู้ใช้จะได้ไม่เห็นข้อความ "กำลังคำนวณเวลา..." ค้างอยู่)
   updateFlashCountdowns();

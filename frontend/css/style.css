@@ -261,6 +261,7 @@ img {
   aspect-ratio: 1 / 1; /* บังคับอัตราส่วนกว้าง:สูง เป็น 1:1 (สี่เหลี่ยมจัตุรัส) ไม่ว่ารูปจริงจะเป็นสัดส่วนอะไร */
   overflow: hidden;     /* ตัดส่วนรูปที่ล้นออกจากกรอบสี่เหลี่ยมจัตุรัส */
   background: #f0f0ee;  /* สีพื้นหลังสำรอง ระหว่างรอโหลดรูป */
+  cursor: pointer;      /* บอกผู้ใช้ว่ากดที่รูปได้ (เปิดดูรูปแบบเต็ม) */
 }
 
 /* รูปภาพสินค้าภายในกล่อง img-wrap */
@@ -416,6 +417,109 @@ img {
   color: var(--text-dim);    /* สีจาง ไม่เด่นเกินไป */
   font-size: 1.4rem;         /* ขนาดใหญ่กว่าตัวอักษรปกติ ให้กดง่าย */
   line-height: 1;             /* กำหนดความสูงบรรทัดให้พอดีกับตัวอักษร ไม่ให้มีช่องว่างเกิน */
+}
+
+/* Product detail gallery modal (ดูรูปสินค้าแบบเต็ม เลื่อนดูได้หลายรูป) */
+/* modal นี้กว้างกว่า modal ทั่วไป (เช่น เลือกไซส์) เพราะต้องมีที่ว่างให้รูปใหญ่ */
+.detail-modal {
+  max-width: 640px;
+}
+
+/* กล่องครอบรูปใหญ่ + ปุ่มลูกศรซ้าย-ขวา */
+.detail-gallery {
+  position: relative;                  /* จุดอ้างอิงให้ปุ่มลูกศร (position: absolute) วางทับรูปได้ */
+  aspect-ratio: 1 / 1;                  /* บังคับสัดส่วนสี่เหลี่ยมจัตุรัสเหมือนการ์ดสินค้า */
+  background: #f0f0ee;                 /* สีพื้นหลังสำรอง ระหว่างรอโหลดรูป */
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0 -28px;                     /* ดึงให้รูปกว้างเต็มขอบ modal (หักลบ padding เดิมของ .modal ออก) */
+  width: calc(100% + 56px);
+}
+
+.detail-gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;                 /* แสดงรูปเต็มโดยไม่ครอป (ต่างจากการ์ดที่ครอปเป็นสี่เหลี่ยมจัตุรัส) เพราะตรงนี้ต้องการเห็นรูปเต็ม ๆ ชัด ๆ */
+  background: #f0f0ee;
+}
+
+/* ปุ่มลูกศรเลื่อนดูรูปก่อนหน้า/ถัดไป วางไว้ซ้าย-ขวาของรูปใหญ่ */
+.gallery-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-nav.prev {
+  left: 12px;
+}
+
+.gallery-nav.next {
+  right: 12px;
+}
+
+/* ซ่อนปุ่มลูกศรไปเลยถ้าสินค้ามีรูปเดียว (JS เติม class "hidden" ให้) ไม่มีอะไรให้เลื่อนดู */
+.gallery-nav.hidden {
+  display: none;
+}
+
+/* แถบรูปย่อ (thumbnail) ใต้รูปใหญ่ กดข้ามไปดูรูปไหนก็ได้โดยตรง */
+.detail-thumbs {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  overflow-x: auto;                    /* ถ้ารูปเยอะเกินความกว้าง modal ให้เลื่อนแนวนอนได้แทนที่จะบีบอัด */
+}
+
+.detail-thumbs img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid transparent;       /* เผื่อพื้นที่ไว้ให้ขอบสีเน้นตอนเลือกอยู่ ไม่ให้รูปขยับตอนเปลี่ยนสถานะ */
+  cursor: pointer;
+  flex-shrink: 0;                      /* ห้ามรูปย่อบีบเล็กลงเวลาพื้นที่ไม่พอ ให้ล้นแล้วเลื่อนดูแทน */
+}
+
+/* รูปย่อของรูปที่กำลังแสดงอยู่ในรูปใหญ่ ไฮไลต์ขอบให้เห็นชัด */
+.detail-thumbs img.active {
+  border-color: var(--accent);
+}
+
+/* กล่องรายละเอียดสินค้าใต้แถบรูปย่อ */
+.detail-info {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-info .brand {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.detail-info h3 {
+  margin: 0;
+}
+
+.detail-info .price {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-top: 6px;
 }
 
 /* กล่องครอบแต่ละช่องกรอกข้อมูลในฟอร์ม (label + input) */

@@ -90,6 +90,31 @@
     </div>
   </div>
 
+  <!-- Modal ดูรูปสินค้าแบบเต็ม (เลื่อนดูได้หลายรูป) -->
+  <!-- เปิดเมื่อผู้ใช้กดที่รูปสินค้าบนการ์ด ปกติจะซ่อนอยู่ (แสดงเมื่อมี class "open") -->
+  <div class="modal-overlay" id="productDetailModal">
+    <div class="modal detail-modal">
+      <!-- ปุ่มกากบาทสำหรับปิด modal -->
+      <span class="close-btn" id="closeDetailModal">&times;</span>
+      <!-- กล่องรูปใหญ่ พร้อมปุ่มลูกศรซ้าย-ขวาเลื่อนดูรูปอื่น (ซ่อนอัตโนมัติถ้ามีรูปเดียว ดู admin.js) -->
+      <div class="detail-gallery">
+        <button type="button" class="gallery-nav prev" id="detailPrevBtn" aria-label="รูปก่อนหน้า">&#10094;</button>
+        <img id="detailMainImage" src="" alt="" />
+        <button type="button" class="gallery-nav next" id="detailNextBtn" aria-label="รูปถัดไป">&#10095;</button>
+      </div>
+      <!-- แถบรูปย่อ (thumbnail) ให้กดข้ามไปดูรูปไหนก็ได้โดยตรง เติมโดย JavaScript -->
+      <div class="detail-thumbs" id="detailThumbs"></div>
+      <!-- รายละเอียดสินค้าโชว์คู่กับรูป เติมโดย JavaScript -->
+      <div class="detail-info">
+        <span class="brand" id="detailBrand"></span>
+        <h3 id="detailName"></h3>
+        <span class="product-code" id="detailCode"></span>
+        <span class="product-condition" id="detailCondition"></span>
+        <span class="price" id="detailPrice"></span>
+      </div>
+    </div>
+  </div>
+
   <!-- กล่องข้อความแจ้งเตือนเล็ก ๆ (toast) มุมล่างของจอ เช่น "เพิ่มลงตะกร้าแล้ว" ควบคุมการแสดง/ซ่อนด้วย JavaScript -->
   <div class="toast" id="toast"></div>
 

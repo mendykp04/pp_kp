@@ -272,13 +272,11 @@
           <input type="text" id="productSizes" required />
         </div>
         <div class="field">
-          <label for="productImageFile">รูปภาพสินค้า (อัปโหลดจากเครื่อง)</label>
-          <!-- ช่องเลือกไฟล์รูปภาพจากเครื่อง accept="image/*" กรองให้เลือกได้เฉพาะไฟล์รูปภาพในหน้าต่างเลือกไฟล์ -->
-          <input type="file" id="productImageFile" accept="image/*" />
-          <!-- รูปตัวอย่าง (preview) แสดงรูปที่เลือกใหม่ หรือรูปเดิมตอนแก้ไขสินค้า เริ่มต้นซ่อนไว้ก่อน -->
-          <img id="productImagePreview" src="" alt="ตัวอย่างรูปภาพ" style="display:none; width:80px; height:80px; object-fit:cover; border-radius:8px; margin-top:8px;" />
-          <!-- ช่องซ่อน เก็บ path ของรูปที่บันทึกไว้แล้ว (จากการอัปโหลดก่อนหน้า หรือรูปเดิมตอนแก้ไข) -->
-          <input type="hidden" id="productImage" />
+          <label for="productImageFile">รูปภาพสินค้า (เลือกได้หลายรูป ถ่ายหลายมุมให้เห็นสภาพจริง)</label>
+          <!-- ช่องเลือกไฟล์รูปภาพจากเครื่อง accept="image/*" กรองให้เลือกได้เฉพาะไฟล์รูปภาพ multiple อนุญาตให้เลือกได้หลายไฟล์พร้อมกัน -->
+          <input type="file" id="productImageFile" accept="image/*" multiple />
+          <!-- แถบรูปตัวอย่าง (thumbnail) ของรูปทั้งหมดที่เลือก/อัปโหลดไว้แล้ว แต่ละรูปมีปุ่มลบของตัวเอง เติมโดย admin.js -->
+          <div id="productImagesPreview" class="images-preview"></div>
         </div>
         <div class="field">
           <label for="productDescription">รายละเอียดสินค้า</label>

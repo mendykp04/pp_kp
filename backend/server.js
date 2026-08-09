@@ -228,8 +228,8 @@ app.get('/api/products/:id', async (req, res) => {
 
 // เมื่อมีการเรียก POST ที่ /api/products (เพิ่มสินค้าใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (requireAuth)
 app.post('/api/products', requireAuth, async (req, res) => {
-  // ดึงข้อมูลฟิลด์ต่าง ๆ ออกจาก body ของ request ที่ส่งมา (ฝั่ง admin ส่งมาเป็น JSON)
-  const { name, brand, code, price, sizes, image, description, condition, categoryId } = req.body;
+  // ดึงข้อมูลฟิลด์ต่าง ๆ ออกจาก body ของ request ที่ส่งมา (ฝั่ง admin ส่งมาเป็น JSON) — images คือ array ของ path รูปที่อัปโหลดไว้แล้ว (อัปโหลดผ่าน /api/upload มาก่อนหน้านี้)
+  const { name, brand, code, price, sizes, images, description, condition, categoryId } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อสินค้าและราคา ถ้าไม่มีให้ตอบกลับ error 400 (ข้อมูลไม่ถูกต้อง)
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'กรุณาระบุชื่อสินค้าและราคา' });
@@ -255,7 +255,8 @@ app.post('/api/products', requireAuth, async (req, res) => {
     // สินค้าเป็นของมือสอง แต่ละรายการมีแค่ 1 คู่เสมอ (ไม่มีแนวคิด "จำนวนสต็อก" หลายชิ้นเหมือนสินค้าใหม่) — 1 = ยังไม่ถูกขาย, 0 = ขายไปแล้ว
     stock: 1,
     sizes: Array.isArray(sizes) ? sizes : [],
-    image: image || '',
+    // เก็บรูปได้หลายรูป รูปแรกในลิสต์ถือเป็นรูปปก (db.js จะเก็บซ้ำไว้ในคอลัมน์ image ให้ส่วนอื่นที่ยังอ้างอิงรูปเดียวใช้งานได้)
+    images: Array.isArray(images) ? images : [],
     description: description || '',
     // สภาพ/ตำหนิสินค้า แยกจากรายละเอียดสินค้าทั่วไป เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน
     condition: condition || '',
@@ -278,7 +279,7 @@ app.put('/api/products/:id', requireAuth, async (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'ไม่พบสินค้า' });
 
   // ดึงข้อมูลที่ส่งมาจาก body สำหรับใช้แก้ไข
-  const { name, brand, code, price, sizes, image, description, condition, categoryId } = req.body;
+  const { name, brand, code, price, sizes, images, description, condition, categoryId } = req.body;
   // เก็บข้อมูลสินค้าเดิมไว้ในตัวแปร existing เพื่อใช้เป็นค่า default ถ้าไม่ได้ส่งฟิลด์นั้นมาแก้ไข
   const existing = products[idx];
   // ถ้ามีการส่งรหัสสินค้าใหม่มา (ไม่ใช่ undefined) และรหัสนั้นเปลี่ยนไปจากเดิมจริง ๆ ให้ตรวจสอบว่าซ้ำกับสินค้าชิ้นอื่นหรือไม่
@@ -302,10 +303,12 @@ app.put('/api/products/:id', requireAuth, async (req, res) => {
     // ถ้าไม่ได้ส่ง categoryId มา ให้คงหมวดหมู่เดิมไว้ (categoryId ที่ส่งมาเป็นสตริงว่าง "" ถือว่าตั้งใจล้างหมวดหมู่ จึงต้องเช็ค undefined เท่านั้น)
     categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
     sizes: Array.isArray(sizes) ? sizes : existing.sizes,
-    image: image ?? existing.image,
+    images: Array.isArray(images) ? images : existing.images,
     description: description ?? existing.description,
     condition: condition ?? existing.condition,
   };
+  // อัปเดตรูปปก (image) ให้ตรงกับรูปแรกใน images เสมอ เผื่อกรณีแก้ไขแล้วส่ง response กลับไปทันทีโดยยังไม่ได้อ่านข้อมูลใหม่จากฐานข้อมูล
+  products[idx].image = products[idx].images[0] || '';
   // บันทึกรายการสินค้าทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
   await db.writeProducts(products);
   // ตอบกลับข้อมูลสินค้าที่แก้ไขเสร็จแล้ว

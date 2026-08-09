@@ -35,6 +35,7 @@ async function init() {
         stock INTEGER NOT NULL DEFAULT 0,
         sizes TEXT,
         image TEXT,
+        images TEXT,
         description TEXT,
         condition TEXT
       )`,
@@ -83,12 +84,18 @@ async function init() {
   if (!existingProductColumns.includes('condition')) {
     await client.execute('ALTER TABLE products ADD COLUMN condition TEXT');
   }
+  // รูปสินค้าหลายรูป (เก็บเป็น JSON array ของ path ในคอลัมน์เดียว เหมือน sizes/items) — คอลัมน์ "image" เดิมยังเก็บรูปหลัก (ปกคู่แรก) ไว้เพื่อความเข้ากันได้กับส่วนอื่นที่ยังอ้างอิงรูปเดียว (เช่น การ์ดสินค้า/ตะกร้า/Flash Sale)
+  if (!existingProductColumns.includes('images')) {
+    await client.execute('ALTER TABLE products ADD COLUMN images TEXT');
+  }
 }
 
 // ฟิลด์ sizes/items เก็บเป็น JSON text ในคอลัมน์เดียว (โครงสร้างเดิมเป็น array ซ้อนอยู่แล้ว)
 // ฟังก์ชันเหล่านี้แปลงกลับเป็น array/object ตอนอ่านออกมาใช้งาน
 function rowToProduct(row) {
-  return { ...row, sizes: row.sizes ? JSON.parse(row.sizes) : [] };
+  // ถ้าแถวนี้ยังไม่มีคอลัมน์ images (สินค้าเก่าก่อนมีฟีเจอร์นี้) ให้ใช้รูปเดียวจากคอลัมน์ image แทน กันรูปหายไปเฉย ๆ
+  const images = row.images ? JSON.parse(row.images) : row.image ? [row.image] : [];
+  return { ...row, sizes: row.sizes ? JSON.parse(row.sizes) : [], images };
 }
 function rowToOrder(row) {
   return { ...row, items: row.items ? JSON.parse(row.items) : [] };
@@ -103,22 +110,25 @@ async function writeProducts(products) {
   // เขียนทับตารางทั้งหมดด้วยรายการที่ส่งมา ในชุด batch เดียว โหมด "write" ทำให้เป็น atomic (transaction เดียว)
   // ไม่มีทางเหลือข้อมูลค้างครึ่ง ๆ กลาง ๆ ถ้าเซิร์ฟเวอร์ล่มกลางคัน
   const statements = [{ sql: 'DELETE FROM products', args: [] }];
-  products.forEach((p) =>
+  products.forEach((p) => {
+    // รูปแรกใน images ถือเป็นรูปหลัก/ปก เก็บซ้ำไว้ในคอลัมน์ image ด้วย เพื่อให้ส่วนอื่นที่ยังอ้างอิงรูปเดียว (การ์ดสินค้า/ตะกร้า/Flash Sale) ใช้งานได้ตามปกติ
+    const images = Array.isArray(p.images) ? p.images : p.image ? [p.image] : [];
     statements.push({
-      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, description, condition)
-            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @description, @condition)`,
+      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, images, description, condition)
+            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @images, @description, @condition)`,
       args: {
         ...p,
         brand: p.brand ?? '',
         code: p.code ?? '',
         categoryId: p.categoryId ?? '',
-        image: p.image ?? '',
+        image: images[0] ?? '',
+        images: JSON.stringify(images),
         description: p.description ?? '',
         condition: p.condition ?? '',
         sizes: JSON.stringify(p.sizes || []),
       },
-    })
-  );
+    });
+  });
   await client.batch(statements, 'write');
 }
 
