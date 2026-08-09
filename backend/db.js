@@ -1,72 +1,88 @@
-// โมดูลนี้เชื่อมต่อฐานข้อมูล SQLite (ไฟล์เดียว เก็บไว้ที่ backend/data/sneakershop.db)
-// และรวมฟังก์ชันอ่าน/เขียนข้อมูลแต่ละตาราง ให้ server.js เรียกใช้แทนการอ่าน/เขียนไฟล์ .json แบบเดิม
+// โมดูลนี้เชื่อมต่อฐานข้อมูล SQLite ผ่าน libSQL (@libsql/client)
+// และรวมฟังก์ชันอ่าน/เขียนข้อมูลแต่ละตาราง ให้ server.js เรียกใช้
+//
+// เหตุผลที่ใช้ libSQL แทน better-sqlite3 ตรง ๆ: libSQL ใช้ตัวเดียวกันได้ทั้ง
+// ไฟล์ในเครื่อง (โหมด "file:" เอาไว้ตอนพัฒนา/รันในเครื่องตัวเอง) และฐานข้อมูล
+// แบบ hosted อย่าง Turso (โหมด "libsql://") เอาไว้ตอน deploy ขึ้นแพลตฟอร์มที่ไม่มี
+// persistent disk (เช่น Render แผน Free) — ถ้าใช้ไฟล์ในเครื่องแบบเดิม ข้อมูลจะหาย
+// ทุกครั้งที่ container รีสตาร์ท เพราะดิสก์เป็นพื้นที่ชั่วคราว ส่วนฐานข้อมูลที่ Turso
+// จะอยู่ถาวรแยกจากตัวเซิร์ฟเวอร์เว็บโดยสิ้นเชิง
 const path = require('path');
-const Database = require('better-sqlite3');
+const { createClient } = require('@libsql/client');
 
-// path เต็มไปยังไฟล์ฐานข้อมูล
+// path เต็มไปยังไฟล์ฐานข้อมูลสำรอง ใช้เมื่อไม่ได้ตั้งค่า TURSO_DATABASE_URL (เช่น ตอนรันในเครื่องตัวเอง)
 const DB_FILE = path.join(__dirname, 'data', 'sneakershop.db');
-// เปิด (หรือสร้างใหม่ถ้ายังไม่มี) ไฟล์ฐานข้อมูล
-const db = new Database(DB_FILE);
-// เปิดโหมด WAL (Write-Ahead Logging) ให้อ่าน/เขียนพร้อมกันได้ลื่นขึ้นและปลอดภัยกว่าถ้าเซิร์ฟเวอร์ล่มกลางคัน
-db.pragma('journal_mode = WAL');
 
-// สร้างตารางทั้งหมด (ถ้ายังไม่มี) — โครงสร้างตรงกับข้อมูลที่เคยเก็บในไฟล์ .json เดิมทุกฟิลด์
-db.exec(`
-  CREATE TABLE IF NOT EXISTS products (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    brand TEXT,
-    code TEXT,
-    price REAL NOT NULL,
-    categoryId TEXT,
-    stock INTEGER NOT NULL DEFAULT 0,
-    sizes TEXT,
-    image TEXT,
-    description TEXT,
-    condition TEXT
-  );
-  CREATE TABLE IF NOT EXISTS employees (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    phone TEXT
-  );
-  CREATE TABLE IF NOT EXISTS customers (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    phone TEXT,
-    address TEXT
-  );
-  CREATE TABLE IF NOT EXISTS orders (
-    id TEXT PRIMARY KEY,
-    customerName TEXT,
-    phone TEXT,
-    address TEXT,
-    items TEXT,
-    total REAL,
-    paymentMethod TEXT,
-    status TEXT,
-    createdAt TEXT
-  );
-  CREATE TABLE IF NOT EXISTS flashsales (
-    id TEXT PRIMARY KEY,
-    productId TEXT,
-    salePrice REAL,
-    startAt TEXT,
-    endAt TEXT,
-    createdAt TEXT
-  );
-  CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(phone);
-  CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-`);
+// ถ้ามีการตั้งค่า TURSO_DATABASE_URL ไว้ (ตอน deploy จริง) ให้ต่อไปยังฐานข้อมูล Turso แบบ hosted
+// ถ้าไม่มี (เช่นตอนรันทดสอบในเครื่อง) ให้ fallback ไปใช้ไฟล์ในเครื่องแทนโดยอัตโนมัติ
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL || `file:${DB_FILE}`,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
 
-// Migration: เติมคอลัมน์ code/condition ให้ตาราง products ที่มีอยู่แล้วจากก่อนหน้านี้ (CREATE TABLE IF NOT EXISTS ด้านบนใช้ไม่ได้กับตารางที่มีอยู่แล้ว)
-// ครอบด้วย try/catch เพราะ ALTER TABLE ... ADD COLUMN จะ error ถ้าคอลัมน์นั้นมีอยู่แล้ว (รันซ้ำได้อย่างปลอดภัย)
-const existingProductColumns = db.prepare('PRAGMA table_info(products)').all().map((c) => c.name);
-if (!existingProductColumns.includes('code')) {
-  db.exec('ALTER TABLE products ADD COLUMN code TEXT');
-}
-if (!existingProductColumns.includes('condition')) {
-  db.exec('ALTER TABLE products ADD COLUMN condition TEXT');
+// ฟังก์ชัน init: สร้างตารางทั้งหมด (ถ้ายังไม่มี) + รัน migration คอลัมน์ที่เพิ่มเข้ามาทีหลัง
+// ต้องเรียกและ await ให้เสร็จก่อนเริ่มรับ request ใด ๆ (ดูตอนท้ายไฟล์ server.js)
+async function init() {
+  await client.batch(
+    [
+      `CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        brand TEXT,
+        code TEXT,
+        price REAL NOT NULL,
+        categoryId TEXT,
+        stock INTEGER NOT NULL DEFAULT 0,
+        sizes TEXT,
+        image TEXT,
+        description TEXT,
+        condition TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS employees (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS customers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT,
+        address TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        customerName TEXT,
+        phone TEXT,
+        address TEXT,
+        items TEXT,
+        total REAL,
+        paymentMethod TEXT,
+        status TEXT,
+        createdAt TEXT
+      )`,
+      `CREATE TABLE IF NOT EXISTS flashsales (
+        id TEXT PRIMARY KEY,
+        productId TEXT,
+        salePrice REAL,
+        startAt TEXT,
+        endAt TEXT,
+        createdAt TEXT
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(phone)`,
+      `CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)`,
+    ],
+    'write'
+  );
+
+  // Migration: เติมคอลัมน์ code/condition ให้ตาราง products ที่มีอยู่แล้วจากก่อนหน้านี้ (CREATE TABLE IF NOT EXISTS ด้านบนใช้ไม่ได้กับตารางที่มีอยู่แล้ว)
+  const columnsResult = await client.execute('PRAGMA table_info(products)');
+  const existingProductColumns = columnsResult.rows.map((c) => c.name);
+  if (!existingProductColumns.includes('code')) {
+    await client.execute('ALTER TABLE products ADD COLUMN code TEXT');
+  }
+  if (!existingProductColumns.includes('condition')) {
+    await client.execute('ALTER TABLE products ADD COLUMN condition TEXT');
+  }
 }
 
 // ฟิลด์ sizes/items เก็บเป็น JSON text ในคอลัมน์เดียว (โครงสร้างเดิมเป็น array ซ้อนอยู่แล้ว)
@@ -79,83 +95,106 @@ function rowToOrder(row) {
 }
 
 // ---------- Products ----------
-function readProducts() {
-  return db.prepare('SELECT * FROM products').all().map(rowToProduct);
+async function readProducts() {
+  const rs = await client.execute('SELECT * FROM products');
+  return rs.rows.map(rowToProduct);
 }
-const writeProducts = db.transaction((products) => {
-  db.prepare('DELETE FROM products').run();
-  const insert = db.prepare(`
-    INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, description, condition)
-    VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @description, @condition)
-  `);
+async function writeProducts(products) {
+  // เขียนทับตารางทั้งหมดด้วยรายการที่ส่งมา ในชุด batch เดียว โหมด "write" ทำให้เป็น atomic (transaction เดียว)
+  // ไม่มีทางเหลือข้อมูลค้างครึ่ง ๆ กลาง ๆ ถ้าเซิร์ฟเวอร์ล่มกลางคัน
+  const statements = [{ sql: 'DELETE FROM products', args: [] }];
   products.forEach((p) =>
-    insert.run({
-      ...p,
-      brand: p.brand ?? '',
-      code: p.code ?? '',
-      categoryId: p.categoryId ?? '',
-      image: p.image ?? '',
-      description: p.description ?? '',
-      condition: p.condition ?? '',
-      sizes: JSON.stringify(p.sizes || []),
+    statements.push({
+      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, description, condition)
+            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @description, @condition)`,
+      args: {
+        ...p,
+        brand: p.brand ?? '',
+        code: p.code ?? '',
+        categoryId: p.categoryId ?? '',
+        image: p.image ?? '',
+        description: p.description ?? '',
+        condition: p.condition ?? '',
+        sizes: JSON.stringify(p.sizes || []),
+      },
     })
   );
-});
+  await client.batch(statements, 'write');
+}
 
 // ---------- Employees ----------
-function readEmployees() {
-  return db.prepare('SELECT * FROM employees').all();
+async function readEmployees() {
+  const rs = await client.execute('SELECT * FROM employees');
+  return rs.rows.map((r) => ({ ...r }));
 }
-const writeEmployees = db.transaction((employees) => {
-  db.prepare('DELETE FROM employees').run();
-  const insert = db.prepare('INSERT INTO employees (id, name, phone) VALUES (@id, @name, @phone)');
-  employees.forEach((e) => insert.run({ ...e, phone: e.phone ?? '' }));
-});
-
-// ---------- Customers ----------
-function readCustomers() {
-  return db.prepare('SELECT * FROM customers').all();
-}
-const writeCustomers = db.transaction((customers) => {
-  db.prepare('DELETE FROM customers').run();
-  const insert = db.prepare('INSERT INTO customers (id, name, phone, address) VALUES (@id, @name, @phone, @address)');
-  customers.forEach((c) => insert.run({ ...c, phone: c.phone ?? '', address: c.address ?? '' }));
-});
-
-// ---------- Orders ----------
-function readOrders() {
-  return db.prepare('SELECT * FROM orders').all().map(rowToOrder);
-}
-const writeOrders = db.transaction((orders) => {
-  db.prepare('DELETE FROM orders').run();
-  const insert = db.prepare(`
-    INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, createdAt)
-    VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @createdAt)
-  `);
-  orders.forEach((o) =>
-    insert.run({
-      ...o,
-      items: JSON.stringify(o.items || []),
-      paymentMethod: o.paymentMethod ?? 'cod',
+async function writeEmployees(employees) {
+  const statements = [{ sql: 'DELETE FROM employees', args: [] }];
+  employees.forEach((e) =>
+    statements.push({
+      sql: 'INSERT INTO employees (id, name, phone) VALUES (@id, @name, @phone)',
+      args: { ...e, phone: e.phone ?? '' },
     })
   );
-});
+  await client.batch(statements, 'write');
+}
+
+// ---------- Customers ----------
+async function readCustomers() {
+  const rs = await client.execute('SELECT * FROM customers');
+  return rs.rows.map((r) => ({ ...r }));
+}
+async function writeCustomers(customers) {
+  const statements = [{ sql: 'DELETE FROM customers', args: [] }];
+  customers.forEach((c) =>
+    statements.push({
+      sql: 'INSERT INTO customers (id, name, phone, address) VALUES (@id, @name, @phone, @address)',
+      args: { ...c, phone: c.phone ?? '', address: c.address ?? '' },
+    })
+  );
+  await client.batch(statements, 'write');
+}
+
+// ---------- Orders ----------
+async function readOrders() {
+  const rs = await client.execute('SELECT * FROM orders');
+  return rs.rows.map(rowToOrder);
+}
+async function writeOrders(orders) {
+  const statements = [{ sql: 'DELETE FROM orders', args: [] }];
+  orders.forEach((o) =>
+    statements.push({
+      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, createdAt)
+            VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @createdAt)`,
+      args: {
+        ...o,
+        items: JSON.stringify(o.items || []),
+        paymentMethod: o.paymentMethod ?? 'cod',
+      },
+    })
+  );
+  await client.batch(statements, 'write');
+}
 
 // ---------- Flash Sales ----------
-function readFlashSales() {
-  return db.prepare('SELECT * FROM flashsales').all();
+async function readFlashSales() {
+  const rs = await client.execute('SELECT * FROM flashsales');
+  return rs.rows.map((r) => ({ ...r }));
 }
-const writeFlashSales = db.transaction((flashSales) => {
-  db.prepare('DELETE FROM flashsales').run();
-  const insert = db.prepare(`
-    INSERT INTO flashsales (id, productId, salePrice, startAt, endAt, createdAt)
-    VALUES (@id, @productId, @salePrice, @startAt, @endAt, @createdAt)
-  `);
-  flashSales.forEach((s) => insert.run(s));
-});
+async function writeFlashSales(flashSales) {
+  const statements = [{ sql: 'DELETE FROM flashsales', args: [] }];
+  flashSales.forEach((s) =>
+    statements.push({
+      sql: `INSERT INTO flashsales (id, productId, salePrice, startAt, endAt, createdAt)
+            VALUES (@id, @productId, @salePrice, @startAt, @endAt, @createdAt)`,
+      args: s,
+    })
+  );
+  await client.batch(statements, 'write');
+}
 
 module.exports = {
-  db,
+  client,
+  init,
   readProducts,
   writeProducts,
   readEmployees,
