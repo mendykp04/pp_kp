@@ -16,6 +16,8 @@ const generatePromptPayPayload = require('promptpay-qr');
 const QRCode = require('qrcode');
 // เรียกใช้ชั้นฐานข้อมูล SQLite (backend/db.js) แทนการอ่าน/เขียนไฟล์ .json โดยตรง
 const db = require('./db');
+// เรียกใช้ตัวช่วยเชื่อมต่อ Cloudinary (backend/cloudinary.js) สำหรับอัปโหลดรูปสินค้าให้อยู่ถาวร ไม่หายตอน container รีสตาร์ท
+const cloudinaryHelper = require('./cloudinary');
 
 // สร้างแอปพลิเคชัน Express ขึ้นมา 1 ตัว เก็บไว้ในตัวแปร app
 const app = express();
@@ -79,13 +81,17 @@ app.use('/admin', express.static(path.join(__dirname, '..', 'admin')));
 // เสิร์ฟไฟล์รูปภาพที่อัปโหลดไว้ ที่ path /uploads เพื่อให้เบราว์เซอร์เรียกดูรูปสินค้าที่เพิ่งอัปโหลดได้
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// ตั้งค่า multer ว่าจะเก็บไฟล์ที่อัปโหลดไว้ที่ไหน และตั้งชื่อไฟล์อย่างไร
-const uploadStorage = multer.diskStorage({
-  // บอก multer ว่าให้บันทึกไฟล์ทุกไฟล์ที่อัปโหลดไว้ในโฟลเดอร์ uploads ที่เตรียมไว้
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  // ตั้งชื่อไฟล์ใหม่ให้ไม่ซ้ำกัน โดยใช้ genId ต่อด้วยนามสกุลไฟล์เดิม (เช่น .jpg, .png)
-  filename: (req, file, cb) => cb(null, genId('img-') + path.extname(file.originalname)),
-});
+// ตั้งค่า multer ว่าจะเก็บไฟล์ที่อัปโหลดไว้ที่ไหน
+// ถ้าตั้งค่า Cloudinary ไว้แล้ว (ดู backend/cloudinary.js) ให้เก็บไฟล์ไว้ในหน่วยความจำก่อน (ไม่เขียนลงดิสก์เลย) แล้วส่งต่อขึ้น Cloudinary ในขั้นตอนถัดไป
+// ถ้ายังไม่ได้ตั้งค่า Cloudinary (เช่นตอนรันในเครื่องตัวเอง) ให้ fallback ไปเขียนไฟล์ลงโฟลเดอร์ uploads ในเครื่องแทนเหมือนเดิม
+const uploadStorage = cloudinaryHelper.isConfigured
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      // บอก multer ว่าให้บันทึกไฟล์ทุกไฟล์ที่อัปโหลดไว้ในโฟลเดอร์ uploads ที่เตรียมไว้
+      destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+      // ตั้งชื่อไฟล์ใหม่ให้ไม่ซ้ำกัน โดยใช้ genId ต่อด้วยนามสกุลไฟล์เดิม (เช่น .jpg, .png)
+      filename: (req, file, cb) => cb(null, genId('img-') + path.extname(file.originalname)),
+    });
 // สร้างตัวจัดการอัปโหลด โดยจำกัดขนาดไฟล์ไม่เกิน 5MB และรับเฉพาะไฟล์รูปภาพเท่านั้น
 const upload = multer({
   storage: uploadStorage,
@@ -196,10 +202,21 @@ app.get('/api/payment/promptpay-qr', async (req, res) => {
 
 // เมื่อมีการเรียก POST ที่ /api/upload พร้อมแนบไฟล์มาด้วย
 // upload.single('image') คือให้ multer ดักรับไฟล์จาก field ชื่อ "image" เพียงไฟล์เดียว แล้วค่อยรันฟังก์ชันต่อท้าย
-app.post('/api/upload', requireAuth, upload.single('image'), (req, res) => {
+app.post('/api/upload', requireAuth, upload.single('image'), async (req, res) => {
   // ถ้าไม่มีไฟล์แนบมาเลย (เช่น ผู้ใช้กด submit โดยไม่เลือกไฟล์) ให้ตอบกลับ error 400
   if (!req.file) return res.status(400).json({ error: 'กรุณาเลือกไฟล์รูปภาพ' });
-  // ตอบกลับ path ของรูปที่บันทึกไว้ (เช่น /uploads/img-xxxxx.jpg) ให้ฝั่ง admin นำไปใช้เป็นค่า image ของสินค้า
+
+  // ถ้าตั้งค่า Cloudinary ไว้แล้ว ให้ส่งไฟล์ (อยู่ในหน่วยความจำ ไม่ได้เขียนลงดิสก์) ขึ้น Cloudinary แล้วตอบกลับ URL ถาวรจากที่นั่นแทน
+  if (cloudinaryHelper.isConfigured) {
+    try {
+      const result = await cloudinaryHelper.uploadBuffer(req.file.buffer, genId('img-'));
+      return res.json({ url: result.secure_url });
+    } catch (err) {
+      return res.status(500).json({ error: 'อัปโหลดรูปภาพไม่สำเร็จ กรุณาลองใหม่' });
+    }
+  }
+
+  // ถ้ายังไม่ได้ตั้งค่า Cloudinary (เช่นตอนรันในเครื่องตัวเอง) ให้ตอบกลับ path ของรูปที่บันทึกไว้ในเครื่อง (เช่น /uploads/img-xxxxx.jpg) เหมือนเดิม
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
