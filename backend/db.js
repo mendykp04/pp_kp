@@ -70,8 +70,16 @@ async function init() {
         endAt TEXT,
         createdAt TEXT
       )`,
+      `CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY,
+        date TEXT,
+        description TEXT,
+        amount REAL,
+        createdAt TEXT
+      )`,
       `CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(phone)`,
       `CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)`,
+      `CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date)`,
     ],
     'write'
   );
@@ -208,6 +216,23 @@ async function writeFlashSales(flashSales) {
   await client.batch(statements, 'write');
 }
 
+// ---------- Expenses ----------
+async function readExpenses() {
+  const rs = await client.execute('SELECT * FROM expenses');
+  return rs.rows.map((r) => ({ ...r }));
+}
+async function writeExpenses(expenses) {
+  const statements = [{ sql: 'DELETE FROM expenses', args: [] }];
+  expenses.forEach((e) =>
+    statements.push({
+      sql: `INSERT INTO expenses (id, date, description, amount, createdAt)
+            VALUES (@id, @date, @description, @amount, @createdAt)`,
+      args: e,
+    })
+  );
+  await client.batch(statements, 'write');
+}
+
 module.exports = {
   client,
   init,
@@ -221,4 +246,6 @@ module.exports = {
   writeOrders,
   readFlashSales,
   writeFlashSales,
+  readExpenses,
+  writeExpenses,
 };

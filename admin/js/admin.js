@@ -135,6 +135,8 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
     if (tab === 'customers') loadCustomers(customerSearchInput.value.trim());
     if (tab === 'employees') loadEmployees(employeeSearchInput.value.trim());
     if (tab === 'report') loadReport(reportDateInput.value);
+    if (tab === 'expenses') loadExpenses();
+    if (tab === 'analytics') loadAnalytics();
   });
 });
 
@@ -921,6 +923,206 @@ reportDateInput.addEventListener('change', () => loadReport(reportDateInput.valu
 // ผูก event ให้ปุ่ม "พิมพ์ใบสรุปยอดขาย" เรียกฟังก์ชันสั่งพิมพ์ของเบราว์เซอร์
 // เบราว์เซอร์จะเปิดหน้าต่างพิมพ์ โดยใช้กฎ CSS ใน @media print เพื่อซ่อนส่วนที่ไม่ต้องการ (เช่น แถบเมนู, ปุ่มต่าง ๆ)
 document.getElementById('printReportBtn').addEventListener('click', () => window.print());
+
+// ---------- Expenses (รายจ่าย) ----------
+// ส่วนบันทึกรายจ่ายของร้าน (เช่น ค่าซื้อรองเท้ามือสอง, ค่าขนส่ง, ค่าเช่า) ใช้คำนวณกำไร/ขาดทุนในแท็บ "รายงาน"
+
+// ตัวแปรเก็บรายการรายจ่ายทั้งหมดที่โหลดมาจาก API
+let expenses = [];
+// อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการรายจ่าย
+const expenseTableBody = document.getElementById('expenseTableBody');
+// อ้างอิง element กล่อง modal สำหรับเพิ่มรายจ่าย
+const expenseModal = document.getElementById('expenseModal');
+// อ้างอิง element ฟอร์มเพิ่มรายจ่ายภายใน modal
+const expenseForm = document.getElementById('expenseForm');
+
+// ฟังก์ชัน async โหลดรายการรายจ่ายทั้งหมดจาก backend
+async function loadExpenses() {
+  // ยิง HTTP GET ไปที่ /api/expenses แล้วรอผลลัพธ์
+  const res = await fetch(`${API_BASE}/expenses`);
+  // แปลง response เป็น array ของรายจ่าย แล้วเก็บลงตัวแปรกลาง
+  expenses = await res.json();
+  // วาดตารางรายจ่ายใหม่ตามข้อมูลที่เพิ่งโหลดมา
+  renderExpenseTable();
+}
+
+// ฟังก์ชันวาด (render) ตารางแสดงรายการรายจ่ายทั้งหมด พร้อมยอดรวม
+function renderExpenseTable() {
+  // ถ้าไม่มีรายจ่ายเลย
+  if (expenses.length === 0) {
+    // แสดงข้อความแจ้งว่ายังไม่มีรายจ่าย (ครอบคลุม 4 คอลัมน์)
+    expenseTableBody.innerHTML = '<tr><td colspan="4">ยังไม่มีรายจ่าย</td></tr>';
+    document.getElementById('expenseTotal').textContent = formatPrice(0);
+    return; // ออกจากฟังก์ชันทันที
+  }
+  // วนสร้างแถวตาราง (tr) สำหรับรายจ่ายแต่ละรายการ แล้วรวมเป็นข้อความเดียว
+  expenseTableBody.innerHTML = expenses
+    .map(
+      (e) => `
+    <tr>
+      <td>${e.date}</td>
+      <td>${e.description}</td>
+      <td>${formatPrice(e.amount)}</td>
+      <td>
+        <button class="btn-icon danger" data-action="delete" data-id="${e.id}">ลบ</button>
+      </td>
+    </tr>
+  `
+    )
+    .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
+
+  // ผูก event ให้ปุ่ม "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
+  expenseTableBody.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
+    btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
+  });
+
+  // คำนวณและแสดงยอดรายจ่ายรวมทั้งหมด
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  document.getElementById('expenseTotal').textContent = formatPrice(total);
+}
+
+// ฟังก์ชันเปิด modal สำหรับเพิ่มรายจ่ายใหม่ ตั้งค่าเริ่มต้นของช่องวันที่เป็นวันนี้ให้อัตโนมัติ
+function openExpenseModal() {
+  expenseForm.reset();
+  document.getElementById('expenseDate').value = todayDateString();
+  expenseModal.classList.add('open');
+}
+
+// ผูก event ให้กับปุ่ม "+ เพิ่มรายจ่าย"
+document.getElementById('addExpenseBtn').addEventListener('click', openExpenseModal);
+// ผูก event ให้กับปุ่มกากบาทปิด modal
+document.getElementById('closeExpenseModal').addEventListener('click', () => {
+  expenseModal.classList.remove('open');
+});
+// ผูก event คลิกที่พื้นหลังมืดรอบ modal ถ้าคลิกตรงพื้นหลัง ให้ปิด modal ด้วย
+expenseModal.addEventListener('click', (e) => {
+  if (e.target === expenseModal) expenseModal.classList.remove('open');
+});
+
+// ผูก event เมื่อผู้ใช้กดปุ่ม "บันทึกรายจ่าย" (submit ฟอร์ม)
+expenseForm.addEventListener('submit', async (e) => {
+  // ป้องกันเบราว์เซอร์รีโหลดหน้าตามพฤติกรรมปกติของฟอร์ม
+  e.preventDefault();
+  // รวบรวมค่าจากทุกช่องกรอกในฟอร์ม สร้างเป็น object ที่จะส่งไปให้ backend
+  const payload = {
+    date: document.getElementById('expenseDate').value,
+    description: document.getElementById('expenseDescription').value.trim(),
+    amount: Number(document.getElementById('expenseAmount').value),
+  };
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
+  try {
+    const res = await fetch(`${API_BASE}/expenses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    // ถ้า response ไม่สำเร็จ ให้โยน error
+    if (!res.ok) throw new Error('save failed');
+    // ปิด modal เพราะบันทึกสำเร็จแล้ว
+    expenseModal.classList.remove('open');
+    // แจ้งเตือนว่าเพิ่มสำเร็จ
+    showToast('เพิ่มรายจ่ายเรียบร้อย');
+    // โหลดรายการรายจ่ายใหม่ทั้งหมด เพื่อให้ตารางแสดงข้อมูลล่าสุด
+    loadExpenses();
+  } catch (err) {
+    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }
+});
+
+// ฟังก์ชัน async สำหรับลบรายจ่าย รับพารามิเตอร์เป็นรหัสรายจ่ายที่ต้องการลบ
+async function deleteExpense(expenseId) {
+  // แสดงกล่องยืนยันก่อนลบจริง เพราะลบแล้วกู้คืนไม่ได้
+  if (!confirm('ต้องการลบรายจ่ายนี้ใช่หรือไม่?')) return;
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
+  try {
+    const res = await fetch(`${API_BASE}/expenses/${expenseId}`, { method: 'DELETE' });
+    // ถ้า response ไม่สำเร็จ ให้โยน error
+    if (!res.ok) throw new Error('delete failed');
+    // แจ้งเตือนว่าลบสำเร็จ
+    showToast('ลบรายจ่ายเรียบร้อย');
+    // โหลดรายการรายจ่ายใหม่ทั้งหมด เพื่อให้ตารางไม่แสดงรายการที่ถูกลบไปแล้ว
+    loadExpenses();
+  } catch (err) {
+    // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }
+}
+
+// ---------- Analytics (รายงานยอดขาย/กำไร-ขาดทุน/สินค้าและแบรนด์ขายดี) ----------
+// ส่วนแสดงรายงานสรุปตามช่วงวันที่ที่เลือก (ดึงข้อมูลที่คำนวณสำเร็จรูปมาจาก backend โดยตรง ไม่ต้องคำนวณเองฝั่งหน้าเว็บ)
+
+// อ้างอิง element ช่องเลือกช่วงวันที่ในหน้ารายงาน
+const analyticsFromInput = document.getElementById('analyticsFromInput');
+const analyticsToInput = document.getElementById('analyticsToInput');
+
+// ฟังก์ชัน async โหลดรายงานสรุปของช่วงวันที่ที่เลือกอยู่ตอนนี้จาก backend
+async function loadAnalytics() {
+  const from = analyticsFromInput.value;
+  const to = analyticsToInput.value;
+  // ถ้ายังไม่ได้เลือกวันที่ให้ครบทั้งสองช่อง ให้หยุดรอก่อน (ยังไม่มีช่วงวันที่ให้คำนวณ)
+  if (!from || !to) return;
+  // ใช้ try/catch ดักจับข้อผิดพลาด เผื่อกรณีเซิร์ฟเวอร์ล่มหรือเน็ตหลุด
+  try {
+    const res = await fetch(`${API_BASE}/reports/summary?from=${from}&to=${to}`);
+    if (!res.ok) throw new Error('load failed');
+    // แปลง response เป็น object สรุปรายงาน แล้ววาดผลลัพธ์ลงหน้าเว็บ
+    const data = await res.json();
+    renderAnalytics(data);
+  } catch (err) {
+    showToast('โหลดรายงานไม่สำเร็จ กรุณาลองใหม่');
+  }
+}
+
+// ฟังก์ชันวาด (render) ผลสรุปรายงานลงในหน้าเว็บ (ยอดขาย, รายจ่าย, กำไร/ขาดทุน, สินค้า/แบรนด์ขายดี)
+function renderAnalytics(data) {
+  document.getElementById('analyticsRevenue').textContent = formatPrice(data.revenue);
+  document.getElementById('analyticsOrderCount').textContent = data.orderCount;
+  document.getElementById('analyticsExpenses').textContent = formatPrice(data.expenses);
+  // แสดงกำไร/ขาดทุน พร้อมเปลี่ยนสีตามผลลัพธ์ (เขียว = กำไร, แดง = ขาดทุน) ให้เห็นสถานะได้ทันทีโดยไม่ต้องอ่านตัวเลข
+  const profitEl = document.getElementById('analyticsProfit');
+  profitEl.textContent = formatPrice(data.profit);
+  profitEl.style.color = data.profit < 0 ? '#e5484d' : '#22c55e';
+
+  // วาดตารางสินค้าขายดี (ถ้าไม่มีข้อมูลเลยในช่วงที่เลือก ให้แสดงข้อความแจ้งแทน)
+  document.getElementById('topProductsTableBody').innerHTML = data.topProducts.length
+    ? data.topProducts
+        .map(
+          (p) => `
+      <tr>
+        <td>${p.code || '-'}</td>
+        <td>${p.name}</td>
+        <td>${p.brand || '-'}</td>
+        <td>${p.count}</td>
+        <td>${formatPrice(p.revenue)}</td>
+      </tr>
+    `
+        )
+        .join('')
+    : '<tr><td colspan="5">ไม่มีคำสั่งซื้อในช่วงวันที่ที่เลือก</td></tr>';
+
+  // วาดตารางแบรนด์ขายดี (ถ้าไม่มีข้อมูลเลยในช่วงที่เลือก ให้แสดงข้อความแจ้งแทน)
+  document.getElementById('topBrandsTableBody').innerHTML = data.topBrands.length
+    ? data.topBrands
+        .map(
+          (b) => `
+      <tr>
+        <td>${b.brand}</td>
+        <td>${b.count}</td>
+        <td>${formatPrice(b.revenue)}</td>
+      </tr>
+    `
+        )
+        .join('')
+    : '<tr><td colspan="3">ไม่มีคำสั่งซื้อในช่วงวันที่ที่เลือก</td></tr>';
+}
+
+// ตั้งค่าเริ่มต้นของช่วงวันที่ในหน้ารายงาน ให้เป็น "ต้นเดือนนี้ ถึง วันนี้" ตอนเปิดหน้าเว็บ (ช่วงที่มีประโยชน์ที่สุดโดยไม่ต้องเลือกเอง)
+analyticsFromInput.value = todayDateString().slice(0, 8) + '01';
+analyticsToInput.value = todayDateString();
+// เมื่อผู้ใช้เปลี่ยนวันที่ที่เลือกฝั่งใดฝั่งหนึ่ง ให้โหลดรายงานของช่วงใหม่ทันที
+analyticsFromInput.addEventListener('change', loadAnalytics);
+analyticsToInput.addEventListener('change', loadAnalytics);
 
 // ---------- Flash Sale ----------
 // ส่วนจัดการ Flash Sale ที่หลังบ้าน: โหลด/แสดง/ตั้งค่าใหม่/แก้ไข/ยกเลิก

@@ -32,6 +32,10 @@
         <button class="nav-btn" data-tab="employees">👤 พนักงาน</button>
         <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" (คำนวณจากคำสั่งซื้อโดยตรง) -->
         <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
+        <!-- ปุ่มสลับไปแท็บ "รายจ่าย" -->
+        <button class="nav-btn" data-tab="expenses">💸 รายจ่าย</button>
+        <!-- ปุ่มสลับไปแท็บ "รายงาน" (ยอดขาย/กำไร-ขาดทุน/สินค้าและแบรนด์ขายดี ตามช่วงวันที่ที่เลือก) -->
+        <button class="nav-btn" data-tab="analytics">📈 รายงาน</button>
       </nav>
       <!-- ลิงก์กลับไปหน้าร้านค้าฝั่งลูกค้า -->
       <a href="/" class="back-link">← กลับหน้าร้านค้า</a>
@@ -239,6 +243,94 @@
           </div>
         </div>
       </section>
+
+      <!-- Tab: Expenses (รายจ่าย) -->
+      <section id="tab-expenses" class="tab-panel">
+        <div class="panel-header">
+          <h1>รายจ่าย</h1>
+          <!-- ปุ่มเปิด modal สำหรับเพิ่มรายจ่ายใหม่ -->
+          <button class="btn" id="addExpenseBtn">+ เพิ่มรายจ่าย</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th>รายการ</th>
+                <th>จำนวนเงิน</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางรายจ่ายจะถูกเติมโดย admin.js -->
+            <tbody id="expenseTableBody">
+              <tr><td colspan="4">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- สรุปรายจ่ายรวมทั้งหมด -->
+        <div class="cart-summary">
+          <div class="row total"><span>รายจ่ายรวมทั้งหมด</span><span id="expenseTotal">0 บาท</span></div>
+        </div>
+      </section>
+
+      <!-- Tab: Analytics (รายงานยอดขาย/กำไร-ขาดทุน/สินค้าและแบรนด์ขายดี) -->
+      <section id="tab-analytics" class="tab-panel">
+        <div class="panel-header">
+          <h1>รายงาน</h1>
+        </div>
+        <!-- ช่องเลือกช่วงวันที่ (จาก-ถึง) ที่ต้องการดูรายงาน -->
+        <div class="filters">
+          <div class="field" style="margin-bottom:0;">
+            <label for="analyticsFromInput">จากวันที่</label>
+            <input type="date" id="analyticsFromInput" />
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="analyticsToInput">ถึงวันที่</label>
+            <input type="date" id="analyticsToInput" />
+          </div>
+        </div>
+        <!-- สรุปยอดขาย/รายจ่าย/กำไร-ขาดทุน ของช่วงวันที่ที่เลือก -->
+        <div class="cart-summary">
+          <div class="row"><span>ยอดขาย</span><span id="analyticsRevenue">0 บาท</span></div>
+          <div class="row"><span>จำนวนคำสั่งซื้อ</span><span id="analyticsOrderCount">0</span></div>
+          <div class="row"><span>รายจ่าย</span><span id="analyticsExpenses">0 บาท</span></div>
+          <div class="row total"><span>กำไร/ขาดทุน</span><span id="analyticsProfit">0 บาท</span></div>
+        </div>
+        <h3>📦 สินค้าขายดี (10 อันดับแรก)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>รหัส</th>
+                <th>สินค้า</th>
+                <th>แบรนด์</th>
+                <th>จำนวนที่ขาย</th>
+                <th>ยอดขาย</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางสินค้าขายดีจะถูกเติมโดย admin.js -->
+            <tbody id="topProductsTableBody">
+              <tr><td colspan="5">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>🏷️ แบรนด์ขายดี (10 อันดับแรก)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>แบรนด์</th>
+                <th>จำนวนที่ขาย</th>
+                <th>ยอดขาย</th>
+              </tr>
+            </thead>
+            <!-- เนื้อหาตารางแบรนด์ขายดีจะถูกเติมโดย admin.js -->
+            <tbody id="topBrandsTableBody">
+              <tr><td colspan="3">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -369,6 +461,33 @@
         </div>
         <!-- ปุ่ม submit ฟอร์ม -->
         <button type="submit" class="btn btn-block">บันทึกข้อมูลลูกค้า</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal เพิ่มรายจ่าย -->
+  <div class="modal-overlay" id="expenseModal">
+    <div class="modal">
+      <!-- ปุ่มกากบาทปิด modal -->
+      <span class="close-btn" id="closeExpenseModal">&times;</span>
+      <h3>เพิ่มรายจ่าย</h3>
+      <!-- ฟอร์มกรอกข้อมูลรายจ่าย เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้างผ่าน API -->
+      <form id="expenseForm">
+        <div class="field">
+          <label for="expenseDate">วันที่</label>
+          <input type="date" id="expenseDate" required />
+        </div>
+        <!-- รายการรายจ่าย: พิมพ์อิสระเอง ไม่บังคับเป็นหมวดหมู่ตายตัว (เช่น "ซื้อรองเท้ามือสอง 3 คู่", "ค่าขนส่ง", "ค่าเช่าร้าน") -->
+        <div class="field">
+          <label for="expenseDescription">รายการ</label>
+          <input type="text" id="expenseDescription" placeholder="เช่น ซื้อรองเท้ามือสอง 3 คู่, ค่าขนส่ง" required />
+        </div>
+        <div class="field">
+          <label for="expenseAmount">จำนวนเงิน (บาท)</label>
+          <input type="number" id="expenseAmount" min="0" required />
+        </div>
+        <!-- ปุ่ม submit ฟอร์ม -->
+        <button type="submit" class="btn btn-block">บันทึกรายจ่าย</button>
       </form>
     </div>
   </div>

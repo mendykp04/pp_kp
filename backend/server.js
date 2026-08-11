@@ -830,6 +830,137 @@ app.delete('/api/flash-sales/:id', requireAuth, async (req, res) => {
   res.json(removed[0]);
 });
 
+// ---------- Expenses API (รายจ่าย) ----------
+// กลุ่ม API สำหรับบันทึกรายจ่ายของร้าน (เช่น ค่าซื้อรองเท้ามือสอง, ค่าขนส่ง, ค่าเช่า) ใช้คำนวณกำไร/ขาดทุนในหน้ารายงาน
+
+// เมื่อมีการเรียก GET ที่ /api/expenses (ขอรายการรายจ่ายทั้งหมด รองรับกรองตามช่วงวันที่ด้วย query string ?from=YYYY-MM-DD&to=YYYY-MM-DD) — ข้อมูลรายจ่ายเป็นความลับทางธุรกิจ จึงต้องล็อกอินก่อน
+app.get('/api/expenses', requireAuth, async (req, res) => {
+  // อ่านรายการรายจ่ายทั้งหมดจากฐานข้อมูล
+  let expenses = await db.readExpenses();
+  // ถ้ามีการระบุ query string "from"/"to" มา ให้กรองเฉพาะรายจ่ายที่อยู่ในช่วงวันที่นั้น
+  if (req.query.from) expenses = expenses.filter((e) => e.date >= req.query.from);
+  if (req.query.to) expenses = expenses.filter((e) => e.date <= req.query.to);
+  // เรียงลำดับรายจ่ายจากวันที่ใหม่ไปเก่า แล้วส่งกลับไป
+  res.json(expenses.sort((a, b) => new Date(b.date) - new Date(a.date)));
+});
+
+// เมื่อมีการเรียก POST ที่ /api/expenses (เพิ่มรายจ่ายใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.post('/api/expenses', requireAuth, async (req, res) => {
+  // ดึงข้อมูลวันที่, รายการ, จำนวนเงิน จาก body ที่ส่งมา
+  const { date, description, amount } = req.body;
+  // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีครบทั้ง 3 ฟิลด์ ถ้าไม่มีให้ตอบกลับ error 400
+  if (!date || !description || amount === undefined) {
+    return res.status(400).json({ error: 'กรุณาระบุวันที่, รายการ, และจำนวนเงินให้ครบถ้วน' });
+  }
+  // อ่านรายการรายจ่ายทั้งหมดที่มีอยู่แล้ว เพื่อนำรายการใหม่ไปต่อท้าย
+  const expenses = await db.readExpenses();
+  // สร้าง object รายจ่ายใหม่ พร้อม id อัตโนมัติ
+  const newExpense = {
+    id: genId('exp-'),
+    date,
+    description,
+    amount: Number(amount),
+    createdAt: new Date().toISOString(),
+  };
+  // เพิ่มรายจ่ายใหม่เข้าไปท้าย array
+  expenses.push(newExpense);
+  // บันทึกรายการรายจ่ายทั้งหมด (รวมของใหม่) กลับลงฐานข้อมูล
+  await db.writeExpenses(expenses);
+  // ตอบกลับสถานะ 201 (สร้างสำเร็จ) พร้อมข้อมูลรายจ่ายที่เพิ่งสร้าง
+  res.status(201).json(newExpense);
+});
+
+// เมื่อมีการเรียก DELETE ที่ /api/expenses/:id (ลบรายจ่ายตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.delete('/api/expenses/:id', requireAuth, async (req, res) => {
+  // อ่านรายการรายจ่ายทั้งหมดจากฐานข้อมูล
+  const expenses = await db.readExpenses();
+  // หาตำแหน่งของรายจ่ายที่ต้องการลบ
+  const idx = expenses.findIndex((e) => e.id === req.params.id);
+  // ถ้าไม่เจอ ให้ตอบกลับ 404
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบรายการรายจ่ายนี้' });
+  // ลบออกจาก array ด้วย splice (เก็บตัวที่ถูกลบไว้ในตัวแปร removed)
+  const removed = expenses.splice(idx, 1);
+  // บันทึกรายการรายจ่ายที่เหลือ (หลังลบ) กลับลงฐานข้อมูล
+  await db.writeExpenses(expenses);
+  // ตอบกลับข้อมูลรายจ่ายที่ถูกลบไป เพื่อยืนยันว่าลบรายการไหน
+  res.json(removed[0]);
+});
+
+// ---------- Reports API (รายงานยอดขาย/กำไร-ขาดทุน/สินค้าขายดี) ----------
+
+// เมื่อมีการเรียก GET ที่ /api/reports/summary?from=YYYY-MM-DD&to=YYYY-MM-DD (ขอสรุปรายงานของช่วงวันที่ที่ระบุ) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.get('/api/reports/summary', requireAuth, async (req, res) => {
+  // ต้องระบุทั้งวันที่เริ่มต้นและสิ้นสุด ถ้าขาดอย่างใดอย่างหนึ่งให้ตอบกลับ error
+  const { from, to } = req.query;
+  if (!from || !to) {
+    return res.status(400).json({ error: 'กรุณาระบุช่วงวันที่ (from, to)' });
+  }
+
+  // อ่านคำสั่งซื้อ, รายจ่าย, และสินค้าทั้งหมด มาคำนวณสรุปรายงาน
+  const orders = await db.readOrders();
+  const expenses = await db.readExpenses();
+  const products = await db.readProducts();
+
+  // กรองเฉพาะคำสั่งซื้อที่อยู่ในช่วงวันที่ที่ระบุ (เทียบแค่ส่วนวันที่ YYYY-MM-DD ของ createdAt)
+  const rangeOrders = orders.filter((o) => {
+    const orderDate = o.createdAt.slice(0, 10);
+    return orderDate >= from && orderDate <= to;
+  });
+  // กรองเฉพาะรายจ่ายที่อยู่ในช่วงวันที่ที่ระบุ
+  const rangeExpenses = expenses.filter((e) => e.date >= from && e.date <= to);
+
+  // ยอดขายรวม = ผลรวม total ของทุกคำสั่งซื้อในช่วงที่เลือก
+  const revenue = rangeOrders.reduce((sum, o) => sum + o.total, 0);
+  // รายจ่ายรวม = ผลรวม amount ของทุกรายจ่ายในช่วงที่เลือก
+  const totalExpenses = rangeExpenses.reduce((sum, e) => sum + e.amount, 0);
+  // กำไร/ขาดทุน = ยอดขาย - รายจ่าย (ถ้าติดลบคือขาดทุน)
+  const profit = revenue - totalExpenses;
+
+  // รวบรวมสถิติสินค้าขายดี: นับจำนวนที่ขายได้ (qty) และยอดขายของสินค้าแต่ละชิ้น จากทุกรายการในทุกคำสั่งซื้อ
+  const productStats = {};
+  rangeOrders.forEach((o) => {
+    o.items.forEach((item) => {
+      if (!productStats[item.productId]) {
+        productStats[item.productId] = { productId: item.productId, name: item.name, count: 0, revenue: 0 };
+      }
+      productStats[item.productId].count += item.qty;
+      productStats[item.productId].revenue += item.price * item.qty;
+    });
+  });
+  // แนบรหัสสินค้า+แบรนด์ให้แต่ละสถิติ โดยค้นจากฐานข้อมูลสินค้าจริง (เผื่อสินค้านั้นถูกลบไปแล้ว ให้ใช้ค่าว่างแทน)
+  Object.values(productStats).forEach((stat) => {
+    const product = products.find((p) => p.id === stat.productId);
+    stat.code = product?.code || '';
+    stat.brand = product?.brand || '';
+  });
+
+  // รวบรวมสถิติแบรนด์ขายดี โดยรวมยอดจากสถิติสินค้าด้านบนตามแบรนด์ (สินค้าที่ไม่มีแบรนด์ระบุไว้ จัดเป็นกลุ่ม "ไม่ระบุแบรนด์")
+  const brandStats = {};
+  Object.values(productStats).forEach((stat) => {
+    const brand = stat.brand || 'ไม่ระบุแบรนด์';
+    if (!brandStats[brand]) brandStats[brand] = { brand, count: 0, revenue: 0 };
+    brandStats[brand].count += stat.count;
+    brandStats[brand].revenue += stat.revenue;
+  });
+
+  // เรียงสินค้า/แบรนด์ขายดีจากจำนวนคำสั่งซื้อมากไปน้อย (ตามที่ตกลงกันไว้ว่าจัดอันดับจากจำนวนคำสั่งซื้อ) แล้วตัดเอาแค่ 10 อันดับแรก
+  const topProducts = Object.values(productStats)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+  const topBrands = Object.values(brandStats)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  res.json({
+    revenue,
+    orderCount: rangeOrders.length,
+    expenses: totalExpenses,
+    profit,
+    topProducts,
+    topBrands,
+  });
+});
+
 // Middleware ดักจับข้อผิดพลาดทั้งหมดในแอป (ต้องมี 4 พารามิเตอร์ Express ถึงจะรู้ว่าเป็น error handler)
 // ใช้ดักข้อผิดพลาดจาก multer เช่น ไฟล์ใหญ่เกินไป หรือไฟล์ไม่ใช่รูปภาพ แล้วตอบกลับเป็น JSON แทนหน้า error ปกติ
 app.use((err, req, res, next) => {
