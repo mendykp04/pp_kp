@@ -372,6 +372,7 @@ function renderFlashSales() {
         <div class="flash-price-row">
           <span class="price-strike">${formatPrice(s.productPrice)}</span>
           <span class="price flash-price">${formatPrice(s.salePrice)}</span>
+          <span class="discount-badge">-${Math.round((1 - s.salePrice / s.productPrice) * 100)}%</span>
         </div>
         <!-- data-end เก็บเวลาสิ้นสุด Flash Sale ไว้ ให้ตัวนับถอยหลัง (updateFlashCountdowns) มาอ่านไปคำนวณเวลาที่เหลือ -->
         <span class="flash-countdown" data-end="${s.endAt}">กำลังคำนวณเวลา...</span>
