@@ -246,7 +246,7 @@ app.get('/api/products/:id', async (req, res) => {
 // เมื่อมีการเรียก POST ที่ /api/products (เพิ่มสินค้าใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น (requireAuth)
 app.post('/api/products', requireAuth, async (req, res) => {
   // ดึงข้อมูลฟิลด์ต่าง ๆ ออกจาก body ของ request ที่ส่งมา (ฝั่ง admin ส่งมาเป็น JSON) — images คือ array ของ path รูปที่อัปโหลดไว้แล้ว (อัปโหลดผ่าน /api/upload มาก่อนหน้านี้)
-  const { name, brand, code, price, sizes, images, description, condition, categoryId } = req.body;
+  const { name, brand, code, price, sizes, images, description, condition, categoryId, type } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อสินค้าและราคา ถ้าไม่มีให้ตอบกลับ error 400 (ข้อมูลไม่ถูกต้อง)
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'กรุณาระบุชื่อสินค้าและราคา' });
@@ -277,6 +277,8 @@ app.post('/api/products', requireAuth, async (req, res) => {
     description: description || '',
     // สภาพ/ตำหนิสินค้า แยกจากรายละเอียดสินค้าทั่วไป เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน
     condition: condition || '',
+    // ประเภทรองเท้า เช่น รองเท้าแฟชั่น, รองเท้าวิ่ง ใช้กรอง/ค้นหาทั้งฝั่งแอดมินและหน้าร้านค้า
+    type: type || '',
   };
   // เพิ่มสินค้าใหม่เข้าไปท้าย array ของสินค้าทั้งหมด
   products.push(newProduct);
@@ -296,7 +298,7 @@ app.put('/api/products/:id', requireAuth, async (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'ไม่พบสินค้า' });
 
   // ดึงข้อมูลที่ส่งมาจาก body สำหรับใช้แก้ไข
-  const { name, brand, code, price, sizes, images, description, condition, categoryId } = req.body;
+  const { name, brand, code, price, sizes, images, description, condition, categoryId, type } = req.body;
   // เก็บข้อมูลสินค้าเดิมไว้ในตัวแปร existing เพื่อใช้เป็นค่า default ถ้าไม่ได้ส่งฟิลด์นั้นมาแก้ไข
   const existing = products[idx];
   // ถ้ามีการส่งรหัสสินค้าใหม่มา (ไม่ใช่ undefined) และรหัสนั้นเปลี่ยนไปจากเดิมจริง ๆ ให้ตรวจสอบว่าซ้ำกับสินค้าชิ้นอื่นหรือไม่
@@ -323,6 +325,7 @@ app.put('/api/products/:id', requireAuth, async (req, res) => {
     images: Array.isArray(images) ? images : existing.images,
     description: description ?? existing.description,
     condition: condition ?? existing.condition,
+    type: type ?? existing.type,
   };
   // อัปเดตรูปปก (image) ให้ตรงกับรูปแรกใน images เสมอ เผื่อกรณีแก้ไขแล้วส่ง response กลับไปทันทีโดยยังไม่ได้อ่านข้อมูลใหม่จากฐานข้อมูล
   products[idx].image = products[idx].images[0] || '';

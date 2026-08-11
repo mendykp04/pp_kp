@@ -141,6 +141,9 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
 // ---------- Products ----------
 // ส่วนจัดการสินค้า: โหลด/แสดง/เพิ่ม/แก้ไข/ลบ
 
+// อ้างอิง element ช่องค้นหาสินค้า (ค้นจากรหัสสินค้า, แบรนด์, ชื่อสินค้า, หรือประเภท)
+const productSearchInput = document.getElementById('productSearchInput');
+
 // ฟังก์ชัน async โหลดรายการสินค้าทั้งหมดจาก backend
 async function loadProducts() {
   // ยิง HTTP GET ไปที่ /api/products แล้วรอผลลัพธ์
@@ -151,16 +154,32 @@ async function loadProducts() {
   renderProductTable();
 }
 
-// ฟังก์ชันวาด (render) ตารางแสดงรายการสินค้าทั้งหมด
+// ฟังก์ชันกรองสินค้าตามคำค้นหาปัจจุบัน (ค้นจากรหัสสินค้า, แบรนด์, ชื่อสินค้า, หรือประเภท) — กรองฝั่ง client เพราะสินค้าทั้งหมดโหลดไว้ในหน่วยความจำอยู่แล้ว ไม่ต้องยิง API ซ้ำ
+function getFilteredProducts() {
+  const q = productSearchInput.value.trim().toLowerCase();
+  if (!q) return products;
+  return products.filter(
+    (p) =>
+      (p.code || '').toLowerCase().includes(q) ||
+      (p.brand || '').toLowerCase().includes(q) ||
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.type || '').toLowerCase().includes(q)
+  );
+}
+
+// ฟังก์ชันวาด (render) ตารางแสดงรายการสินค้า (ตามผลการค้นหาปัจจุบัน)
 function renderProductTable() {
-  // ถ้าไม่มีสินค้าเลย
-  if (products.length === 0) {
-    // แสดงข้อความแจ้งว่ายังไม่มีสินค้า (ในแถวเดียว ครอบคลุม 8 คอลัมน์)
-    productTableBody.innerHTML = '<tr><td colspan="7">ยังไม่มีสินค้า</td></tr>';
+  const filtered = getFilteredProducts();
+  // ถ้าไม่มีสินค้าที่ตรงกับเงื่อนไขเลย
+  if (filtered.length === 0) {
+    // แสดงข้อความแจ้งเตือนต่างกันตามว่ายังไม่มีสินค้าเลย หรือค้นหาแล้วไม่เจอ (ครอบคลุม 9 คอลัมน์)
+    productTableBody.innerHTML = `<tr><td colspan="9">${
+      products.length === 0 ? 'ยังไม่มีสินค้า' : 'ไม่พบสินค้าที่ค้นหา'
+    }</td></tr>`;
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับสินค้าแต่ละชิ้น แล้วรวมเป็นข้อความเดียว
-  productTableBody.innerHTML = products
+  productTableBody.innerHTML = filtered
     .map(
       (p) => `
     <tr>
@@ -168,6 +187,7 @@ function renderProductTable() {
       <td>${p.code || '-'}</td>
       <td>${p.name}</td>
       <td>${p.brand}</td>
+      <td>${p.type || '-'}</td>
       <td>${formatPrice(p.price)}</td>
       <td>${p.stock > 0 ? 'พร้อมขาย' : 'ขายแล้ว'}</td>
       <td>${p.sizes.join(', ')}</td>
@@ -208,6 +228,8 @@ function openProductModal(product = null) {
   document.getElementById('productBrand').value = product?.brand || '';
   // เติมค่ารหัสรองเท้าลงในช่องกรอก (ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน)
   document.getElementById('productCode').value = product?.code || '';
+  // เติมค่าประเภทรองเท้าลงในดรอปดาวน์
+  document.getElementById('productType').value = product?.type || '';
   // เติมค่าราคาลงในช่องกรอก (ใช้ ?? เพราะราคาอาจเป็น 0 ซึ่งถือเป็นค่าที่ถูกต้อง ไม่ใช่ค่าว่าง)
   document.getElementById('productPrice').value = product?.price ?? '';
   // เติมค่าไซส์ทั้งหมด โดยแปลง array ของไซส์ให้เป็นข้อความคั่นด้วยจุลภาค เช่น "40,41,42"
@@ -296,6 +318,9 @@ document.getElementById('productImageFile').addEventListener('change', async (e)
   }
 });
 
+// ผูก event ให้ค้นหาแบบ real-time ทุกครั้งที่ผู้ใช้พิมพ์ในช่องค้นหาสินค้า
+productSearchInput.addEventListener('input', renderProductTable);
+
 // ผูก event ให้กับปุ่ม "+ เพิ่มสินค้าใหม่" เมื่อคลิกให้เปิด modal แบบไม่ส่งสินค้าเดิม (โหมดเพิ่มใหม่)
 document.getElementById('addProductBtn').addEventListener('click', () => openProductModal());
 // ผูก event ให้กับปุ่มกากบาทปิด modal
@@ -321,6 +346,8 @@ productForm.addEventListener('submit', async (e) => {
     brand: document.getElementById('productBrand').value.trim(),
     // รหัสรองเท้า ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (เช่น A1, A2)
     code: document.getElementById('productCode').value.trim(),
+    // ประเภทรองเท้า เช่น รองเท้าแฟชั่น, รองเท้าวิ่ง
+    type: document.getElementById('productType').value,
     price: Number(document.getElementById('productPrice').value),
     // แปลงข้อความไซส์ (คั่นด้วยจุลภาค) เป็น array ของตัวเลข
     sizes: document

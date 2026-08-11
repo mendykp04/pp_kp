@@ -15,6 +15,8 @@ const productGrid = document.getElementById('productGrid');
 const searchInput = document.getElementById('searchInput');
 // อ้างอิง element dropdown เลือกกรองตามแบรนด์
 const brandFilter = document.getElementById('brandFilter');
+// อ้างอิง element dropdown เลือกกรองตามประเภทรองเท้า (เช่น รองเท้าแฟชั่น, รองเท้าวิ่ง)
+const typeFilter = document.getElementById('typeFilter');
 // อ้างอิง element dropdown เลือกกรองตามช่วงราคา (เช่น 0-5,000 / 5,001-10,000)
 const priceRangeFilter = document.getElementById('priceRangeFilter');
 // อ้างอิง element กล่อง modal สำหรับเลือกไซส์
@@ -80,6 +82,11 @@ function getFilteredProducts() {
   if (brandFilter.value) {
     // กรองเฉพาะสินค้าที่แบรนด์ตรงกับที่เลือก
     list = list.filter((p) => p.brand === brandFilter.value);
+  }
+  // ถ้ามีการเลือกประเภทรองเท้าใน dropdown (ไม่ใช่ค่าว่าง "ทุกประเภท")
+  if (typeFilter.value) {
+    // กรองเฉพาะสินค้าที่ประเภทตรงกับที่เลือก
+    list = list.filter((p) => p.type === typeFilter.value);
   }
   // ถ้ามีการเลือกช่วงราคาใน dropdown (ไม่ใช่ค่าว่าง "ทุกช่วงราคา")
   if (priceRangeFilter.value) {
@@ -253,10 +260,11 @@ function openProductDetailModal(productId) {
   detailImages = product.images && product.images.length > 0 ? product.images : [product.image];
   detailIndex = 0;
 
-  // เติมข้อมูลสินค้า (ชื่อ, แบรนด์, ราคา, รหัส, สภาพ) ลงใน modal
+  // เติมข้อมูลสินค้า (ชื่อ, แบรนด์, ราคา, รหัส, ประเภท, สภาพ) ลงใน modal
   document.getElementById('detailBrand').textContent = product.brand;
   document.getElementById('detailName').textContent = product.name;
   document.getElementById('detailCode').textContent = product.code ? `รหัส: ${product.code}` : '';
+  document.getElementById('detailType').textContent = product.type ? `ประเภท: ${product.type}` : '';
   document.getElementById('detailCondition').textContent = product.condition ? `สภาพ: ${product.condition}` : '';
   document.getElementById('detailPrice').textContent = formatPrice(product.price);
 
@@ -317,6 +325,8 @@ productDetailModal.addEventListener('click', (e) => {
 searchInput.addEventListener('input', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกแบรนด์ ให้วาดรายการสินค้าใหม่ตามแบรนด์ที่เลือก
 brandFilter.addEventListener('change', renderProducts);
+// เมื่อผู้ใช้เปลี่ยนตัวเลือกประเภทรองเท้า ให้วาดรายการสินค้าใหม่ตามประเภทที่เลือก
+typeFilter.addEventListener('change', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกช่วงราคา ให้วาดรายการสินค้าใหม่ตามช่วงราคาที่เลือก
 priceRangeFilter.addEventListener('change', renderProducts);
 

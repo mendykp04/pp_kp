@@ -49,6 +49,10 @@
           <!-- ปุ่มเปิด modal สำหรับเพิ่มสินค้าใหม่ -->
           <button class="btn" id="addProductBtn">+ เพิ่มสินค้าใหม่</button>
         </div>
+        <!-- ช่องค้นหาสินค้า จาก "รหัสสินค้า", "แบรนด์", "ชื่อสินค้า" หรือ "ประเภท" (ค้นหาแบบ real-time ตามที่พิมพ์) -->
+        <div class="filters">
+          <input type="text" id="productSearchInput" placeholder="ค้นหาจากรหัสสินค้า, แบรนด์, ชื่อสินค้า หรือประเภท..." />
+        </div>
         <!-- กล่องครอบตาราง เผื่อกรณีตารางกว้างเกินจอ จะได้เลื่อนซ้าย-ขวาได้ -->
         <div class="table-wrap">
           <table>
@@ -59,6 +63,7 @@
                 <th>รหัส</th>
                 <th>ชื่อสินค้า</th>
                 <th>แบรนด์</th>
+                <th>ประเภท</th>
                 <th>ราคา</th>
                 <th>สถานะ</th>
                 <th>ไซส์</th>
@@ -67,7 +72,7 @@
             </thead>
             <!-- เนื้อหาตาราง (แถวข้อมูลสินค้า) จะถูกเติมโดย admin.js ตอนแรกยังไม่มีข้อมูลจึงขึ้น "กำลังโหลด..." -->
             <tbody id="productTableBody">
-              <tr><td colspan="8">กำลังโหลด...</td></tr>
+              <tr><td colspan="9">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -261,6 +266,22 @@
         <div class="field">
           <label for="productCode">รหัสรองเท้า (เช่น A1, A2)</label>
           <input type="text" id="productCode" required />
+        </div>
+        <!-- ประเภทรองเท้า: ใช้กรอง/ค้นหาทั้งฝั่งแอดมินและหน้าร้านค้า รายชื่อตัวเลือกต้องตรงกับ frontend/index.html เพื่อให้ตัวกรองหน้าร้านค้าใช้งานได้ครบ -->
+        <div class="field">
+          <label for="productType">ประเภทรองเท้า</label>
+          <select id="productType">
+            <option value="">-- ไม่ระบุประเภท --</option>
+            <option value="รองเท้าแฟชั่น">รองเท้าแฟชั่น</option>
+            <option value="รองเท้าวิ่ง">รองเท้าวิ่ง</option>
+            <option value="รองเท้าบาสเก็ตบอล">รองเท้าบาสเก็ตบอล</option>
+            <option value="รองเท้าฟุตบอล">รองเท้าฟุตบอล</option>
+            <option value="รองเท้าเทรนนิ่ง/ฟิตเนส">รองเท้าเทรนนิ่ง/ฟิตเนส</option>
+            <option value="รองเท้าสเก็ต">รองเท้าสเก็ต</option>
+            <option value="รองเท้าลำลอง">รองเท้าลำลอง</option>
+            <option value="รองเท้าทางการ">รองเท้าทางการ</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
         </div>
         <div class="field">
           <label for="productPrice">ราคา (บาท)</label>

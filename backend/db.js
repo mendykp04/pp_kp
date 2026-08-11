@@ -37,7 +37,8 @@ async function init() {
         image TEXT,
         images TEXT,
         description TEXT,
-        condition TEXT
+        condition TEXT,
+        type TEXT
       )`,
       `CREATE TABLE IF NOT EXISTS employees (
         id TEXT PRIMARY KEY,
@@ -88,6 +89,10 @@ async function init() {
   if (!existingProductColumns.includes('images')) {
     await client.execute('ALTER TABLE products ADD COLUMN images TEXT');
   }
+  // ประเภทรองเท้า (เช่น รองเท้าแฟชั่น, รองเท้าวิ่ง) ใช้กรอง/ค้นหาทั้งฝั่งแอดมินและหน้าร้านค้า
+  if (!existingProductColumns.includes('type')) {
+    await client.execute('ALTER TABLE products ADD COLUMN type TEXT');
+  }
 }
 
 // ฟิลด์ sizes/items เก็บเป็น JSON text ในคอลัมน์เดียว (โครงสร้างเดิมเป็น array ซ้อนอยู่แล้ว)
@@ -114,8 +119,8 @@ async function writeProducts(products) {
     // รูปแรกใน images ถือเป็นรูปหลัก/ปก เก็บซ้ำไว้ในคอลัมน์ image ด้วย เพื่อให้ส่วนอื่นที่ยังอ้างอิงรูปเดียว (การ์ดสินค้า/ตะกร้า/Flash Sale) ใช้งานได้ตามปกติ
     const images = Array.isArray(p.images) ? p.images : p.image ? [p.image] : [];
     statements.push({
-      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, images, description, condition)
-            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @images, @description, @condition)`,
+      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, images, description, condition, type)
+            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @images, @description, @condition, @type)`,
       args: {
         ...p,
         brand: p.brand ?? '',
@@ -125,6 +130,7 @@ async function writeProducts(products) {
         images: JSON.stringify(images),
         description: p.description ?? '',
         condition: p.condition ?? '',
+        type: p.type ?? '',
         sizes: JSON.stringify(p.sizes || []),
       },
     });

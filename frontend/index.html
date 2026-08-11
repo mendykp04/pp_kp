@@ -53,6 +53,19 @@
       <select id="brandFilter">
         <option value="">ทุกแบรนด์</option>
       </select>
+      <!-- ดรอปดาวน์เลือกกรองตามประเภทรองเท้า รายชื่อตัวเลือกต้องตรงกับ admin/index.html เพื่อให้ตัวกรองนี้ใช้งานได้ครบ -->
+      <select id="typeFilter">
+        <option value="">ทุกประเภท</option>
+        <option value="รองเท้าแฟชั่น">รองเท้าแฟชั่น</option>
+        <option value="รองเท้าวิ่ง">รองเท้าวิ่ง</option>
+        <option value="รองเท้าบาสเก็ตบอล">รองเท้าบาสเก็ตบอล</option>
+        <option value="รองเท้าฟุตบอล">รองเท้าฟุตบอล</option>
+        <option value="รองเท้าเทรนนิ่ง/ฟิตเนส">รองเท้าเทรนนิ่ง/ฟิตเนส</option>
+        <option value="รองเท้าสเก็ต">รองเท้าสเก็ต</option>
+        <option value="รองเท้าลำลอง">รองเท้าลำลอง</option>
+        <option value="รองเท้าทางการ">รองเท้าทางการ</option>
+        <option value="อื่นๆ">อื่นๆ</option>
+      </select>
       <!-- ดรอปดาวน์เลือกกรองตามช่วงราคา (แบ่งเป็นแบนด์ละ 5,000 บาท) -->
       <select id="priceRangeFilter">
         <option value="">ทุกช่วงราคา</option>
@@ -109,6 +122,7 @@
         <span class="brand" id="detailBrand"></span>
         <h3 id="detailName"></h3>
         <span class="product-code" id="detailCode"></span>
+        <span class="product-condition" id="detailType"></span>
         <span class="product-condition" id="detailCondition"></span>
         <span class="price" id="detailPrice"></span>
       </div>
