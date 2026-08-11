@@ -104,6 +104,13 @@ const STATUS_CLASS_MAP = {
   จัดส่งไม่สำเร็จ: 'status-failed',
 };
 
+// ตารางแปลสถานะการชำระเงิน (ข้อความไทย) ให้เป็น class สี highlight — ใช้ชุดสีคนละชุดกับ STATUS_CLASS_MAP ด้านบน (นี่คือสถานะ "จ่ายเงินหรือยัง" แยกจากสถานะ "จัดส่งถึงไหนแล้ว")
+const PAYMENT_STATUS_CLASS_MAP = {
+  ไม่ต้องชำระล่วงหน้า: 'payment-status-na',
+  รอตรวจสอบสลิป: 'payment-status-pending',
+  ชำระเงินแล้ว: 'payment-status-paid',
+};
+
 // ฟังก์ชันแปลงรหัสวิธีชำระเงินให้เป็นข้อความภาษาไทยอ่านง่าย (ใช้ร่วมกันทั้งหน้า track.html, account.html และหลังบ้าน)
 function formatPaymentMethod(method) {
   const labels = {

@@ -97,6 +97,14 @@
           <p class="payment-hint">กรุณาชำระเงินตามยอดที่ระบุ แล้วเก็บสลิปไว้เป็นหลักฐาน</p>
         </div>
 
+        <!-- ช่องแนบสลิปโอนเงิน แสดงเฉพาะตอนเลือก "โอนเงินผ่านธนาคาร" หรือ "พร้อมเพย์" เท่านั้น (ไม่บังคับตอนนี้ ยังไม่แนบก็สั่งซื้อได้ แล้วค่อยแนบทีหลังผ่านหน้า "ตรวจสอบคำสั่งซื้อ" ก็ได้ เผื่อยังไม่ได้โอนตอนกดสั่งซื้อ) -->
+        <div class="field" id="slipUploadField" style="display:none;">
+          <label for="slipFile">แนบสลิปโอนเงิน (ถ้าโอนแล้ว)</label>
+          <input type="file" id="slipFile" accept="image/*" />
+          <!-- แสดงรูปตัวอย่างสลิปที่อัปโหลดสำเร็จแล้ว เริ่มต้นซ่อนไว้ก่อน -->
+          <img id="slipPreview" src="" alt="ตัวอย่างสลิป" style="display:none; width:80px; height:80px; object-fit:cover; border-radius:8px; margin-top:8px;" />
+        </div>
+
         <!-- ปุ่มชนิด submit เมื่อกดจะสั่งให้ฟอร์มด้านบนทำงาน (trigger event submit) -->
         <button type="submit" class="btn btn-block">ยืนยันสั่งซื้อ</button>
       </form>

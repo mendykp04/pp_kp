@@ -61,6 +61,8 @@ async function init() {
         total REAL,
         paymentMethod TEXT,
         status TEXT,
+        paymentStatus TEXT,
+        slipUrl TEXT,
         createdAt TEXT
       )`,
       `CREATE TABLE IF NOT EXISTS flashsales (
@@ -108,6 +110,16 @@ async function init() {
   const existingCustomerColumns = customerColumnsResult.rows.map((c) => c.name);
   if (!existingCustomerColumns.includes('password')) {
     await client.execute('ALTER TABLE customers ADD COLUMN password TEXT');
+  }
+
+  // Migration: เติมคอลัมน์ paymentStatus/slipUrl ให้ตาราง orders ที่มีอยู่แล้วจากก่อนหน้านี้ (ใช้ตอนลูกค้าแนบสลิปโอนเงิน + แอดมินยืนยันการชำระเงิน)
+  const orderColumnsResult = await client.execute('PRAGMA table_info(orders)');
+  const existingOrderColumns = orderColumnsResult.rows.map((c) => c.name);
+  if (!existingOrderColumns.includes('paymentStatus')) {
+    await client.execute('ALTER TABLE orders ADD COLUMN paymentStatus TEXT');
+  }
+  if (!existingOrderColumns.includes('slipUrl')) {
+    await client.execute('ALTER TABLE orders ADD COLUMN slipUrl TEXT');
   }
 }
 
@@ -195,12 +207,14 @@ async function writeOrders(orders) {
   const statements = [{ sql: 'DELETE FROM orders', args: [] }];
   orders.forEach((o) =>
     statements.push({
-      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, createdAt)
-            VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @createdAt)`,
+      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, paymentStatus, slipUrl, createdAt)
+            VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @paymentStatus, @slipUrl, @createdAt)`,
       args: {
         ...o,
         items: JSON.stringify(o.items || []),
         paymentMethod: o.paymentMethod ?? 'cod',
+        paymentStatus: o.paymentStatus ?? '',
+        slipUrl: o.slipUrl ?? '',
       },
     })
   );

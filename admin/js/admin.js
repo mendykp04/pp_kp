@@ -447,11 +447,18 @@ function getOrderStatusClass(status) {
   return ORDER_STATUS_OPTIONS.find((s) => s.label === status)?.className || '';
 }
 
+// ตารางแปลสถานะการชำระเงิน (ข้อความไทย) ให้เป็น class สี highlight — ใช้ชุดสีเดียวกับหน้าร้านค้า (ดู style.css .status-badge.payment-status-*)
+const PAYMENT_STATUS_CLASS_MAP = {
+  ไม่ต้องชำระล่วงหน้า: 'payment-status-na',
+  รอตรวจสอบสลิป: 'payment-status-pending',
+  ชำระเงินแล้ว: 'payment-status-paid',
+};
+
 function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
-    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 9 คอลัมน์)
-    orderTableBody.innerHTML = '<tr><td colspan="9">ยังไม่มีคำสั่งซื้อ</td></tr>';
+    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 10 คอลัมน์)
+    orderTableBody.innerHTML = '<tr><td colspan="10">ยังไม่มีคำสั่งซื้อ</td></tr>';
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
@@ -475,6 +482,18 @@ function renderOrderTable() {
       <td>${formatPrice(o.total)}</td>
       <td>${formatPaymentMethod(o.paymentMethod)}</td>
       <td>
+        <!-- ป้ายสถานะการชำระเงิน (คนละสถานะกับสถานะจัดส่ง) -->
+        <span class="payment-status-badge ${PAYMENT_STATUS_CLASS_MAP[o.paymentStatus] || ''}">${o.paymentStatus || '-'}</span>
+        <!-- ลิงก์ดูรูปสลิปที่ลูกค้าแนบมา (ถ้ามี) -->
+        ${o.slipUrl ? `<div><a href="${o.slipUrl}" target="_blank" rel="noopener">ดูสลิป</a></div>` : ''}
+        <!-- ปุ่มยืนยันการชำระเงิน แสดงเฉพาะตอนที่ยังต้องโอนเงิน (ไม่ใช่เก็บเงินปลายทาง) และยังไม่เคยยืนยันมาก่อน -->
+        ${
+          o.paymentMethod !== 'cod' && o.paymentStatus !== 'ชำระเงินแล้ว'
+            ? `<div><button class="btn-icon" data-action="confirm-payment" data-id="${o.id}">✅ ยืนยันชำระเงิน</button></div>`
+            : ''
+        }
+      </td>
+      <td>
         <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) — class status-* ทำให้พื้นหลังมีสีต่างกันตามสถานะ -->
         <select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${o.id}">${optionsHTML}</select>
       </td>
@@ -491,6 +510,11 @@ function renderOrderTable() {
   // ผูก event ให้ปุ่ม "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
   orderTableBody.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
     btn.addEventListener('click', () => deleteOrder(btn.dataset.id));
+  });
+
+  // ผูก event ให้ปุ่ม "✅ ยืนยันชำระเงิน" ทุกปุ่มที่เพิ่งวาดใหม่ กดแล้วยิง API ยืนยันว่าตรวจสลิป/เงินเข้าจริงแล้ว
+  orderTableBody.querySelectorAll('button[data-action="confirm-payment"]').forEach((btn) => {
+    btn.addEventListener('click', () => confirmOrderPayment(btn.dataset.id));
   });
 
   // ผูก event ให้ทุกดรอปดาวน์สถานะที่เพิ่งวาดใหม่ เมื่อเปลี่ยนตัวเลือกให้ยิง API อัปเดตสถานะทันที
@@ -544,6 +568,25 @@ async function deleteOrder(orderId) {
     loadOrders();
   } catch (err) {
     // ถ้าเกิดข้อผิดพลาด ให้แจ้งเตือนผู้ใช้
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }
+}
+
+// ฟังก์ชัน async สำหรับยืนยันว่าตรวจสลิป/เงินเข้าจริงแล้ว (หลังแอดมินเช็คกับแอปธนาคารตัวเองเรียบร้อย)
+async function confirmOrderPayment(orderId) {
+  // แสดงกล่องยืนยันก่อน กันกดพลาด เพราะเป็นการยืนยันว่าเงินเข้าจริง
+  if (!confirm('ยืนยันว่าตรวจสอบแล้วว่าเงินเข้าบัญชีจริงใช่หรือไม่?')) return;
+  try {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/payment-status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentStatus: 'ชำระเงินแล้ว' }),
+    });
+    if (!res.ok) throw new Error('update failed');
+    showToast('ยืนยันการชำระเงินเรียบร้อย');
+    // โหลดรายการคำสั่งซื้อใหม่ทั้งหมด เพื่อให้ตารางแสดงป้ายสถานะล่าสุด
+    loadOrders();
+  } catch (err) {
     showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
   }
 }

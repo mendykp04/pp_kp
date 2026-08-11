@@ -10,9 +10,13 @@ const successMessage = document.getElementById('successMessage');
 const bankTransferDetail = document.getElementById('bankTransferDetail');
 // อ้างอิง element กล่องแสดง QR code พร้อมเพย์ (โผล่มาตอนเลือก "พร้อมเพย์")
 const promptpayDetail = document.getElementById('promptpayDetail');
+// อ้างอิง element ช่องแนบสลิปโอนเงิน (โผล่มาตอนเลือก "โอนเงินผ่านธนาคาร" หรือ "พร้อมเพย์" อย่างใดอย่างหนึ่ง)
+const slipUploadField = document.getElementById('slipUploadField');
 
 // ตัวแปรเก็บข้อมูลบัญชีธนาคารที่โหลดมาจาก backend ไว้ (โหลดครั้งเดียวพอ ไม่ต้องยิง API ซ้ำทุกครั้งที่สลับตัวเลือก)
 let cachedPaymentInfo = null;
+// ตัวแปรเก็บ URL ของสลิปที่อัปโหลดสำเร็จแล้ว (ว่างไว้ถ้ายังไม่ได้แนบ ยังสั่งซื้อได้ตามปกติ แนบทีหลังผ่านหน้า "ตรวจสอบคำสั่งซื้อ" ก็ได้)
+let uploadedSlipUrl = '';
 
 // ฟังก์ชันแสดง/ซ่อนกล่องรายละเอียดการชำระเงิน ให้ตรงกับตัวเลือกที่ผู้ใช้เลือกอยู่ตอนนี้
 async function updatePaymentMethodDisplay() {
@@ -24,6 +28,8 @@ async function updatePaymentMethodDisplay() {
   // ซ่อนกล่องรายละเอียดทั้งสองแบบไว้ก่อนเป็นค่าเริ่มต้น แล้วค่อยเปิดเฉพาะอันที่ตรงกับตัวเลือกด้านล่าง
   bankTransferDetail.style.display = 'none';
   promptpayDetail.style.display = 'none';
+  // ช่องแนบสลิปให้โชว์เฉพาะตอนเลือกวิธีที่ต้องโอนเงินล่วงหน้า (ไม่ใช่เก็บเงินปลายทาง) เท่านั้น
+  slipUploadField.style.display = selected.value === 'cod' ? 'none' : 'block';
 
   // ถ้าเลือก "โอนเงินผ่านธนาคาร"
   if (selected.value === 'bank_transfer') {
@@ -69,6 +75,33 @@ async function updatePaymentMethodDisplay() {
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกวิธีการชำระเงิน (คลิก radio ตัวไหนก็ตามที่ชื่อ paymentMethod) ให้อัปเดตกล่องรายละเอียดทันที
 document.querySelectorAll('input[name="paymentMethod"]').forEach((radio) => {
   radio.addEventListener('change', updatePaymentMethodDisplay);
+});
+
+// ผูก event เมื่อผู้ใช้เลือกไฟล์สลิปโอนเงินจากช่อง input type="file" — อัปโหลดขึ้น backend ทันที (ไม่ต้องรอกดยืนยันสั่งซื้อ) แล้วเก็บ URL ไว้ส่งไปพร้อมออเดอร์
+document.getElementById('slipFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById('slipPreview');
+  // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างอัปโหลด
+  try {
+    showToast('กำลังอัปโหลดสลิป...');
+    const formData = new FormData();
+    formData.append('image', file);
+    const res = await fetch(`${API_BASE}/upload/slip`, { method: 'POST', body: formData });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'อัปโหลดสลิปไม่สำเร็จ');
+    }
+    const data = await res.json();
+    uploadedSlipUrl = data.url;
+    preview.src = data.url;
+    preview.style.display = 'block';
+    showToast('แนบสลิปสำเร็จ');
+  } catch (err) {
+    showToast(err.message);
+    e.target.value = '';
+  }
 });
 
 // ฟังก์ชันวาด (render) รายการสินค้าทั้งหมดในตะกร้าลงในหน้าเว็บ
@@ -171,6 +204,8 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     items: cart.map((i) => ({ productId: i.productId, size: i.size, qty: i.qty, flashSaleId: i.flashSaleId })),
     // อ่านวิธีการชำระเงินที่เลือกไว้ (radio ที่ถูกเลือกอยู่ตอนนี้)
     paymentMethod: document.querySelector('input[name="paymentMethod"]:checked').value,
+    // URL ของสลิปที่อัปโหลดไว้แล้ว (ถ้ามี) — ไม่บังคับ ยังไม่แนบก็สั่งซื้อได้ แล้วค่อยแนบทีหลังผ่านหน้า "ตรวจสอบคำสั่งซื้อ"
+    slipUrl: uploadedSlipUrl,
   };
 
   // หาปุ่ม submit ภายในฟอร์มที่เพิ่งถูกส่ง เพื่อเปลี่ยนสถานะระหว่างรอผลลัพธ์

@@ -355,6 +355,22 @@ app.post('/api/upload', requireAuth, upload.single('image'), async (req, res) =>
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+// เมื่อมีการเรียก POST ที่ /api/upload/slip (ลูกค้าอัปโหลดรูปสลิปโอนเงินตอนสั่งซื้อ/แนบทีหลัง) — เปิดสาธารณะ ไม่ต้องล็อกอิน (คนละสิทธิ์กับ /api/upload ที่สงวนไว้สำหรับแอดมินอัปโหลดรูปสินค้าเท่านั้น)
+app.post('/api/upload/slip', upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'กรุณาเลือกไฟล์รูปภาพ' });
+
+  if (cloudinaryHelper.isConfigured) {
+    try {
+      const result = await cloudinaryHelper.uploadBuffer(req.file.buffer, genId('slip-'));
+      return res.json({ url: result.secure_url });
+    } catch (err) {
+      return res.status(500).json({ error: 'อัปโหลดสลิปไม่สำเร็จ กรุณาลองใหม่' });
+    }
+  }
+
+  res.json({ url: `/uploads/${req.file.filename}` });
+});
+
 // ---------- Products API ----------
 // กลุ่ม API ที่เกี่ยวกับ "สินค้า" ทั้งหมด (ดู/เพิ่ม/แก้/ลบ)
 
@@ -519,8 +535,8 @@ app.get('/api/orders/track', async (req, res) => {
 
 // เมื่อมีการเรียก POST ที่ /api/orders (ลูกค้ากดยืนยันสั่งซื้อจากตะกร้า)
 app.post('/api/orders', async (req, res) => {
-  // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body
-  const { customerName, phone, address, items, paymentMethod } = req.body;
+  // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body — slipUrl (ไม่บังคับ) คือรูปสลิปโอนเงินที่อัปโหลดไว้แล้ว (ถ้ามีตอนกดสั่งซื้อ)
+  const { customerName, phone, address, items, paymentMethod, slipUrl } = req.body;
   // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่ (ชื่อ, เบอร์โทร, ที่อยู่ และต้องมีรายการสินค้าอย่างน้อย 1 ชิ้น)
   if (!customerName || !phone || !address || !Array.isArray(items) || items.length === 0) {
     // ถ้าข้อมูลไม่ครบ ตอบกลับ error 400
@@ -607,6 +623,10 @@ app.post('/api/orders', async (req, res) => {
     // เก็บวิธีชำระเงินที่ลูกค้าเลือกไว้ด้วย ให้ default เป็น "เก็บเงินปลายทาง" (cod) ถ้าไม่ได้ระบุมา
     paymentMethod: paymentMethod || 'cod',
     status: 'รอดำเนินการ',
+    // เก็บเงินปลายทางไม่ต้องตรวจสอบการโอนเงิน ส่วนโอนธนาคาร/พร้อมเพย์เริ่มต้นเป็น "รอตรวจสอบสลิป" จนกว่าแอดมินจะยืนยัน
+    paymentStatus: (paymentMethod || 'cod') === 'cod' ? 'ไม่ต้องชำระล่วงหน้า' : 'รอตรวจสอบสลิป',
+    // สลิปโอนเงินที่แนบมาตอนสั่งซื้อ (ถ้ามี) — ไม่มีก็แนบเพิ่มทีหลังได้ผ่านหน้า "ตรวจสอบคำสั่งซื้อ" หรือ "บัญชีของฉัน"
+    slipUrl: slipUrl || '',
     createdAt: new Date().toISOString(),
   };
   // เพิ่มออเดอร์ใหม่เข้าไปท้าย array
@@ -632,6 +652,38 @@ app.put('/api/orders/:id/status', requireAuth, async (req, res) => {
   // บันทึกรายการคำสั่งซื้อทั้งหมด (ที่อัปเดตแล้ว) กลับลงไฟล์
   await db.writeOrders(orders);
   // ตอบกลับข้อมูลออเดอร์ที่อัปเดตสถานะแล้ว
+  res.json(orders[idx]);
+});
+
+// เมื่อมีการเรียก POST ที่ /api/orders/:id/slip (ลูกค้าแนบ/เปลี่ยนรูปสลิปโอนเงินของคำสั่งซื้อตัวเอง) — ไม่ต้องล็อกอิน แต่ต้องระบุเบอร์โทรให้ตรงกับออเดอร์นั้นเหมือนหน้า "ตรวจสอบคำสั่งซื้อ" กันคนอื่นมาแนบสลิปมั่วใส่ออเดอร์คนอื่น
+app.post('/api/orders/:id/slip', async (req, res) => {
+  const { phone, slipUrl } = req.body;
+  if (!phone || !slipUrl) {
+    return res.status(400).json({ error: 'กรุณาระบุเบอร์โทรและแนบรูปสลิป' });
+  }
+  const orders = await db.readOrders();
+  const idx = orders.findIndex((o) => o.id === req.params.id && o.phone === phone);
+  if (idx === -1) {
+    return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ กรุณาตรวจสอบหมายเลขคำสั่งซื้อและเบอร์โทรอีกครั้ง' });
+  }
+  // บันทึกสลิปใหม่ และตั้งสถานะการชำระเงินกลับเป็น "รอตรวจสอบสลิป" เสมอ (เผื่อเป็นการแนบสลิปใหม่ทับของเดิมที่เคยถูกปฏิเสธหรือยังไม่ได้ตรวจ)
+  orders[idx].slipUrl = slipUrl;
+  orders[idx].paymentStatus = 'รอตรวจสอบสลิป';
+  await db.writeOrders(orders);
+  res.json(orders[idx]);
+});
+
+// เมื่อมีการเรียก PUT ที่ /api/orders/:id/payment-status (แอดมินตรวจสลิปแล้วยืนยัน/ปฏิเสธการชำระเงิน) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+app.put('/api/orders/:id/payment-status', requireAuth, async (req, res) => {
+  const { paymentStatus } = req.body;
+  if (!paymentStatus) {
+    return res.status(400).json({ error: 'กรุณาระบุสถานะการชำระเงิน' });
+  }
+  const orders = await db.readOrders();
+  const idx = orders.findIndex((o) => o.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ' });
+  orders[idx].paymentStatus = paymentStatus;
+  await db.writeOrders(orders);
   res.json(orders[idx]);
 });
 
