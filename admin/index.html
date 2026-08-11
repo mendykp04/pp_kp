@@ -20,22 +20,34 @@
       <!-- โลโก้ร้าน + คำว่า Admin กำกับไว้ -->
       <div class="brand">SNEAK<span>&apos;R</span> <small>Admin</small></div>
       <nav>
-        <!-- ปุ่มสลับไปแท็บ "จัดการสินค้า" เริ่มต้นเป็นแท็บที่ active (เปิดอยู่) data-tab ใช้บอก JS ว่าปุ่มนี้คู่กับแท็บไหน -->
-        <button class="nav-btn active" data-tab="products">📦 จัดการสินค้า</button>
-        <!-- ปุ่มสลับไปแท็บ "Flash Sale" -->
-        <button class="nav-btn" data-tab="flashsales">⚡ Flash Sale</button>
-        <!-- ปุ่มสลับไปแท็บ "คำสั่งซื้อ" (ออเดอร์จากหน้าร้านค้าออนไลน์) -->
-        <button class="nav-btn" data-tab="orders">🧾 คำสั่งซื้อ</button>
-        <!-- ปุ่มสลับไปแท็บ "ฐานข้อมูลลูกค้า" -->
-        <button class="nav-btn" data-tab="customers">🧑‍🤝‍🧑 ลูกค้า</button>
-        <!-- ปุ่มสลับไปแท็บ "จัดการพนักงาน" -->
-        <button class="nav-btn" data-tab="employees">👤 พนักงาน</button>
-        <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" (คำนวณจากคำสั่งซื้อโดยตรง) -->
-        <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
-        <!-- ปุ่มสลับไปแท็บ "รายจ่าย" -->
-        <button class="nav-btn" data-tab="expenses">💸 รายจ่าย</button>
-        <!-- ปุ่มสลับไปแท็บ "รายงาน" (ยอดขาย/กำไร-ขาดทุน/สินค้าและแบรนด์ขายดี ตามช่วงวันที่ที่เลือก) -->
-        <button class="nav-btn" data-tab="analytics">📈 รายงาน</button>
+        <!-- กลุ่มเมนูที่ 1: สินค้า/การขาย -->
+        <div class="nav-group">
+          <div class="nav-group-title">สินค้า &amp; การขาย</div>
+          <!-- ปุ่มสลับไปแท็บ "จัดการสินค้า" เริ่มต้นเป็นแท็บที่ active (เปิดอยู่) data-tab ใช้บอก JS ว่าปุ่มนี้คู่กับแท็บไหน -->
+          <button class="nav-btn active" data-tab="products">📦 จัดการสินค้า</button>
+          <!-- ปุ่มสลับไปแท็บ "Flash Sale" -->
+          <button class="nav-btn" data-tab="flashsales">⚡ Flash Sale</button>
+          <!-- ปุ่มสลับไปแท็บ "คำสั่งซื้อ" (ออเดอร์จากหน้าร้านค้าออนไลน์) -->
+          <button class="nav-btn" data-tab="orders">🧾 คำสั่งซื้อ</button>
+        </div>
+        <!-- กลุ่มเมนูที่ 2: บุคคล (ลูกค้า/พนักงาน) -->
+        <div class="nav-group">
+          <div class="nav-group-title">ลูกค้า &amp; พนักงาน</div>
+          <!-- ปุ่มสลับไปแท็บ "ฐานข้อมูลลูกค้า" -->
+          <button class="nav-btn" data-tab="customers">🧑‍🤝‍🧑 ลูกค้า</button>
+          <!-- ปุ่มสลับไปแท็บ "จัดการพนักงาน" -->
+          <button class="nav-btn" data-tab="employees">👤 พนักงาน</button>
+        </div>
+        <!-- กลุ่มเมนูที่ 3: สรุปยอดขาย/รายจ่าย/รายงาน -->
+        <div class="nav-group">
+          <div class="nav-group-title">ยอดขาย &amp; รายงาน</div>
+          <!-- ปุ่มสลับไปแท็บ "สรุปยอดขายประจำวัน" (คำนวณจากคำสั่งซื้อโดยตรง) -->
+          <button class="nav-btn" data-tab="report">📊 สรุปยอดขาย</button>
+          <!-- ปุ่มสลับไปแท็บ "รายจ่าย" -->
+          <button class="nav-btn" data-tab="expenses">💸 รายจ่าย</button>
+          <!-- ปุ่มสลับไปแท็บ "รายงาน" (ยอดขาย/กำไร-ขาดทุน/สินค้าและแบรนด์ขายดี ตามช่วงวันที่ที่เลือก) -->
+          <button class="nav-btn" data-tab="analytics">📈 รายงาน</button>
+        </div>
       </nav>
       <!-- ลิงก์กลับไปหน้าร้านค้าฝั่งลูกค้า -->
       <a href="/" class="back-link">← กลับหน้าร้านค้า</a>
