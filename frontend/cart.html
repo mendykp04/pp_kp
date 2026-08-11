@@ -18,6 +18,7 @@
     <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
     <nav>
       <a href="index.html">สินค้า</a>
+      <a href="track.html">ตรวจสอบคำสั่งซื้อ</a>
       <!-- ลิงก์ตะกร้า (อยู่หน้านี้อยู่แล้ว) พร้อมตัวเลขจำนวนสินค้า อัปเดตโดย JavaScript -->
       <a href="cart.html" class="cart-link">
         🛒 ตะกร้า <span class="cart-count" id="cartCount">0</span>
@@ -106,6 +107,8 @@
       <p id="orderRef"></p>
       <!-- ข้อความเตือนให้โอนเงิน แสดงเฉพาะตอนเลือกวิธีชำระเงินที่ต้องโอนล่วงหน้า (ซ่อนไว้ก่อนเป็นค่าเริ่มต้น) -->
       <p id="paymentReminder" style="display:none; color: var(--accent); font-weight: 700;"></p>
+      <!-- ลิงก์ไปหน้าตรวจสอบสถานะ พร้อมเติมหมายเลขคำสั่งซื้อให้อัตโนมัติ (href ถูกตั้งค่าโดย JavaScript หลังสั่งซื้อสำเร็จ) -->
+      <a href="track.html" id="trackOrderLink" class="btn btn-outline" style="margin-right: 8px;">ตรวจสอบสถานะ</a>
       <a href="index.html" class="btn">เลือกซื้อสินค้าต่อ</a>
     </div>
   </main>

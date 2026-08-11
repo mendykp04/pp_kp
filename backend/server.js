@@ -367,6 +367,21 @@ app.get('/api/orders', requireAuth, async (req, res) => {
   res.json(orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
 });
 
+// เมื่อมีการเรียก GET ที่ /api/orders/track?orderId=...&phone=... (ลูกค้าตรวจสอบสถานะคำสั่งซื้อของตัวเอง ไม่ต้องล็อกอิน)
+// ต้องระบุทั้งหมายเลขคำสั่งซื้อและเบอร์โทรให้ตรงกันทั้งคู่ ถึงจะดูได้ — กันไม่ให้คนอื่นเดาหมายเลขคำสั่งซื้อแล้วเห็นชื่อ/ที่อยู่ของลูกค้าคนอื่น
+app.get('/api/orders/track', async (req, res) => {
+  const { orderId, phone } = req.query;
+  if (!orderId || !phone) {
+    return res.status(400).json({ error: 'กรุณาระบุหมายเลขคำสั่งซื้อและเบอร์โทร' });
+  }
+  const orders = await db.readOrders();
+  const order = orders.find((o) => o.id === orderId && o.phone === phone);
+  if (!order) {
+    return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ กรุณาตรวจสอบหมายเลขคำสั่งซื้อและเบอร์โทรอีกครั้ง' });
+  }
+  res.json(order);
+});
+
 // เมื่อมีการเรียก POST ที่ /api/orders (ลูกค้ากดยืนยันสั่งซื้อจากตะกร้า)
 app.post('/api/orders', async (req, res) => {
   // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body

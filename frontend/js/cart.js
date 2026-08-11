@@ -206,6 +206,8 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     successMessage.style.display = 'block';
     // แสดงหมายเลขคำสั่งซื้อ (id) ที่ backend ส่งกลับมา ให้ผู้ใช้เก็บไว้อ้างอิง
     document.getElementById('orderRef').textContent = `หมายเลขคำสั่งซื้อ: ${order.id}`;
+    // เติมหมายเลขคำสั่งซื้อลงในลิงก์ "ตรวจสอบสถานะ" ให้อัตโนมัติ กดแล้วไปหน้า track.html พร้อมกรอกหมายเลขไว้ให้เลย (เหลือแค่กรอกเบอร์โทรยืนยัน)
+    document.getElementById('trackOrderLink').href = `track.html?orderId=${encodeURIComponent(order.id)}`;
     // ถ้าลูกค้าเลือกวิธีชำระเงินที่ต้องโอนล่วงหน้า (ไม่ใช่เก็บเงินปลายทาง) ให้ย้ำเตือนอีกครั้งว่ายังต้องโอนเงินตามที่แจ้งไว้
     const paymentReminder = document.getElementById('paymentReminder');
     if (order.paymentMethod !== 'cod') {
