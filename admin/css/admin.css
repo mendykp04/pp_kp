@@ -8,7 +8,9 @@
   --accent: #ff6a00;      /* สีเน้น (ส้ม) ให้ตรงกับธีมหน้าร้านค้า */
   --accent-dark: #d95700; /* สีเน้นเข้มขึ้น ใช้ตอน hover ปุ่ม */
   --border: #e5e5e0;      /* สีเส้นขอบ */
-  --radius: 10px;         /* ค่าความโค้งมุมมาตรฐาน */
+  --radius: 12px;         /* ค่าความโค้งมุมมาตรฐาน */
+  --shadow-sm: 0 1px 2px rgba(20, 20, 15, 0.05), 0 1px 1px rgba(20, 20, 15, 0.03); /* เงาบางสำหรับสถานะปกติ */
+  --shadow-md: 0 12px 24px -8px rgba(20, 20, 15, 0.16); /* เงานุ่มขนาดใหญ่ขึ้น ใช้ตอน hover/ลอย */
 }
 
 /* ตั้งค่าพื้นฐานให้ทุก element นับ padding/border รวมอยู่ในขนาดที่กำหนด */
@@ -16,12 +18,24 @@
   box-sizing: border-box;
 }
 
+/* กำหนดขนาดฟอนต์พื้นฐานของทั้งหน้า ปรับให้ใหญ่ขึ้นเล็กน้อยจากค่ามาตรฐาน 16px ให้อ่านสบายตาขึ้นตอนใช้งานนาน ๆ */
+html {
+  font-size: 16.5px;
+}
+
 /* สไตล์พื้นฐานของหน้า admin ทั้งหน้า */
 body {
   margin: 0;                                                 /* ลบระยะขอบเริ่มต้นของเบราว์เซอร์ */
-  font-family: 'Segoe UI', 'Prompt', system-ui, sans-serif;    /* ฟอนต์ที่ใช้ */
+  font-family: 'Sarabun', 'Segoe UI', system-ui, sans-serif;   /* ฟอนต์ไทยอ่านง่าย ดูเป็นงานออกแบบจริงมากกว่าฟอนต์ระบบทั่วไป */
   background: var(--bg);                                     /* สีพื้นหลัง */
   color: var(--text);                                        /* สีตัวอักษร */
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* หัวข้อและโลโก้ใช้ฟอนต์ Prompt แยกจากฟอนต์เนื้อหา ให้ดูมีลำดับชั้นชัดเจน */
+h1, h2, h3, .brand, .btn {
+  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
 }
 
 /* โครงหลักของหน้า admin แบ่งเป็นแถบเมนูซ้าย + เนื้อหาขวา อยู่แถวเดียวกัน */
@@ -159,19 +173,23 @@ body {
 /* ปุ่มหลัก เช่น "+ เพิ่มสินค้าใหม่" */
 .btn {
   display: inline-block;   /* ทำให้กำหนด padding ได้ */
-  padding: 10px 20px;       /* ระยะห่างภายในปุ่ม */
+  padding: 11px 22px;       /* ระยะห่างภายในปุ่ม */
   background: var(--accent); /* พื้นหลังสีเน้น (ส้ม) */
   color: #fff;               /* ตัวอักษรสีขาว */
   border: none;              /* ไม่มีเส้นขอบ */
-  border-radius: 8px;        /* มุมโค้ง */
-  font-weight: 700;          /* ตัวหนา */
-  font-size: 0.95rem;        /* ขนาดตัวอักษร */
+  border-radius: 9px;        /* มุมโค้ง */
+  font-weight: 600;          /* ตัวหนาปานกลาง */
+  font-size: 0.97rem;        /* ขนาดตัวอักษร */
   cursor: pointer;           /* เปลี่ยนเมาส์เป็นรูปมือ */
+  box-shadow: var(--shadow-sm);
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
 }
 
 /* สไตล์เมื่อเอาเมาส์ไปชี้ปุ่มหลัก */
 .btn:hover {
   background: var(--accent-dark); /* เปลี่ยนเป็นสีเข้มขึ้นตอน hover */
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* ปุ่มที่ต้องการให้กว้างเต็มพื้นที่ (เช่นปุ่ม "บันทึกสินค้า" ใน modal) */
@@ -208,6 +226,7 @@ body {
   border: 1px solid var(--border);  /* เส้นขอบกล่อง */
   border-radius: var(--radius);     /* มุมโค้งมาตรฐาน */
   overflow-x: auto;                  /* ถ้าตารางข้างในกว้างเกิน ให้เลื่อนแนวนอนแทนที่จะบีบอัด */
+  box-shadow: var(--shadow-sm);      /* เงาบางให้ตารางแยกจากพื้นหลังชัดเจนขึ้น */
 }
 
 /* ตัวตารางเอง */
@@ -220,9 +239,9 @@ table {
 /* สไตล์ร่วมของหัวตาราง (th) และเซลล์ข้อมูล (td) */
 th, td {
   text-align: left;                       /* จัดข้อความชิดซ้าย (ปกติของตารางข้อมูล) */
-  padding: 14px 16px;                      /* ระยะห่างภายในแต่ละเซลล์ */
+  padding: 15px 16px;                      /* ระยะห่างภายในแต่ละเซลล์ */
   border-bottom: 1px solid var(--border);  /* เส้นคั่นด้านล่างของแต่ละแถว */
-  font-size: 0.9rem;                       /* ขนาดตัวอักษร */
+  font-size: 0.94rem;                      /* ขนาดตัวอักษร ใหญ่ขึ้นเล็กน้อยให้อ่านง่ายขึ้น */
   white-space: nowrap;                     /* ห้ามข้อความตัดขึ้นบรรทัดใหม่ในเซลล์ (ให้ตารางเลื่อนแนวนอนแทน) */
 }
 
