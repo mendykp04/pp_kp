@@ -7,25 +7,8 @@ const trackOrderIdInput = document.getElementById('trackOrderId');
 const trackPhoneInput = document.getElementById('trackPhone');
 const trackResult = document.getElementById('trackResult');
 
-// ตารางแปลสถานะคำสั่งซื้อ (ข้อความไทย) ให้เป็น class สี highlight — ใช้ชุดสีเดียวกับหลังบ้าน (ดู admin.css .order-status-select.status-*) เพื่อให้ความหมายของสีตรงกันทั้งฝั่งแอดมินและลูกค้า
-const STATUS_CLASS_MAP = {
-  รอดำเนินการ: 'status-pending',
-  กำลังจัดส่ง: 'status-shipping',
-  จัดส่งแล้ว: 'status-delivered',
-  จัดส่งไม่สำเร็จ: 'status-failed',
-};
-
-// ฟังก์ชันแปลงรหัสวิธีชำระเงินให้เป็นข้อความภาษาไทยอ่านง่าย (เหมือนกับที่ใช้ในหลังบ้าน)
-function formatPaymentMethod(method) {
-  const labels = {
-    cod: 'เก็บเงินปลายทาง',
-    bank_transfer: 'โอนเงินผ่านธนาคาร',
-    promptpay: 'พร้อมเพย์',
-  };
-  return labels[method] || labels.cod;
-}
-
 // ฟังก์ชันวาด (render) ผลลัพธ์คำสั่งซื้อที่ค้นพบ ลงในกล่อง trackResult
+// (STATUS_CLASS_MAP และ formatPaymentMethod มาจาก common.js ใช้ร่วมกับหน้า account.html)
 function renderTrackResult(order) {
   const statusClass = STATUS_CLASS_MAP[order.status] || '';
   trackResult.innerHTML = `

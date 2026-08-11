@@ -49,7 +49,8 @@ async function init() {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         phone TEXT,
-        address TEXT
+        address TEXT,
+        password TEXT
       )`,
       `CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
@@ -100,6 +101,13 @@ async function init() {
   // ประเภทรองเท้า (เช่น รองเท้าแฟชั่น, รองเท้าวิ่ง) ใช้กรอง/ค้นหาทั้งฝั่งแอดมินและหน้าร้านค้า
   if (!existingProductColumns.includes('type')) {
     await client.execute('ALTER TABLE products ADD COLUMN type TEXT');
+  }
+
+  // Migration: เติมคอลัมน์ password ให้ตาราง customers ที่มีอยู่แล้วจากก่อนหน้านี้ (ใช้ตอนลูกค้าสมัครสมาชิก/ล็อกอินหน้าร้านค้าเอง)
+  const customerColumnsResult = await client.execute('PRAGMA table_info(customers)');
+  const existingCustomerColumns = customerColumnsResult.rows.map((c) => c.name);
+  if (!existingCustomerColumns.includes('password')) {
+    await client.execute('ALTER TABLE customers ADD COLUMN password TEXT');
   }
 }
 
@@ -171,8 +179,8 @@ async function writeCustomers(customers) {
   const statements = [{ sql: 'DELETE FROM customers', args: [] }];
   customers.forEach((c) =>
     statements.push({
-      sql: 'INSERT INTO customers (id, name, phone, address) VALUES (@id, @name, @phone, @address)',
-      args: { ...c, phone: c.phone ?? '', address: c.address ?? '' },
+      sql: 'INSERT INTO customers (id, name, phone, address, password) VALUES (@id, @name, @phone, @address, @password)',
+      args: { ...c, phone: c.phone ?? '', address: c.address ?? '', password: c.password ?? null },
     })
   );
   await client.batch(statements, 'write');

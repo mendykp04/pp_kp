@@ -1,0 +1,59 @@
+<!-- บอกเบราว์เซอร์ว่านี่คือเอกสาร HTML5 -->
+<!DOCTYPE html>
+<!-- แท็กเปิดของหน้าเว็บ กำหนดภาษาเริ่มต้นเป็นภาษาไทย -->
+<html lang="th">
+<head>
+  <!-- กำหนดชุดตัวอักษรเป็น UTF-8 เพื่อให้แสดงภาษาไทยถูกต้อง -->
+  <meta charset="UTF-8" />
+  <!-- ตั้งค่าหน้าเว็บให้ responsive ตามขนาดหน้าจออุปกรณ์ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ข้อความที่แสดงบนแท็บเบราว์เซอร์ -->
+  <title>เข้าสู่ระบบ | SNEAK&apos;R</title>
+  <!-- เชื่อมไฟล์ CSS เดียวกันกับหน้าแรก เพื่อให้ธีม/สไตล์เหมือนกันทั้งเว็บ -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- แถบเมนูด้านบน เหมือนกับหน้าอื่น ๆ เพื่อให้กดสลับหน้าได้ตลอดเวลา -->
+  <header class="navbar">
+    <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
+    <nav>
+      <a href="index.html">สินค้า</a>
+      <a href="track.html">ตรวจสอบคำสั่งซื้อ</a>
+      <!-- ช่องนี้จะถูกเติมลิงก์ "เข้าสู่ระบบ" หรือ "บัญชีของฉัน" โดย common.js ตามสถานะล็อกอินปัจจุบัน -->
+      <span id="authNav"></span>
+      <a href="cart.html" class="cart-link">
+        🛒 ตะกร้า <span class="cart-count" id="cartCount">0</span>
+      </a>
+    </nav>
+  </header>
+
+  <main class="section" style="max-width: 420px;">
+    <h2 class="section-title">เข้าสู่ระบบ</h2>
+
+    <!-- ฟอร์มเข้าสู่ระบบ เมื่อกด submit จะถูก JavaScript ดักไว้ (preventDefault) แล้วยิงไปที่ API แทนการรีโหลดหน้า -->
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginPhone">เบอร์โทร</label>
+        <input type="tel" id="loginPhone" required />
+      </div>
+      <div class="field">
+        <label for="loginPassword">รหัสผ่าน</label>
+        <input type="password" id="loginPassword" required />
+      </div>
+      <button type="submit" class="btn btn-block">เข้าสู่ระบบ</button>
+    </form>
+    <p style="color: var(--text-dim); margin-top: 16px; text-align: center;">
+      ยังไม่มีบัญชี? <a href="register.html" style="color: var(--accent);">สมัครสมาชิก</a>
+    </p>
+  </main>
+
+  <footer>© 2026 SNEAK&apos;R Shop. All rights reserved.</footer>
+
+  <!-- กล่องข้อความแจ้งเตือนเล็ก ๆ (toast) เช่นตอนเข้าสู่ระบบไม่สำเร็จ -->
+  <div class="toast" id="toast"></div>
+
+  <!-- โหลด common.js ก่อน เพื่อให้มีฟังก์ชันกลาง (API_BASE, showToast) ให้ login.js เรียกใช้ได้ -->
+  <script src="js/common.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

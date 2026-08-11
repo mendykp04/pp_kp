@@ -1,0 +1,54 @@
+<!-- บอกเบราว์เซอร์ว่านี่คือเอกสาร HTML5 -->
+<!DOCTYPE html>
+<!-- แท็กเปิดของหน้าเว็บ กำหนดภาษาเริ่มต้นเป็นภาษาไทย -->
+<html lang="th">
+<head>
+  <!-- กำหนดชุดตัวอักษรเป็น UTF-8 เพื่อให้แสดงภาษาไทยถูกต้อง -->
+  <meta charset="UTF-8" />
+  <!-- ตั้งค่าหน้าเว็บให้ responsive ตามขนาดหน้าจออุปกรณ์ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- ข้อความที่แสดงบนแท็บเบราว์เซอร์ -->
+  <title>บัญชีของฉัน | SNEAK&apos;R</title>
+  <!-- เชื่อมไฟล์ CSS เดียวกันกับหน้าแรก เพื่อให้ธีม/สไตล์เหมือนกันทั้งเว็บ -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- แถบเมนูด้านบน เหมือนกับหน้าอื่น ๆ เพื่อให้กดสลับหน้าได้ตลอดเวลา -->
+  <header class="navbar">
+    <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
+    <nav>
+      <a href="index.html">สินค้า</a>
+      <a href="track.html">ตรวจสอบคำสั่งซื้อ</a>
+      <!-- ช่องนี้จะถูกเติมลิงก์ "เข้าสู่ระบบ" หรือ "บัญชีของฉัน" โดย common.js ตามสถานะล็อกอินปัจจุบัน -->
+      <span id="authNav"></span>
+      <a href="cart.html" class="cart-link">
+        🛒 ตะกร้า <span class="cart-count" id="cartCount">0</span>
+      </a>
+    </nav>
+  </header>
+
+  <main class="section">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+      <h2 class="section-title" style="margin-bottom:0;">บัญชีของฉัน</h2>
+      <!-- ปุ่มออกจากระบบ กดแล้วจะทำลาย session ฝั่งลูกค้า แล้วพากลับไปหน้าแรก -->
+      <button class="btn btn-outline" id="logoutBtn">ออกจากระบบ →</button>
+    </div>
+
+    <!-- กล่องแสดงชื่อ/เบอร์โทรของบัญชีที่ล็อกอินอยู่ เติมโดย account.js -->
+    <p id="accountInfo" style="color: var(--text-dim); margin-top: -16px; margin-bottom: 28px;"></p>
+
+    <h3 style="margin-bottom: 16px;">ประวัติคำสั่งซื้อ</h3>
+    <!-- รายการคำสั่งซื้อทั้งหมดของบัญชีนี้จะถูกวาดลงในนี้โดย account.js -->
+    <div id="orderList"><p>กำลังโหลด...</p></div>
+  </main>
+
+  <footer>© 2026 SNEAK&apos;R Shop. All rights reserved.</footer>
+
+  <!-- กล่องข้อความแจ้งเตือนเล็ก ๆ (toast) -->
+  <div class="toast" id="toast"></div>
+
+  <!-- โหลด common.js ก่อน เพื่อให้มีฟังก์ชันกลาง (API_BASE, formatPrice, showToast, STATUS_CLASS_MAP) ให้ account.js เรียกใช้ได้ -->
+  <script src="js/common.js"></script>
+  <script src="js/account.js"></script>
+</body>
+</html>

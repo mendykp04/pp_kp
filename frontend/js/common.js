@@ -95,6 +95,25 @@ function formatPrice(num) {
   return num.toLocaleString('th-TH') + ' บาท';
 }
 
+// ตารางแปลสถานะคำสั่งซื้อ (ข้อความไทย) ให้เป็น class สี highlight — ใช้ชุดสีเดียวกับหลังบ้าน (ดู admin.css .order-status-select.status-*)
+// เพื่อให้ความหมายของสีตรงกันทั้งฝั่งแอดมินและลูกค้า ใช้ร่วมกันทั้งหน้า track.html และ account.html
+const STATUS_CLASS_MAP = {
+  รอดำเนินการ: 'status-pending',
+  กำลังจัดส่ง: 'status-shipping',
+  จัดส่งแล้ว: 'status-delivered',
+  จัดส่งไม่สำเร็จ: 'status-failed',
+};
+
+// ฟังก์ชันแปลงรหัสวิธีชำระเงินให้เป็นข้อความภาษาไทยอ่านง่าย (ใช้ร่วมกันทั้งหน้า track.html, account.html และหลังบ้าน)
+function formatPaymentMethod(method) {
+  const labels = {
+    cod: 'เก็บเงินปลายทาง',
+    bank_transfer: 'โอนเงินผ่านธนาคาร',
+    promptpay: 'พร้อมเพย์',
+  };
+  return labels[method] || labels.cod;
+}
+
 // ฟังก์ชันแสดงข้อความแจ้งเตือนเล็ก ๆ (toast) ที่มุมล่างของหน้าจอ เช่น "เพิ่มลงตะกร้าแล้ว"
 function showToast(message) {
   // หา element ของกล่อง toast ในหน้านั้น
@@ -109,6 +128,26 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
+// ฟังก์ชัน async อัปเดตลิงก์ในแถบเมนู (navbar) ให้ตรงกับสถานะล็อกอินของลูกค้าปัจจุบัน
+// ถ้าล็อกอินอยู่ → โชว์ชื่อ + ลิงก์ไปหน้า "บัญชีของฉัน" ถ้ายังไม่ล็อกอิน → โชว์ลิงก์ "เข้าสู่ระบบ"
+// ทุกหน้าที่มี <span id="authNav"></span> ในแถบเมนูจะถูกอัปเดตอัตโนมัติ (หน้าไหนไม่มีก็แค่ไม่ทำอะไร ไม่ error)
+async function updateAuthNav() {
+  const el = document.getElementById('authNav');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API_BASE}/auth/customer/me`);
+    const data = await res.json();
+    el.innerHTML = data.loggedIn
+      ? `<a href="account.html">👤 ${data.name}</a>`
+      : `<a href="login.html">เข้าสู่ระบบ</a>`;
+  } catch {
+    // ถ้าเช็คสถานะไม่ได้ (เช่นเน็ตหลุด) ให้แสดงลิงก์เข้าสู่ระบบไว้ก่อนเป็นค่าเริ่มต้น ไม่ปล่อยให้ช่องว่างเปล่า
+    el.innerHTML = `<a href="login.html">เข้าสู่ระบบ</a>`;
+  }
+}
+
 // เมื่อโหลดหน้าเว็บเสร็จ (DOM พร้อมใช้งานแล้ว) ให้เรียกอัปเดตตัวเลขบนไอคอนตะกร้าทันที
 // เพื่อให้ตัวเลขตรงกับข้อมูลที่เก็บไว้ใน localStorage ตั้งแต่เปิดหน้ามา
 document.addEventListener('DOMContentLoaded', updateCartBadge);
+// เรียกอัปเดตแถบเมนูให้ตรงกับสถานะล็อกอินทันทีที่เปิดหน้าเว็บเช่นกัน
+document.addEventListener('DOMContentLoaded', updateAuthNav);

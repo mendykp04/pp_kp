@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 // เรียกใช้โมดูล fs (File System) ของ Node.js เพื่ออ่าน/เขียนไฟล์ JSON
 const fs = require('fs');
+// เรียกใช้โมดูล crypto (ในตัว Node.js อยู่แล้ว ไม่ต้องติดตั้งเพิ่ม) ใช้แฮชรหัสผ่านลูกค้าตอนสมัครสมาชิก/ล็อกอินหน้าร้านค้า
+const crypto = require('crypto');
 // เรียกใช้โมดูล path เพื่อสร้าง path ของไฟล์ให้ถูกต้องทุกระบบปฏิบัติการ
 const path = require('path');
 // เรียกใช้ไลบรารี multer สำหรับรับไฟล์ที่อัปโหลดมาจากฟอร์ม (multipart/form-data) เช่นรูปสินค้า
@@ -126,6 +128,38 @@ function requireAuth(req, res, next) {
   res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' });
 }
 
+// Middleware ตรวจสอบว่า request นี้มาจาก "ลูกค้าที่ล็อกอินหน้าร้านค้าแล้ว" หรือไม่ (คนละสถานะกับ requireAuth ด้านบนที่เป็นของแอดมิน)
+// ใช้ req.session.customerId แยกต่างหากจาก req.session.isAdmin จึงไม่ชนกัน
+function requireCustomerAuth(req, res, next) {
+  if (req.session && req.session.customerId) return next();
+  res.status(401).json({ error: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' });
+}
+
+// ฟังก์ชันแฮชรหัสผ่านด้วย scrypt (มีอยู่ในตัว Node.js อยู่แล้ว ไม่ต้องติดตั้งไลบรารีเพิ่ม เช่น bcrypt)
+// เก็บผลลัพธ์เป็นข้อความรูปแบบ "salt:hash" (แยกด้วย : ) เพื่อให้ verifyPassword ใช้ salt เดียวกันตรวจสอบภายหลังได้
+function hashPassword(password) {
+  // สุ่ม salt ใหม่ทุกครั้ง กันคนที่ตั้งรหัสผ่านเหมือนกันมีแฮชออกมาเหมือนกัน (ป้องกัน rainbow table)
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+// ฟังก์ชันตรวจสอบรหัสผ่านที่กรอกมา เทียบกับค่าแฮชที่เก็บไว้ในฐานข้อมูล
+function verifyPassword(password, stored) {
+  // ถ้าบัญชีนี้ยังไม่เคยตั้งรหัสผ่านไว้เลย (เช่น แอดมินเพิ่มลูกค้าเข้าระบบเองโดยลูกค้ายังไม่เคยสมัครสมาชิก) ให้ถือว่าตรวจสอบไม่ผ่านเสมอ
+  if (!stored) return false;
+  const [salt, hash] = stored.split(':');
+  const inputHash = crypto.scryptSync(password, salt, 64).toString('hex');
+  // ใช้ crypto.timingSafeEqual แทนการเทียบ string ตรง ๆ (===) เพื่อป้องกัน timing attack
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(inputHash, 'hex'));
+}
+
+// ฟังก์ชันตัดฟิลด์ password ออกจากข้อมูลลูกค้าก่อนส่งกลับไปให้ฝั่งหน้าเว็บเสมอ (ป้องกันแฮชรหัสผ่านหลุดออกไปโดยไม่ตั้งใจ แม้จะเป็น response ของแอดมินก็ตาม)
+function sanitizeCustomer(customer) {
+  const { password, ...rest } = customer;
+  return rest;
+}
+
 // ---------- Auth API (ระบบล็อกอินเข้าหลังบ้าน) ----------
 
 // เมื่อมีการเรียก POST ที่ /api/auth/login (กรอกฟอร์มล็อกอินแล้วกดเข้าสู่ระบบ)
@@ -160,6 +194,107 @@ app.get('/api/auth/me', (req, res) => {
     return res.json({ loggedIn: true, username: req.session.username });
   }
   res.json({ loggedIn: false });
+});
+
+// ---------- Customer Auth API (ระบบสมัครสมาชิก/ล็อกอินฝั่งลูกค้า หน้าร้านค้า) ----------
+// แยกต่างหากจากระบบล็อกอินแอดมินด้านบนโดยสิ้นเชิง (คนละ session key: customerId ไม่ใช่ isAdmin)
+// ให้ลูกค้าเข้ามาดูประวัติ/สถานะคำสั่งซื้อของตัวเองได้ทั้งหมดในที่เดียว โดยไม่ต้องจำหมายเลขคำสั่งซื้อทีละใบเหมือนหน้า "ตรวจสอบคำสั่งซื้อ" (track.html)
+
+// เมื่อมีการเรียก POST ที่ /api/auth/customer/register (ลูกค้าสมัครสมาชิกใหม่)
+app.post('/api/auth/customer/register', async (req, res) => {
+  const { name, phone, password, address } = req.body;
+  // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อ, เบอร์โทร, รหัสผ่าน (อย่างน้อย 6 ตัวอักษร กันตั้งรหัสสั้นเกินไป)
+  if (!name || !phone || !password) {
+    return res.status(400).json({ error: 'กรุณาระบุชื่อ-สกุล, เบอร์โทร, และรหัสผ่าน' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+  }
+
+  const customers = await db.readCustomers();
+  const idx = customers.findIndex((c) => c.phone === phone);
+
+  if (idx !== -1 && customers[idx].password) {
+    // เบอร์นี้เคยสมัครสมาชิกไว้แล้ว (มีรหัสผ่านอยู่แล้ว) ให้ไปเข้าสู่ระบบแทน
+    return res.status(400).json({ error: 'เบอร์โทรนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบแทนการสมัครใหม่' });
+  }
+
+  let customer;
+  if (idx !== -1) {
+    // เบอร์นี้มีอยู่แล้วในฐานข้อมูลลูกค้า แต่ยังไม่เคยตั้งรหัสผ่าน (เช่นแอดมินเคยเพิ่มไว้เอง หรือเคยสั่งซื้อแบบไม่ได้สมัครสมาชิก)
+    // ให้ "อัปเกรด" รายการเดิมเป็นบัญชีที่ล็อกอินได้ แทนที่จะสร้างซ้ำ เพื่อให้ประวัติคำสั่งซื้อเดิม (จับคู่ด้วยเบอร์โทร) ยังเชื่อมกับบัญชีนี้เหมือนเดิม
+    customers[idx] = {
+      ...customers[idx],
+      name,
+      address: address || customers[idx].address,
+      password: hashPassword(password),
+    };
+    customer = customers[idx];
+  } else {
+    // เบอร์นี้ไม่เคยมีในระบบมาก่อนเลย ให้สร้างลูกค้าใหม่
+    customer = { id: genId('cus-'), name, phone, address: address || '', password: hashPassword(password) };
+    customers.push(customer);
+  }
+  await db.writeCustomers(customers);
+
+  // ล็อกอินให้อัตโนมัติทันทีหลังสมัครสำเร็จ (ไม่ต้องให้กรอกล็อกอินซ้ำอีกรอบ)
+  req.session.customerId = customer.id;
+  req.session.customerName = customer.name;
+  req.session.customerPhone = customer.phone;
+  req.session.customerAddress = customer.address;
+  res.status(201).json({ success: true, name: customer.name, phone: customer.phone });
+});
+
+// เมื่อมีการเรียก POST ที่ /api/auth/customer/login (ลูกค้าเข้าสู่ระบบ)
+app.post('/api/auth/customer/login', async (req, res) => {
+  const { phone, password } = req.body;
+  if (!phone || !password) {
+    return res.status(400).json({ error: 'กรุณาระบุเบอร์โทรและรหัสผ่าน' });
+  }
+  const customers = await db.readCustomers();
+  const customer = customers.find((c) => c.phone === phone);
+  // ไม่บอกว่าผิดที่เบอร์โทรหรือรหัสผ่าน (ข้อความเดียวกันทั้งสองกรณี) เพื่อความปลอดภัย เหมือนระบบล็อกอินแอดมิน
+  if (!customer || !verifyPassword(password, customer.password)) {
+    return res.status(401).json({ error: 'เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง' });
+  }
+  req.session.customerId = customer.id;
+  req.session.customerName = customer.name;
+  req.session.customerPhone = customer.phone;
+  req.session.customerAddress = customer.address;
+  res.json({ success: true, name: customer.name, phone: customer.phone });
+});
+
+// เมื่อมีการเรียก POST ที่ /api/auth/customer/logout (ลูกค้าออกจากระบบ)
+app.post('/api/auth/customer/logout', (req, res) => {
+  // ลบเฉพาะสถานะล็อกอินของลูกค้าออกจาก session (ไม่ทำลาย session ทั้งหมด เผื่อมีค่าอื่นของฝั่งแอดมินอยู่ในเบราว์เซอร์เดียวกัน)
+  delete req.session.customerId;
+  delete req.session.customerName;
+  delete req.session.customerPhone;
+  delete req.session.customerAddress;
+  res.json({ success: true });
+});
+
+// เมื่อมีการเรียก GET ที่ /api/auth/customer/me (เช็คว่าตอนนี้ลูกค้าล็อกอินอยู่หรือไม่ ใช้ตอนเปิดทุกหน้าของหน้าร้านค้า)
+app.get('/api/auth/customer/me', (req, res) => {
+  if (req.session && req.session.customerId) {
+    return res.json({
+      loggedIn: true,
+      name: req.session.customerName,
+      phone: req.session.customerPhone,
+      address: req.session.customerAddress || '',
+    });
+  }
+  res.json({ loggedIn: false });
+});
+
+// เมื่อมีการเรียก GET ที่ /api/customer/orders (ขอประวัติคำสั่งซื้อทั้งหมดของลูกค้าที่ล็อกอินอยู่) — เฉพาะลูกค้าที่ล็อกอินแล้วเท่านั้น
+app.get('/api/customer/orders', requireCustomerAuth, async (req, res) => {
+  const orders = await db.readOrders();
+  // กรองเฉพาะคำสั่งซื้อที่เบอร์โทรตรงกับบัญชีที่ล็อกอินอยู่ (ไม่รับเบอร์โทรจาก query string ของผู้ใช้ ป้องกันดูออเดอร์ของคนอื่น)
+  const myOrders = orders
+    .filter((o) => o.phone === req.session.customerPhone)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json(myOrders);
 });
 
 // ---------- Payment API (ข้อมูลบัญชีรับโอนเงิน + สร้าง QR code พร้อมเพย์) ----------
@@ -621,8 +756,8 @@ function enrichCustomerWithOrders(customer, orders) {
   const customerOrders = orders
     .filter((o) => o.phone === customer.phone)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  // ส่งคืนข้อมูลลูกค้าเดิม รวมกับรายการคำสั่งซื้อที่เจอ (ใช้ดูว่าลูกค้าคนนี้เคยสั่งรองเท้ารุ่นไหนไปบ้าง)
-  return { ...customer, orders: customerOrders };
+  // ส่งคืนข้อมูลลูกค้าเดิม (ตัดฟิลด์ password ออกก่อนเสมอ) รวมกับรายการคำสั่งซื้อที่เจอ (ใช้ดูว่าลูกค้าคนนี้เคยสั่งรองเท้ารุ่นไหนไปบ้าง)
+  return { ...sanitizeCustomer(customer), orders: customerOrders };
 }
 
 // เมื่อมีการเรียก GET ที่ /api/customers (ขอรายการลูกค้าทั้งหมด รองรับค้นหาด้วย query string ?q=)

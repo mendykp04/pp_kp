@@ -226,3 +226,18 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
 
 // เรียกฟังก์ชันวาดตะกร้าทันทีที่ไฟล์นี้ถูกโหลด เพื่อแสดงข้อมูลตะกร้าล่าสุดตั้งแต่เปิดหน้ามา
 renderCart();
+
+// ถ้าลูกค้าล็อกอินอยู่ ให้เติมชื่อ/เบอร์โทร/ที่อยู่ในฟอร์มจัดส่งให้อัตโนมัติจากบัญชีที่สมัครไว้ (ลูกค้ายังแก้ไขเองได้ตามปกติ แค่ช่วยประหยัดเวลาไม่ต้องพิมพ์ซ้ำทุกครั้ง)
+(async () => {
+  try {
+    const res = await fetch(`${API_BASE}/auth/customer/me`);
+    const me = await res.json();
+    if (me.loggedIn) {
+      document.getElementById('customerName').value = me.name;
+      document.getElementById('phone').value = me.phone;
+      if (me.address) document.getElementById('address').value = me.address;
+    }
+  } catch {
+    // ถ้าเช็คสถานะล็อกอินไม่ได้ ก็แค่ปล่อยให้ลูกค้ากรอกฟอร์มเองตามปกติ ไม่ต้องแจ้ง error
+  }
+})();
