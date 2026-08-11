@@ -106,6 +106,13 @@ const upload = multer({
   },
 });
 
+// ฟังก์ชันแปลงเวลา createdAt (เก็บเป็น UTC ISO string) ให้เป็นวันที่ YYYY-MM-DD ตามเขตเวลาไทย (UTC+7)
+// จำเป็นต้องใช้ตรงนี้แทนการ slice(0, 10) ตรง ๆ เพราะ createdAt เป็นเวลา UTC — ถ้าลูกค้าสั่งซื้อช่วงหลังเที่ยงคืนถึงตี 7 ตามเวลาไทย
+// วันที่ใน UTC จะยังเป็นของ "เมื่อวาน" ทำให้ออเดอร์ไปโผล่ผิดวันในหน้าสรุปยอดขาย/รายงาน
+function toThaiDateString(isoString) {
+  return new Date(isoString).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+}
+
 // ฟังก์ชันสร้างรหัส (id) แบบสุ่ม โดยรับ prefix (เช่น "p" สำหรับสินค้า, "o" สำหรับออเดอร์) มาต่อหน้า
 function genId(prefix) {
   // นำเวลาปัจจุบัน (Date.now) แปลงเป็นเลขฐาน 36 ต่อกับเลขสุ่มอีกชุด เพื่อให้ id ไม่ซ้ำกัน
@@ -511,8 +518,8 @@ app.get('/api/orders', requireAuth, async (req, res) => {
   let orders = await db.readOrders();
   // ถ้ามีการระบุ query string "date" มา (เช่น ตอนดูสรุปยอดขายของวันที่เลือกในแท็บ "สรุปยอดขาย")
   if (req.query.date) {
-    // กรองเฉพาะคำสั่งซื้อที่ "วันที่" ของ createdAt (ตัดเอาแค่ส่วน YYYY-MM-DD) ตรงกับวันที่ที่ระบุ
-    orders = orders.filter((o) => o.createdAt.slice(0, 10) === req.query.date);
+    // กรองเฉพาะคำสั่งซื้อที่ "วันที่" ของ createdAt (แปลงเป็นเขตเวลาไทยก่อนเทียบ) ตรงกับวันที่ที่ระบุ
+    orders = orders.filter((o) => toThaiDateString(o.createdAt) === req.query.date);
   }
   // เรียงลำดับคำสั่งซื้อจากใหม่ไปเก่า (เทียบวันที่สร้าง createdAt) แล้วส่งกลับไป
   res.json(orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
@@ -1104,9 +1111,9 @@ app.get('/api/reports/summary', requireAuth, async (req, res) => {
   const expenses = await db.readExpenses();
   const products = await db.readProducts();
 
-  // กรองเฉพาะคำสั่งซื้อที่อยู่ในช่วงวันที่ที่ระบุ (เทียบแค่ส่วนวันที่ YYYY-MM-DD ของ createdAt)
+  // กรองเฉพาะคำสั่งซื้อที่อยู่ในช่วงวันที่ที่ระบุ (เทียบแค่ส่วนวันที่ YYYY-MM-DD ของ createdAt แปลงเป็นเขตเวลาไทยก่อนเทียบ)
   const rangeOrders = orders.filter((o) => {
-    const orderDate = o.createdAt.slice(0, 10);
+    const orderDate = toThaiDateString(o.createdAt);
     return orderDate >= from && orderDate <= to;
   });
   // กรองเฉพาะรายจ่ายที่อยู่ในช่วงวันที่ที่ระบุ
