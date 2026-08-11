@@ -43,7 +43,8 @@ async function init() {
       `CREATE TABLE IF NOT EXISTS employees (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        phone TEXT
+        phone TEXT,
+        address TEXT
       )`,
       `CREATE TABLE IF NOT EXISTS customers (
         id TEXT PRIMARY KEY,
@@ -121,6 +122,13 @@ async function init() {
   if (!existingOrderColumns.includes('slipUrl')) {
     await client.execute('ALTER TABLE orders ADD COLUMN slipUrl TEXT');
   }
+
+  // Migration: เติมคอลัมน์ address ให้ตาราง employees ที่มีอยู่แล้วจากก่อนหน้านี้
+  const employeeColumnsResult = await client.execute('PRAGMA table_info(employees)');
+  const existingEmployeeColumns = employeeColumnsResult.rows.map((c) => c.name);
+  if (!existingEmployeeColumns.includes('address')) {
+    await client.execute('ALTER TABLE employees ADD COLUMN address TEXT');
+  }
 }
 
 // ฟิลด์ sizes/items เก็บเป็น JSON text ในคอลัมน์เดียว (โครงสร้างเดิมเป็น array ซ้อนอยู่แล้ว)
@@ -175,8 +183,8 @@ async function writeEmployees(employees) {
   const statements = [{ sql: 'DELETE FROM employees', args: [] }];
   employees.forEach((e) =>
     statements.push({
-      sql: 'INSERT INTO employees (id, name, phone) VALUES (@id, @name, @phone)',
-      args: { ...e, phone: e.phone ?? '' },
+      sql: 'INSERT INTO employees (id, name, phone, address) VALUES (@id, @name, @phone, @address)',
+      args: { ...e, phone: e.phone ?? '', address: e.address ?? '' },
     })
   );
   await client.batch(statements, 'write');

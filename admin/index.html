@@ -190,12 +190,13 @@
                 <th>รหัสพนักงาน</th>
                 <th>ชื่อ-สกุล</th>
                 <th>เบอร์โทร</th>
+                <th>ที่อยู่</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
             <!-- เนื้อหาตารางพนักงานจะถูกเติมโดย admin.js -->
             <tbody id="employeeTableBody">
-              <tr><td colspan="4">กำลังโหลด...</td></tr>
+              <tr><td colspan="5">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -429,6 +430,10 @@
         <div class="field">
           <label for="employeePhone">เบอร์โทร</label>
           <input type="tel" id="employeePhone" />
+        </div>
+        <div class="field">
+          <label for="employeeAddress">ที่อยู่</label>
+          <textarea id="employeeAddress" rows="2"></textarea>
         </div>
         <!-- ปุ่ม submit ฟอร์ม -->
         <button type="submit" class="btn btn-block">บันทึกข้อมูลพนักงาน</button>

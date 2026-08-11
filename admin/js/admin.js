@@ -765,7 +765,7 @@ function renderEmployeeTable() {
   // ถ้าไม่มีพนักงานที่ตรงกับเงื่อนไข (หรือยังไม่มีพนักงานเลย)
   if (employees.length === 0) {
     // แสดงข้อความแจ้งว่าไม่พบข้อมูล (ครอบคลุม 4 คอลัมน์)
-    employeeTableBody.innerHTML = '<tr><td colspan="4">ไม่พบข้อมูลพนักงาน</td></tr>';
+    employeeTableBody.innerHTML = '<tr><td colspan="5">ไม่พบข้อมูลพนักงาน</td></tr>';
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับพนักงานแต่ละคน แล้วรวมเป็นข้อความเดียว
@@ -776,6 +776,7 @@ function renderEmployeeTable() {
       <td>${emp.id}</td>
       <td>${emp.name}</td>
       <td>${emp.phone || '-'}</td>
+      <td>${emp.address || '-'}</td>
       <td>
         <button class="btn-icon" data-action="edit" data-id="${emp.id}">แก้ไข</button>
         <button class="btn-icon danger" data-action="delete" data-id="${emp.id}">ลบ</button>
@@ -816,6 +817,8 @@ function openEmployeeModal(employee = null) {
   document.getElementById('employeeName').value = employee?.name || '';
   // เติมค่าเบอร์โทรลงในช่องกรอก
   document.getElementById('employeePhone').value = employee?.phone || '';
+  // เติมค่าที่อยู่ลงในช่องกรอก
+  document.getElementById('employeeAddress').value = employee?.address || '';
   // เพิ่ม class "open" ให้กับ modal เพื่อแสดงหน้าต่างขึ้นมา
   employeeModal.classList.add('open');
 }
@@ -846,6 +849,7 @@ employeeForm.addEventListener('submit', async (e) => {
     id,
     name: document.getElementById('employeeName').value.trim(),
     phone: document.getElementById('employeePhone').value.trim(),
+    address: document.getElementById('employeeAddress').value.trim(),
   };
 
   // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API

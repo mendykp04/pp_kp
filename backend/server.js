@@ -738,7 +738,7 @@ app.get('/api/employees', requireAuth, async (req, res) => {
 // เมื่อมีการเรียก POST ที่ /api/employees (เพิ่มพนักงานใหม่) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 app.post('/api/employees', requireAuth, async (req, res) => {
   // ดึงข้อมูลรหัสพนักงาน, ชื่อ-สกุล, เบอร์โทร จาก body ที่ส่งมา
-  const { id, name, phone } = req.body;
+  const { id, name, phone, address } = req.body;
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีรหัสพนักงานและชื่อ ถ้าไม่มีให้ตอบกลับ error 400
   if (!id || !name) {
     return res.status(400).json({ error: 'กรุณาระบุรหัสพนักงานและชื่อ-สกุล' });
@@ -750,7 +750,7 @@ app.post('/api/employees', requireAuth, async (req, res) => {
     return res.status(400).json({ error: `รหัสพนักงาน ${id} มีอยู่แล้วในระบบ` });
   }
   // สร้าง object พนักงานใหม่
-  const newEmployee = { id, name, phone: phone || '' };
+  const newEmployee = { id, name, phone: phone || '', address: address || '' };
   // เพิ่มพนักงานใหม่เข้าไปท้าย array
   employees.push(newEmployee);
   // บันทึกรายการพนักงานทั้งหมด (รวมของใหม่) กลับลงไฟล์
@@ -767,14 +767,15 @@ app.put('/api/employees/:id', requireAuth, async (req, res) => {
   const idx = employees.findIndex((e) => e.id === req.params.id);
   // ถ้าไม่เจอพนักงาน ให้ตอบกลับ 404
   if (idx === -1) return res.status(404).json({ error: 'ไม่พบพนักงาน' });
-  // ดึงข้อมูลที่ส่งมาจาก body สำหรับใช้แก้ไข (แก้ได้เฉพาะชื่อกับเบอร์โทร ไม่แก้รหัสพนักงานเพื่อกันข้อมูลสับสน)
-  const { name, phone } = req.body;
+  // ดึงข้อมูลที่ส่งมาจาก body สำหรับใช้แก้ไข (แก้ได้เฉพาะชื่อ/เบอร์โทร/ที่อยู่ ไม่แก้รหัสพนักงานเพื่อกันข้อมูลสับสน)
+  const { name, phone, address } = req.body;
   const existing = employees[idx];
   // อัปเดตข้อมูล โดยถ้าไม่ได้ส่งค่าฟิลด์ไหนมา (undefined/null) ให้คงค่าเดิมไว้
   employees[idx] = {
     ...existing,
     name: name ?? existing.name,
     phone: phone ?? existing.phone,
+    address: address ?? existing.address,
   };
   // บันทึกรายการพนักงานทั้งหมด (ที่แก้ไขแล้ว) กลับลงไฟล์
   await db.writeEmployees(employees);
