@@ -242,13 +242,43 @@ td img {
 
 /* ดรอปดาวน์เปลี่ยนสถานะออเดอร์ในตารางคำสั่งซื้อ */
 .order-status-select {
-  background: var(--bg);              /* สีพื้นหลัง */
-  border: 1px solid var(--border);    /* เส้นขอบ */
-  color: var(--text);                 /* สีตัวอักษร */
+  background: var(--bg);              /* สีพื้นหลัง (ทับด้วยสี status-* ด้านล่างถ้ามี) */
+  border: 1px solid var(--border);    /* เส้นขอบ (ทับด้วยสี status-* ด้านล่างถ้ามี) */
+  color: var(--text);                 /* สีตัวอักษร (ทับด้วยสี status-* ด้านล่างถ้ามี) */
   padding: 6px 10px;                   /* ระยะห่างภายใน */
   border-radius: 8px;                  /* มุมโค้ง */
   font-size: 0.85rem;                  /* ขนาดตัวอักษร */
+  font-weight: 700;                    /* ตัวหนา ให้สถานะเด่นชัดอ่านง่าย */
   cursor: pointer;                     /* เปลี่ยนเมาส์เป็นรูปมือ */
+}
+
+/* สีพื้นหลัง+ตัวอักษรของดรอปดาวน์สถานะ แยกตามสถานะ ให้เห็นความคืบหน้าของออเดอร์ได้ทันทีโดยไม่ต้องอ่านข้อความ */
+/* รอดำเนินการ: เหลือง/เตือน — ยังไม่เริ่มดำเนินการอะไร */
+.order-status-select.status-pending {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: #eab308;
+  color: #a16207;
+}
+
+/* กำลังจัดส่ง: ฟ้า — กำลังดำเนินการอยู่ ยังไม่จบ */
+.order-status-select.status-shipping {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #0ea5e9;
+  color: #0369a1;
+}
+
+/* จัดส่งแล้ว: เขียว — สำเร็จ จบงาน */
+.order-status-select.status-delivered {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #15803d;
+}
+
+/* จัดส่งไม่สำเร็จ: แดง — ต้องตามแก้ไข/ติดต่อลูกค้าใหม่ */
+.order-status-select.status-failed {
+  background: rgba(229, 72, 77, 0.15);
+  border-color: #e5484d;
+  color: #c0262b;
 }
 
 /* Modal */

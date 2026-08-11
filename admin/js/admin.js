@@ -405,6 +405,19 @@ function formatPaymentMethod(method) {
   return labels[method] || labels.cod;
 }
 
+// รายการสถานะคำสั่งซื้อทั้งหมดที่เลือกได้ พร้อม class สี highlight ประจำแต่ละสถานะ (ดู .order-status-select.status-* ใน admin.css)
+const ORDER_STATUS_OPTIONS = [
+  { label: 'รอดำเนินการ', className: 'status-pending' },
+  { label: 'กำลังจัดส่ง', className: 'status-shipping' },
+  { label: 'จัดส่งแล้ว', className: 'status-delivered' },
+  { label: 'จัดส่งไม่สำเร็จ', className: 'status-failed' },
+];
+
+// ฟังก์ชันหา class สี highlight ที่ตรงกับสถานะที่ระบุ (คืนค่าว่างถ้าไม่รู้จักสถานะนั้น เช่นข้อมูลเก่าก่อนหน้านี้)
+function getOrderStatusClass(status) {
+  return ORDER_STATUS_OPTIONS.find((s) => s.label === status)?.className || '';
+}
+
 function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
@@ -415,13 +428,13 @@ function renderOrderTable() {
   // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
   orderTableBody.innerHTML = orders
     .map((o) => {
-      // รายการสถานะที่เลือกได้ตามปกติ
-      const statusOptions = ['รอดำเนินการ', 'จัดส่งแล้ว'];
-      // ถ้าออเดอร์นี้มีสถานะเก่าที่ไม่ตรงกับ 2 ตัวเลือกด้านบน (เช่นข้อมูลเก่าก่อนหน้านี้) ให้เติมสถานะเดิมเข้าไปเป็นตัวเลือกเพิ่ม
+      // รายการสถานะที่เลือกได้ตามปกติ (ชื่อ label ล้วน ๆ)
+      const statusLabels = ORDER_STATUS_OPTIONS.map((s) => s.label);
+      // ถ้าออเดอร์นี้มีสถานะเก่าที่ไม่ตรงกับตัวเลือกด้านบน (เช่นข้อมูลเก่าก่อนหน้านี้) ให้เติมสถานะเดิมเข้าไปเป็นตัวเลือกเพิ่ม
       // เพื่อไม่ให้ dropdown แสดงค่าผิดไปจากสถานะจริงที่บันทึกไว้
-      if (!statusOptions.includes(o.status)) statusOptions.unshift(o.status);
+      if (!statusLabels.includes(o.status)) statusLabels.unshift(o.status);
       // สร้างตัวเลือก <option> ทั้งหมด โดยเลือกตัวที่ตรงกับสถานะปัจจุบันของออเดอร์ไว้ก่อน
-      const optionsHTML = statusOptions
+      const optionsHTML = statusLabels
         .map((s) => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`)
         .join('');
       return `
@@ -433,8 +446,8 @@ function renderOrderTable() {
       <td>${formatPrice(o.total)}</td>
       <td>${formatPaymentMethod(o.paymentMethod)}</td>
       <td>
-        <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) -->
-        <select class="order-status-select" data-id="${o.id}">${optionsHTML}</select>
+        <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) — class status-* ทำให้พื้นหลังมีสีต่างกันตามสถานะ -->
+        <select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${o.id}">${optionsHTML}</select>
       </td>
       <td>${new Date(o.createdAt).toLocaleString('th-TH')}</td>
       <td>
@@ -470,6 +483,9 @@ function renderOrderTable() {
         // อัปเดตสถานะในตัวแปร orders ที่เก็บไว้ในหน่วยความจำด้วย ให้ตรงกับที่บันทึกจริง (เผื่อมีการอ้างอิงใช้ที่อื่นต่อ)
         const order = orders.find((o) => o.id === orderId);
         if (order) order.status = newStatus;
+        // สลับ class สี highlight ของดรอปดาวน์ให้ตรงกับสถานะใหม่ทันที โดยไม่ต้องวาดตารางทั้งหมดใหม่ (กันหน้าจอกระตุก/เลื่อนตำแหน่งกลับบนสุด)
+        ORDER_STATUS_OPTIONS.forEach((s) => select.classList.remove(s.className));
+        select.classList.add(getOrderStatusClass(newStatus));
         // แจ้งเตือนว่าอัปเดตสำเร็จ
         showToast(`อัปเดตสถานะออเดอร์เป็น "${newStatus}" เรียบร้อย`);
       } catch (err) {
