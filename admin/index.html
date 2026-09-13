@@ -231,12 +231,33 @@
 
         <!-- กล่องเนื้อหาที่จะถูกพิมพ์ออกมา (หัวกระดาษ + ตาราง + ยอดรวม) -->
         <div id="reportPrintArea">
-          <!-- หัวกระดาษใบสรุปยอดขาย แสดงเฉพาะตอนพิมพ์ให้ดูเป็นทางการ -->
+          <!-- หัวกระดาษใบสรุปยอดขาย แสดงเฉพาะตอนพิมพ์ให้ดูเป็นทางการ เหมือนหัวใบเสร็จร้านจริง -->
           <div class="print-header">
             <h2>SNEAK&apos;R Shop</h2>
+            <p class="print-tagline">รองเท้ามือสองคัดคุณภาพ</p>
+            <div class="print-rule"></div>
             <p>ใบสรุปยอดขายประจำวันที่ <span id="reportDateLabel">-</span></p>
           </div>
-          <div class="table-wrap">
+
+          <!-- การ์ดสรุปยอดขายรวมของวันที่เลือก แสดงตลอด (ทั้งบนจอและตอนพิมพ์) ไว้เหนือตารางรายการ -->
+          <div class="report-stats">
+            <div class="stat-card">
+              <span class="stat-icon" aria-hidden="true">🧾</span>
+              <div class="stat-body">
+                <span class="stat-label">จำนวนคำสั่งซื้อ</span>
+                <span class="stat-value" id="reportBillCount">0</span>
+              </div>
+            </div>
+            <div class="stat-card stat-card-accent">
+              <span class="stat-icon" aria-hidden="true">💰</span>
+              <div class="stat-body">
+                <span class="stat-label">ยอดขายรวมทั้งวัน</span>
+                <span class="stat-value" id="reportTotalRevenue">0 บาท</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap report-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -253,10 +274,19 @@
               </tbody>
             </table>
           </div>
-          <!-- สรุปยอดขายรวมทั้งวัน -->
-          <div class="cart-summary">
-            <div class="row"><span>จำนวนคำสั่งซื้อ</span><span id="reportBillCount">0</span></div>
-            <div class="row total"><span>ยอดขายรวมทั้งวัน</span><span id="reportTotalRevenue">0 บาท</span></div>
+
+          <!-- ลายเซ็นกำกับท้ายใบสรุป แสดงเฉพาะตอนพิมพ์ ให้ดูเป็นเอกสารทางการ -->
+          <div class="print-footer">
+            <!-- ช่องเซ็นชื่อจริงด้วยมือ ปล่อยเป็นเส้นว่างไว้ -->
+            <div class="print-signature">
+              <div class="print-signature-line"></div>
+              <span>ผู้จัดทำรายงาน</span>
+            </div>
+            <!-- วันที่พิมพ์เติมด้วย JavaScript ตอนกดปุ่มพิมพ์ (ไม่ใช่ช่องเซ็นชื่อ จึงไม่ต้องเป็นเส้นว่าง) -->
+            <div class="print-signature">
+              <strong id="reportPrintedAt">-</strong>
+              <span>วันที่พิมพ์</span>
+            </div>
           </div>
         </div>
       </section>

@@ -259,6 +259,62 @@ tr:last-child td {
   border-bottom: none;
 }
 
+/* แถบสีสลับ (zebra stripe) เฉพาะตารางรายงานยอดขาย ช่วยให้ตากวาดอ่านแต่ละบิลไม่หลุดแถวเวลามีหลายรายการซ้อนกัน */
+.report-table-wrap tbody tr:nth-child(even) {
+  background: rgba(20, 20, 15, 0.02);
+}
+
+/* รายการสินค้าในบิลเดียวกัน (คอลัมน์ "รายการ") แสดงเป็นลิสต์แนวตั้ง อ่านง่ายกว่าการต่อด้วย <br> ตรง ๆ */
+.order-items-list {
+  list-style: none;    /* ไม่ต้องมีจุดนำหน้า เพราะมีจุดกลมเล็ก ๆ วาดเองด้านล่างแทน ให้คุมสีได้ */
+  margin: 0;
+  padding: 0;
+  white-space: normal;  /* อนุญาตให้ตัดบรรทัดได้ตามปกติ ทับค่า nowrap ของ td ด้านบน เผื่อชื่อสินค้ายาว */
+}
+.order-items-list li {
+  padding-left: 14px;
+  position: relative;
+}
+.order-items-list li + li {
+  margin-top: 4px;    /* ระยะห่างเล็กน้อยระหว่างรายการสินค้าแต่ละชิ้นในบิลเดียวกัน */
+}
+.order-items-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+.order-items-list .item-qty {
+  color: var(--text-dim);
+  font-size: 0.85em;
+}
+
+/* ป้ายวิธีชำระเงินในตารางรายงาน ใช้รูปทรงเดียวกับ .payment-status-badge แต่คนละชุดสี (แยกความหมาย "จ่ายด้วยอะไร" ออกจาก "จ่ายแล้วหรือยัง") */
+.payment-method-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+/* เก็บเงินปลายทาง: เทาเรียบ ๆ เหมือนกับ payment-status-na เพราะเป็นทางเลือกที่ไม่ต้องรอตรวจสอบอะไร */
+.payment-method-badge.pm-cod {
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+/* โอนเงินผ่านธนาคาร: ฟ้า */
+.payment-method-badge.pm-bank_transfer {
+  background: rgba(14, 165, 233, 0.15);
+  color: #0369a1;
+}
+/* พร้อมเพย์: ม่วง แยกจากฟ้าของธนาคารให้ดูออกทันทีว่าคนละช่องทาง */
+.payment-method-badge.pm-promptpay {
+  background: rgba(139, 92, 246, 0.15);
+  color: #6d28d9;
+}
+
 /* รูปภาพขนาดเล็กในเซลล์ตาราง (รูปสินค้า) */
 td img {
   width: 44px;           /* ความกว้างคงที่ ขนาดย่อสำหรับแสดงในตาราง */
@@ -507,6 +563,101 @@ td img {
   text-align: center;      /* จัดข้อความกึ่งกลาง เหมือนหัวใบเสร็จ */
   margin-bottom: 20px;     /* ระยะห่างด้านล่างก่อนตาราง */
 }
+.print-header h2 {
+  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin: 0;
+}
+/* คำโปรยใต้ชื่อร้าน ให้หัวใบสรุปดูเป็นแบรนด์จริง ไม่ใช่แค่ชื่อลอย ๆ */
+.print-tagline {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+/* เส้นคั่นบาง ๆ ใต้ชื่อร้าน แยกส่วนหัวแบรนด์ออกจากบรรทัดวันที่ของใบสรุป */
+.print-rule {
+  height: 1px;
+  background: var(--border);
+  margin: 12px auto;
+  width: 60%;
+}
+
+/* กล่องลายเซ็นท้ายใบสรุป แสดงเฉพาะตอนพิมพ์ ให้ดูเป็นเอกสารทางการที่เซ็นกำกับได้ */
+.print-footer {
+  display: none;                 /* ซ่อนไว้บนหน้าจอปกติเหมือน print-header ด้านบน */
+  justify-content: space-between;
+  gap: 40px;
+  margin-top: 40px;
+}
+.print-signature {
+  flex: 1;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* เส้นว่างไว้ให้เซ็นชื่อจริงด้วยมือ (ช่อง "ผู้จัดทำรายงาน") */
+.print-signature-line {
+  height: 36px;
+  border-bottom: 1px solid var(--border);
+}
+/* ค่าวันที่พิมพ์จริง (เติมด้วย JavaScript) แสดงเป็นตัวหนาสีเข้ม แทนที่จะเป็นเส้นว่างเหมือนช่องเซ็นชื่อ */
+.print-signature strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* การ์ดสรุปยอดขายรวมของวัน (จำนวนบิล / ยอดขายรวม) เหนือตารางรายงาน */
+.report-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.stat-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.stat-value {
+  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+/* การ์ด "ยอดขายรวมทั้งวัน" เป็นตัวที่สำคัญที่สุดในหน้านี้ ให้เด่นกว่าการ์ดอื่นด้วยสีเน้น (ส้ม) ของร้าน */
+.stat-card-accent {
+  background: rgba(255, 106, 0, 0.08);
+  border-color: rgba(255, 106, 0, 0.35);
+}
+.stat-card-accent .stat-value {
+  color: var(--accent-dark);
+}
 
 /* กล่องข้อความแจ้งเตือนลอย (toast) มุมล่างของจอ เช่น "เพิ่มสินค้าเรียบร้อย" */
 .toast {
@@ -577,6 +728,10 @@ td img {
   .print-header {
     display: block;
   }
+  /* แสดงกล่องลายเซ็นท้ายใบสรุป (ปกติซ่อนไว้บนหน้าจอ) เฉพาะตอนพิมพ์เช่นกัน */
+  .print-footer {
+    display: flex;
+  }
   /* ปรับพื้นที่เนื้อหาให้เต็มหน้ากระดาษ (เดิมเผื่อพื้นที่ให้แถบเมนูซ้าย) */
   .content {
     padding: 0;
@@ -592,6 +747,19 @@ td img {
   .cart-summary {
     background: none;
     border: none;
+  }
+  /* การ์ดสรุปยอดขาย: ตัดเงาและพื้นหลังสีออก เหลือแค่กรอบเส้นบาง ๆ แบบเอกสารกระดาษ ประหยัดหมึกพิมพ์ */
+  .stat-card {
+    background: none;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+  .stat-card-accent .stat-value {
+    color: #000;
+  }
+  /* ตัดแถบสีสลับของตารางรายงานออกตอนพิมพ์ เพราะพื้นหลังสีอ่อนมากมักจางหายไปตอนพิมพ์แบบประหยัดหมึก อ่านไม่ออกว่าเป็นแถบ */
+  .report-table-wrap tbody tr:nth-child(even) {
+    background: none;
   }
   /* ปรับสีเส้นตารางและตัวอักษรในตารางให้เข้ากับพื้นหลังขาว */
   table, th, td {

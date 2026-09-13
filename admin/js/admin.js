@@ -946,8 +946,14 @@ function renderReportTable(dayOrders) {
       <tr>
         <td>${new Date(o.createdAt).toLocaleTimeString('th-TH')}</td>
         <td>${o.customerName}</td>
-        <td>${o.items.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')}</td>
-        <td>${formatPaymentMethod(o.paymentMethod)}</td>
+        <td>
+          <ul class="order-items-list">
+            ${o.items
+              .map((i) => `<li>${i.name} (ไซส์ ${i.size}) <span class="item-qty">x${i.qty}</span></li>`)
+              .join('')}
+          </ul>
+        </td>
+        <td><span class="payment-method-badge pm-${o.paymentMethod}">${formatPaymentMethod(o.paymentMethod)}</span></td>
         <td>${formatPrice(o.total)}</td>
       </tr>
     `
@@ -969,7 +975,11 @@ reportDateInput.addEventListener('change', () => loadReport(reportDateInput.valu
 
 // ผูก event ให้ปุ่ม "พิมพ์ใบสรุปยอดขาย" เรียกฟังก์ชันสั่งพิมพ์ของเบราว์เซอร์
 // เบราว์เซอร์จะเปิดหน้าต่างพิมพ์ โดยใช้กฎ CSS ใน @media print เพื่อซ่อนส่วนที่ไม่ต้องการ (เช่น แถบเมนู, ปุ่มต่าง ๆ)
-document.getElementById('printReportBtn').addEventListener('click', () => window.print());
+document.getElementById('printReportBtn').addEventListener('click', () => {
+  // ประทับวันที่-เวลาที่กดสั่งพิมพ์จริง ลงในช่องลายเซ็นท้ายใบสรุป (ไม่ใช่วันที่ของข้อมูลที่กำลังดูอยู่ ซึ่งอาจเป็นวันอื่นย้อนหลัง)
+  document.getElementById('reportPrintedAt').textContent = new Date().toLocaleString('th-TH');
+  window.print();
+});
 
 // ---------- Expenses (รายจ่าย) ----------
 // ส่วนบันทึกรายจ่ายของร้าน (เช่น ค่าซื้อรองเท้ามือสอง, ค่าขนส่ง, ค่าเช่า) ใช้คำนวณกำไร/ขาดทุนในแท็บ "รายงาน"

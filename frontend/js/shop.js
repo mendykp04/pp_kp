@@ -97,6 +97,9 @@ function getFilteredProducts() {
     const max = maxStr ? Number(maxStr) : Infinity;
     list = list.filter((p) => p.price >= min && p.price <= max);
   }
+  // ตัดสินค้าที่ขายไปแล้ว (stock = 0) ออกจากหน้าร้าน ไม่ต้องแสดงให้ลูกค้าเห็นอีก
+  // (สินค้าที่ยังไม่ขายที่เหลือจะเลื่อนขึ้นมาแทนที่ตำแหน่งเองโดยอัตโนมัติ เพราะเป็นแค่การกรอง list ไม่ใช่การเรียงลำดับใหม่)
+  list = list.filter((p) => p.stock > 0);
   // คืนค่ารายการสินค้าที่ผ่านการกรองแล้ว
   return list;
 }
@@ -137,11 +140,9 @@ function renderProducts() {
         <span class="name">${p.name}</span>
         ${p.code ? `<span class="product-code">รหัส: ${p.code}</span>` : ''}
         ${p.condition ? `<span class="product-condition">สภาพ: ${p.condition}</span>` : ''}
-        <span class="stock">${p.stock > 0 ? 'พร้อมขาย (มีคู่เดียว)' : 'ขายแล้ว'}</span>
+        <span class="stock">พร้อมขาย (มีคู่เดียว)</span>
         ${priceBlock}
-        <button class="btn btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''} ${
-        p.stock === 0 ? 'disabled' : ''
-      }>${p.stock === 0 ? 'ขายแล้ว' : 'เพิ่มลงตะกร้า'}</button>
+        <button class="btn btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''}>เพิ่มลงตะกร้า</button>
       </div>
     </div>
   `;
@@ -353,15 +354,17 @@ async function loadFlashSales() {
 
 // ฟังก์ชันวาด (render) การ์ด Flash Sale ทั้งหมดลงในหน้าเว็บ
 function renderFlashSales() {
-  // ถ้าไม่มี Flash Sale ที่กำลังลดราคาอยู่เลย ให้ซ่อนทั้งโซนไปเลย (ไม่แสดงหัวข้อ "Flash Sale" เปล่า ๆ)
-  if (activeFlashSales.length === 0) {
+  // ตัดสินค้าที่ขายไปแล้ว (productStock = 0) ออกจากโซน Flash Sale ด้วยเหตุผลเดียวกับตารางสินค้าทั้งหมด
+  const list = activeFlashSales.filter((s) => s.productStock > 0);
+  // ถ้าไม่มี Flash Sale ที่กำลังลดราคาอยู่เลย (หรือขายหมดทุกรายการแล้ว) ให้ซ่อนทั้งโซนไปเลย (ไม่แสดงหัวข้อ "Flash Sale" เปล่า ๆ)
+  if (list.length === 0) {
     flashSaleSection.style.display = 'none';
     return; // ออกจากฟังก์ชันทันที
   }
   // ถ้ามีอย่างน้อย 1 รายการ ให้แสดงโซนนี้ขึ้นมา
   flashSaleSection.style.display = 'block';
   // วนลูปสร้าง HTML การ์ดของ Flash Sale แต่ละรายการ แล้วรวมเป็นข้อความเดียว
-  flashSaleGrid.innerHTML = activeFlashSales
+  flashSaleGrid.innerHTML = list
     .map(
       (s) => `
     <div class="product-card flash-card">
@@ -376,9 +379,7 @@ function renderFlashSales() {
         </div>
         <!-- data-end เก็บเวลาสิ้นสุด Flash Sale ไว้ ให้ตัวนับถอยหลัง (updateFlashCountdowns) มาอ่านไปคำนวณเวลาที่เหลือ -->
         <span class="flash-countdown" data-end="${s.endAt}">กำลังคำนวณเวลา...</span>
-        <button class="btn btn-block" data-id="${s.productId}" data-flash-id="${s.id}" ${
-        s.productStock === 0 ? 'disabled' : ''
-      }>${s.productStock === 0 ? 'สินค้าหมด' : 'เพิ่มลงตะกร้า'}</button>
+        <button class="btn btn-block" data-id="${s.productId}" data-flash-id="${s.id}">เพิ่มลงตะกร้า</button>
       </div>
     </div>
   `
