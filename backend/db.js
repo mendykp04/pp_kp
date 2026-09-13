@@ -64,6 +64,8 @@ async function init() {
         status TEXT,
         paymentStatus TEXT,
         slipUrl TEXT,
+        shippingCarrier TEXT,
+        trackingNumber TEXT,
         createdAt TEXT
       )`,
       `CREATE TABLE IF NOT EXISTS flashsales (
@@ -121,6 +123,13 @@ async function init() {
   }
   if (!existingOrderColumns.includes('slipUrl')) {
     await client.execute('ALTER TABLE orders ADD COLUMN slipUrl TEXT');
+  }
+  // Migration: เติมคอลัมน์ shippingCarrier/trackingNumber ให้ตาราง orders ที่มีอยู่แล้วจากก่อนหน้านี้ (ใช้ตอนแอดมินระบุค่ายขนส่ง+เลขพัสดุ ให้ลูกค้าติดตามสถานะจากเว็บขนส่งเองได้)
+  if (!existingOrderColumns.includes('shippingCarrier')) {
+    await client.execute('ALTER TABLE orders ADD COLUMN shippingCarrier TEXT');
+  }
+  if (!existingOrderColumns.includes('trackingNumber')) {
+    await client.execute('ALTER TABLE orders ADD COLUMN trackingNumber TEXT');
   }
 
   // Migration: เติมคอลัมน์ address ให้ตาราง employees ที่มีอยู่แล้วจากก่อนหน้านี้
@@ -215,14 +224,16 @@ async function writeOrders(orders) {
   const statements = [{ sql: 'DELETE FROM orders', args: [] }];
   orders.forEach((o) =>
     statements.push({
-      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, paymentStatus, slipUrl, createdAt)
-            VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @paymentStatus, @slipUrl, @createdAt)`,
+      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, paymentStatus, slipUrl, shippingCarrier, trackingNumber, createdAt)
+            VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @paymentStatus, @slipUrl, @shippingCarrier, @trackingNumber, @createdAt)`,
       args: {
         ...o,
         items: JSON.stringify(o.items || []),
         paymentMethod: o.paymentMethod ?? 'cod',
         paymentStatus: o.paymentStatus ?? '',
         slipUrl: o.slipUrl ?? '',
+        shippingCarrier: o.shippingCarrier ?? '',
+        trackingNumber: o.trackingNumber ?? '',
       },
     })
   );

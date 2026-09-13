@@ -36,6 +36,7 @@ function renderTrackResult(order, phone) {
         <span>วิธีชำระเงิน</span>
         <span>${formatPaymentMethod(order.paymentMethod)}</span>
       </div>
+      ${renderShippingInfoRows(order)}
       <div class="row">
         <span>รายการสินค้า</span>
         <span>${order.items.map((i) => `${i.name} (ไซส์ ${i.size})`).join(', ')}</span>

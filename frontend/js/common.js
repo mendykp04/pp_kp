@@ -104,6 +104,49 @@ const STATUS_CLASS_MAP = {
   จัดส่งไม่สำเร็จ: 'status-failed',
 };
 
+// ลิงก์หน้าติดตามพัสดุของแต่ละบริษัทขนส่งที่ระบบรองรับ (ให้ตรงกับ SHIPPING_CARRIERS ฝั่ง backend/server.js และ admin/js/admin.js)
+// รับเลขพัสดุมาด้วย เผื่อบริษัทไหนรองรับแนบเลขพัสดุลงในลิงก์ได้เลย (ไม่ต้องให้ลูกค้าพิมพ์เอง) ตัวที่ไม่แน่ใจรูปแบบ query string จะลิงก์ไปหน้าแรกของระบบติดตามเฉย ๆ ให้ลูกค้าคัดลอกเลขพัสดุไปวางเอง
+const SHIPPING_CARRIER_TRACK_URL = {
+  ไปรษณีย์ไทย: (code) => `https://track.thailandpost.co.th/?trackNumber=${encodeURIComponent(code)}`,
+  'Kerry Express': (code) => `https://th.kerryexpress.com/th/track/?track=${encodeURIComponent(code)}`,
+  'Flash Express': () => 'https://www.flashexpress.com/tracking/',
+  'J&T Express': () => 'https://www.jtexpress.co.th/index/query/gzquery.html',
+  'SPX Express': () => 'https://spx.co.th/track',
+};
+
+// ฟังก์ชันสร้าง HTML ส่วนแสดงข้อมูลขนส่ง (บริษัทขนส่ง + เลขพัสดุ + ลิงก์ไปติดตามที่เว็บขนส่ง) ใช้ร่วมกันทั้งหน้า track.html และ account.html
+// คืนค่าสตริงว่างถ้าแอดมินยังไม่ได้ระบุข้อมูลขนส่งของออเดอร์นี้ (จะได้ไม่โชว์แถวเปล่า ๆ)
+function renderShippingInfoRows(order) {
+  // ยังไม่มีทั้งชื่อขนส่งและเลขพัสดุ แปลว่าแอดมินยังไม่ได้จัดส่ง/ยังไม่ได้กรอกข้อมูล ไม่ต้องแสดงส่วนนี้เลย
+  if (!order.shippingCarrier && !order.trackingNumber) return '';
+
+  const trackUrlBuilder = SHIPPING_CARRIER_TRACK_URL[order.shippingCarrier];
+  const trackUrl = order.trackingNumber && trackUrlBuilder ? trackUrlBuilder(order.trackingNumber) : null;
+
+  return `
+    <div class="row">
+      <span>บริษัทขนส่ง</span>
+      <span>${order.shippingCarrier || 'ยังไม่ระบุ'}</span>
+    </div>
+    ${
+      order.trackingNumber
+        ? `
+    <div class="row">
+      <span>เลขพัสดุ</span>
+      <span>
+        <strong>${order.trackingNumber}</strong>
+        ${
+          trackUrl
+            ? `<a href="${trackUrl}" target="_blank" rel="noopener" style="color: var(--accent); margin-left: 8px;">ติดตามพัสดุ →</a>`
+            : ''
+        }
+      </span>
+    </div>`
+        : ''
+    }
+  `;
+}
+
 // ตารางแปลสถานะการชำระเงิน (ข้อความไทย) ให้เป็น class สี highlight — ใช้ชุดสีคนละชุดกับ STATUS_CLASS_MAP ด้านบน (นี่คือสถานะ "จ่ายเงินหรือยัง" แยกจากสถานะ "จัดส่งถึงไหนแล้ว")
 const PAYMENT_STATUS_CLASS_MAP = {
   ไม่ต้องชำระล่วงหน้า: 'payment-status-na',

@@ -374,6 +374,28 @@ td img {
   color: #c0262b;
 }
 
+/* ฟอร์มระบุบริษัทขนส่ง+เลขพัสดุ ในตารางคำสั่งซื้อ (ดรอปดาวน์ + ช่องกรอกเลขพัสดุ + ปุ่มบันทึก เรียงในแนวตั้งแคบ ๆ ให้พอดีกับคอลัมน์) */
+.shipping-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+  white-space: normal;    /* ทับค่า nowrap ของ td ที่ครอบอยู่ เพราะฟอร์มนี้ต้องเรียงเป็นแนวตั้ง ไม่ใช่บรรทัดเดียว */
+}
+.shipping-form select,
+.shipping-form input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+.shipping-form button {
+  align-self: flex-start;
+}
+
 /* ป้ายสถานะการชำระเงิน (คนละสถานะกับสถานะจัดส่งด้านบน) ในตารางคำสั่งซื้อ — ใช้ชุดสีเดียวกับหน้าร้านค้า (ดู style.css .status-badge.payment-status-*) */
 .payment-status-badge {
   display: inline-block;

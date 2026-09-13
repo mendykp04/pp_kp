@@ -447,6 +447,9 @@ function getOrderStatusClass(status) {
   return ORDER_STATUS_OPTIONS.find((s) => s.label === status)?.className || '';
 }
 
+// รายชื่อบริษัทขนส่งที่เลือกได้ในดรอปดาวน์ — ต้องตรงกับ SHIPPING_CARRIERS ฝั่ง backend (server.js) เพราะ backend ตรวจสอบซ้ำอีกชั้นก่อนบันทึก
+const SHIPPING_CARRIERS = ['ไปรษณีย์ไทย', 'Flash Express', 'Kerry Express', 'J&T Express', 'SPX Express'];
+
 // ตารางแปลสถานะการชำระเงิน (ข้อความไทย) ให้เป็น class สี highlight — ใช้ชุดสีเดียวกับหน้าร้านค้า (ดู style.css .status-badge.payment-status-*)
 const PAYMENT_STATUS_CLASS_MAP = {
   ไม่ต้องชำระล่วงหน้า: 'payment-status-na',
@@ -457,8 +460,8 @@ const PAYMENT_STATUS_CLASS_MAP = {
 function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
-    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 10 คอลัมน์)
-    orderTableBody.innerHTML = '<tr><td colspan="10">ยังไม่มีคำสั่งซื้อ</td></tr>';
+    // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 11 คอลัมน์)
+    orderTableBody.innerHTML = '<tr><td colspan="11">ยังไม่มีคำสั่งซื้อ</td></tr>';
     return; // ออกจากฟังก์ชันทันที
   }
   // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
@@ -497,8 +500,23 @@ function renderOrderTable() {
         <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) — class status-* ทำให้พื้นหลังมีสีต่างกันตามสถานะ -->
         <select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${o.id}">${optionsHTML}</select>
       </td>
+      <td>
+        <!-- ฟอร์มระบุบริษัทขนส่ง+เลขพัสดุ ของออเดอร์นี้ ลูกค้าจะเห็นข้อมูลนี้ที่หน้าตรวจสอบคำสั่งซื้อ/บัญชีของฉัน เอาไปติดตามพัสดุที่เว็บขนส่งเองได้ -->
+        <div class="shipping-form" data-id="${o.id}">
+          <select class="shipping-carrier-select">
+            <option value="">— เลือกขนส่ง —</option>
+            ${SHIPPING_CARRIERS.map(
+              (c) => `<option value="${c}" ${o.shippingCarrier === c ? 'selected' : ''}>${c}</option>`
+            ).join('')}
+          </select>
+          <input type="text" class="shipping-tracking-input" placeholder="เลขพัสดุ" value="${escapeHtml(o.trackingNumber || '')}" />
+          <button class="btn-icon" data-action="save-shipping" data-id="${o.id}">บันทึก</button>
+        </div>
+      </td>
       <td>${new Date(o.createdAt).toLocaleString('th-TH')}</td>
       <td>
+        <!-- พิมพ์บิล/ใบเสร็จของออเดอร์นี้ เปิดเป็นหน้าต่างแยกที่จัดหน้าสวยงามพร้อมสั่งพิมพ์ทันที -->
+        <button class="btn-icon" data-action="print-bill" data-id="${o.id}">🧾 พิมพ์บิล</button>
         <!-- ลบคำสั่งซื้อ: ลบแล้วยอดขายในสรุปยอดขายประจำวันของวันนั้นจะหายไปตามด้วย เพราะสรุปยอดขายคำนวณจากคำสั่งซื้อโดยตรง ไม่ได้เก็บแยกไว้ต่างหาก -->
         <button class="btn-icon danger" data-action="delete" data-id="${o.id}">ลบ</button>
       </td>
@@ -510,6 +528,22 @@ function renderOrderTable() {
   // ผูก event ให้ปุ่ม "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
   orderTableBody.querySelectorAll('button[data-action="delete"]').forEach((btn) => {
     btn.addEventListener('click', () => deleteOrder(btn.dataset.id));
+  });
+
+  // ผูก event ให้ปุ่ม "🧾 พิมพ์บิล" ทุกปุ่มที่เพิ่งวาดใหม่
+  orderTableBody.querySelectorAll('button[data-action="print-bill"]').forEach((btn) => {
+    btn.addEventListener('click', () => printReceipt(btn.dataset.id));
+  });
+
+  // ผูก event ให้ปุ่ม "บันทึก" ของฟอร์มขนส่งทุกแถวที่เพิ่งวาดใหม่ กดแล้วบันทึกบริษัทขนส่ง+เลขพัสดุของออเดอร์นั้น
+  orderTableBody.querySelectorAll('button[data-action="save-shipping"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      // หาฟอร์มที่ครอบปุ่มนี้อยู่ เพื่อดึงค่าที่กรอกไว้จากดรอปดาวน์+ช่องกรอกในแถวเดียวกัน
+      const form = btn.closest('.shipping-form');
+      const shippingCarrier = form.querySelector('.shipping-carrier-select').value;
+      const trackingNumber = form.querySelector('.shipping-tracking-input').value.trim();
+      saveOrderShipping(btn.dataset.id, shippingCarrier, trackingNumber);
+    });
   });
 
   // ผูก event ให้ปุ่ม "✅ ยืนยันชำระเงิน" ทุกปุ่มที่เพิ่งวาดใหม่ กดแล้วยิง API ยืนยันว่าตรวจสลิป/เงินเข้าจริงแล้ว
@@ -589,6 +623,239 @@ async function confirmOrderPayment(orderId) {
   } catch (err) {
     showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
   }
+}
+
+// ฟังก์ชัน async บันทึกบริษัทขนส่ง+เลขพัสดุของออเดอร์หนึ่ง (ลูกค้าจะเห็นข้อมูลนี้ที่หน้าตรวจสอบคำสั่งซื้อ/บัญชีของฉัน)
+async function saveOrderShipping(orderId, shippingCarrier, trackingNumber) {
+  try {
+    const res = await fetch(`${API_BASE}/orders/${orderId}/shipping`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shippingCarrier, trackingNumber }),
+    });
+    if (!res.ok) throw new Error('update failed');
+    // อัปเดตข้อมูลในตัวแปร orders ที่เก็บไว้ในหน่วยความจำด้วย ให้ตรงกับที่บันทึกจริง
+    const order = orders.find((o) => o.id === orderId);
+    if (order) {
+      order.shippingCarrier = shippingCarrier;
+      order.trackingNumber = trackingNumber;
+    }
+    showToast('บันทึกข้อมูลขนส่งเรียบร้อย');
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่');
+  }
+}
+
+// ---------- Receipt (พิมพ์บิล/ใบเสร็จรายออเดอร์) ----------
+// เปิดใบเสร็จของออเดอร์หนึ่งเป็นหน้าต่างเบราว์เซอร์แยกต่างหาก (ไม่ยุ่งกับ layout ของหน้า admin หลัก)
+// จัดหน้าให้ดูเหมือนใบเสร็จจริงจากเครื่องพิมพ์ใบเสร็จ (ตัวยาวแคบ เส้นประคั่น) แล้วเปิดกล่องสั่งพิมพ์ให้อัตโนมัติ
+
+// ฟังก์ชันแปลงอักขระพิเศษของ HTML (<, >, &, "...) ให้เป็น entity ปลอดภัย กันชื่อ/ที่อยู่ลูกค้าที่มีอักขระพิเศษทำ HTML ของใบเสร็จพัง
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
+// ฟังก์ชันหลัก: รับรหัสออเดอร์ หาใบข้อมูลจาก orders ที่โหลดไว้ในหน่วยความจำแล้ว แล้วเปิดหน้าต่างใบเสร็จ
+function printReceipt(orderId) {
+  // หาออเดอร์จาก array ที่โหลดไว้แล้ว (ไม่ต้องยิง API ซ้ำ เพราะหน้าคำสั่งซื้อโหลดข้อมูลครบอยู่แล้ว)
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) {
+    showToast('ไม่พบคำสั่งซื้อนี้');
+    return;
+  }
+
+  // สร้างแถวรายการสินค้าแต่ละชิ้น: ชื่อ+ไซส์ชั้นบน จำนวน x ราคาต่อชิ้นชั้นล่าง ราคารวมชิดขวา
+  const itemsHTML = order.items
+    .map(
+      (i) => `
+      <div class="receipt-item">
+        <div class="receipt-item-name">
+          <span>${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)})</span>
+          <span class="receipt-item-sub">${i.qty} x ${formatPrice(i.price)}</span>
+        </div>
+        <div class="receipt-item-total">${formatPrice(i.price * i.qty)}</div>
+      </div>`
+    )
+    .join('');
+
+  // แปลงเวลาสร้างออเดอร์ให้อ่านง่ายตามรูปแบบไทย
+  const createdAtText = new Date(order.createdAt).toLocaleString('th-TH', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  });
+
+  // ประกอบเป็นเอกสาร HTML สมบูรณ์ 1 หน้า (มีหัว/สไตล์ในตัวเอง ไม่พึ่งพา admin.css เพราะเปิดในหน้าต่างแยก)
+  const receiptHTML = `
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<title>ใบเสร็จ ${escapeHtml(order.id)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 12px;
+    background: #ececec;
+    font-family: 'Sarabun', system-ui, sans-serif;
+    color: #1a1a1a;
+    display: flex;
+    justify-content: center;
+  }
+  .receipt {
+    width: 100%;
+    max-width: 340px;
+    background: #fff;
+    padding: 24px 20px 30px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+  }
+  .receipt-header {
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .receipt-header h1 {
+    font-family: 'Prompt', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin: 0;
+  }
+  .receipt-header p {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: #6b7280;
+  }
+  .receipt-dash {
+    border-top: 2px dashed #bbb;
+    margin: 16px 0;
+  }
+  .receipt-meta-row, .receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    gap: 12px;
+  }
+  .receipt-meta-row span:first-child { color: #6b7280; }
+  .receipt-meta-row span:last-child { text-align: right; }
+  .receipt-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+  .receipt-item-name { display: flex; flex-direction: column; }
+  .receipt-item-sub { color: #6b7280; font-size: 0.78rem; margin-top: 2px; }
+  .receipt-item-total {
+    font-family: 'Courier New', monospace;
+    white-space: nowrap;
+  }
+  .receipt-total-row.grand {
+    font-family: 'Prompt', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #d95700;
+    margin-top: 4px;
+  }
+  .receipt-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: #6b7280;
+  }
+  .receipt-footer .thanks {
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+  }
+  .receipt-scissor {
+    text-align: center;
+    color: #bbb;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    margin-top: 22px;
+  }
+  .print-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: #ff6a00;
+    color: #fff;
+    font-family: 'Prompt', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .receipt { box-shadow: none; max-width: 100%; }
+    .print-btn { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="receipt-header">
+      <h1>SNEAK'R Shop</h1>
+      <p>รองเท้ามือสองคัดคุณภาพ</p>
+    </div>
+    <div class="receipt-dash"></div>
+    <div class="receipt-meta-row"><span>เลขที่บิล</span><span>${escapeHtml(order.id)}</span></div>
+    <div class="receipt-meta-row"><span>วันที่</span><span>${escapeHtml(createdAtText)}</span></div>
+    <div class="receipt-meta-row"><span>ลูกค้า</span><span>${escapeHtml(order.customerName)}</span></div>
+    <div class="receipt-meta-row"><span>เบอร์โทร</span><span>${escapeHtml(order.phone)}</span></div>
+    <div class="receipt-meta-row"><span>ที่อยู่จัดส่ง</span><span>${escapeHtml(order.address)}</span></div>
+    <div class="receipt-dash"></div>
+    ${itemsHTML}
+    <div class="receipt-dash"></div>
+    <div class="receipt-total-row grand"><span>ยอดรวมทั้งหมด</span><span>${formatPrice(order.total)}</span></div>
+    <div class="receipt-meta-row"><span>วิธีชำระเงิน</span><span>${escapeHtml(formatPaymentMethod(order.paymentMethod))}</span></div>
+    <div class="receipt-meta-row"><span>สถานะการชำระเงิน</span><span>${escapeHtml(order.paymentStatus || '-')}</span></div>
+    <div class="receipt-meta-row"><span>สถานะการจัดส่ง</span><span>${escapeHtml(order.status)}</span></div>
+    ${
+      order.shippingCarrier || order.trackingNumber
+        ? `
+    <div class="receipt-dash"></div>
+    <div class="receipt-meta-row"><span>บริษัทขนส่ง</span><span>${escapeHtml(order.shippingCarrier || '-')}</span></div>
+    ${
+      order.trackingNumber
+        ? `<div class="receipt-meta-row"><span>เลขพัสดุ</span><span>${escapeHtml(order.trackingNumber)}</span></div>`
+        : ''
+    }`
+        : ''
+    }
+    <div class="receipt-scissor">✂ - - - - - - - - - - - - - - - - - - - -</div>
+    <div class="receipt-footer">
+      <p class="thanks">ขอบคุณที่อุดหนุนนะครับ 🙏</p>
+      <p>เก็บใบเสร็จนี้ไว้เป็นหลักฐานการสั่งซื้อ</p>
+    </div>
+    <button class="print-btn no-print" onclick="window.print()">🖨️ พิมพ์ใบเสร็จ</button>
+  </div>
+</body>
+</html>`;
+
+  // เปิดหน้าต่างใหม่แล้วเขียนเอกสารใบเสร็จลงไป (เกิดจาก user gesture คือการคลิกปุ่ม จึงไม่โดน popup blocker)
+  const receiptWindow = window.open('', '_blank', 'width=420,height=720');
+  if (!receiptWindow) {
+    showToast('เบราว์เซอร์บล็อกการเปิดหน้าต่างใหม่ กรุณาอนุญาต pop-up แล้วลองใหม่');
+    return;
+  }
+  receiptWindow.document.write(receiptHTML);
+  receiptWindow.document.close();
 }
 
 // ---------- Customers ----------

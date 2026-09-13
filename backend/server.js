@@ -694,6 +694,26 @@ app.put('/api/orders/:id/payment-status', requireAuth, async (req, res) => {
   res.json(orders[idx]);
 });
 
+// รายชื่อบริษัทขนส่งที่ระบบรองรับให้แอดมินเลือก (ใช้ตรวจสอบฝั่งเซิร์ฟเวอร์ด้วย กันส่งค่าที่ไม่รู้จักมาปนเปื้อนข้อมูล)
+const SHIPPING_CARRIERS = ['ไปรษณีย์ไทย', 'Flash Express', 'Kerry Express', 'J&T Express', 'SPX Express'];
+
+// เมื่อมีการเรียก PUT ที่ /api/orders/:id/shipping (แอดมินระบุ/แก้ไขบริษัทขนส่ง+เลขพัสดุของออเดอร์) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
+// ลูกค้าจะเห็นข้อมูลนี้ที่หน้า "ตรวจสอบคำสั่งซื้อ" (track.html) และ "บัญชีของฉัน" (account.html) เพื่อเอาเลขพัสดุไปติดตามที่เว็บบริษัทขนส่งเอง
+app.put('/api/orders/:id/shipping', requireAuth, async (req, res) => {
+  const { shippingCarrier, trackingNumber } = req.body;
+  // อนุญาตให้ล้างค่าได้ (ส่งสตริงว่างมา) เผื่อกรอกผิดแล้วอยากเคลียร์ทิ้ง แต่ถ้าระบุค่ายขนส่งมาต้องอยู่ในรายชื่อที่รองรับเท่านั้น
+  if (shippingCarrier && !SHIPPING_CARRIERS.includes(shippingCarrier)) {
+    return res.status(400).json({ error: 'ไม่รู้จักบริษัทขนส่งนี้' });
+  }
+  const orders = await db.readOrders();
+  const idx = orders.findIndex((o) => o.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ' });
+  orders[idx].shippingCarrier = (shippingCarrier || '').trim();
+  orders[idx].trackingNumber = (trackingNumber || '').trim();
+  await db.writeOrders(orders);
+  res.json(orders[idx]);
+});
+
 // เมื่อมีการเรียก DELETE ที่ /api/orders/:id (ลบคำสั่งซื้อตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 // หมายเหตุ: แท็บ "สรุปยอดขาย" คำนวณยอดขายสดจากคำสั่งซื้อโดยตรง จึงไม่ต้องอัปเดตยอดขายแยกต่างหาก — ลบคำสั่งซื้อแล้วยอดขายของวันนั้นจะลดลงตามราคาที่หายไปทันที
 app.delete('/api/orders/:id', requireAuth, async (req, res) => {
