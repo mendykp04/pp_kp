@@ -337,18 +337,45 @@
             <input type="date" id="analyticsToInput" />
           </div>
         </div>
-        <!-- สรุปยอดขาย/รายจ่าย/กำไร-ขาดทุน ของช่วงวันที่ที่เลือก -->
-        <div class="cart-summary">
-          <div class="row"><span>ยอดขาย</span><span id="analyticsRevenue">0 บาท</span></div>
-          <div class="row"><span>จำนวนคำสั่งซื้อ</span><span id="analyticsOrderCount">0</span></div>
-          <div class="row"><span>รายจ่าย</span><span id="analyticsExpenses">0 บาท</span></div>
-          <div class="row total"><span>กำไร/ขาดทุน</span><span id="analyticsProfit">0 บาท</span></div>
+        <!-- สรุปยอดขาย/รายจ่าย/กำไร-ขาดทุน ของช่วงวันที่ที่เลือก แสดงเป็นการ์ดสถิติ (เหมือนแท็บ "สรุปยอดขาย") แทนแถวข้อความเรียบ ๆ แบบเดิม ให้ดูเป็นแดชบอร์ดจริงจัง -->
+        <div class="report-stats">
+          <div class="stat-card">
+            <span class="stat-icon" aria-hidden="true">💰</span>
+            <div class="stat-body">
+              <span class="stat-label">ยอดขาย</span>
+              <span class="stat-value" id="analyticsRevenue">0 บาท</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon" aria-hidden="true">🧾</span>
+            <div class="stat-body">
+              <span class="stat-label">จำนวนคำสั่งซื้อ</span>
+              <span class="stat-value" id="analyticsOrderCount">0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <span class="stat-icon" aria-hidden="true">💸</span>
+            <div class="stat-body">
+              <span class="stat-label">รายจ่าย</span>
+              <span class="stat-value" id="analyticsExpenses">0 บาท</span>
+            </div>
+          </div>
+          <!-- การ์ดกำไร/ขาดทุน: ไอคอน+สีพื้นหลัง+สีตัวเลขเปลี่ยนตามผลลัพธ์จริงทั้งหมด (เขียว+📈 = กำไร, แดง+📉 = ขาดทุน) เติม class โดย admin.js เพราะเป็นค่าที่ไม่รู้ล่วงหน้าตอนเขียน HTML -->
+          <div class="stat-card" id="analyticsProfitCard">
+            <span class="stat-icon" id="analyticsProfitIcon" aria-hidden="true">📈</span>
+            <div class="stat-body">
+              <span class="stat-label">กำไร/ขาดทุน</span>
+              <span class="stat-value" id="analyticsProfit">0 บาท</span>
+            </div>
+          </div>
         </div>
+
         <h3>📦 สินค้าขายดี (10 อันดับแรก)</h3>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th>อันดับ</th>
                 <th>รหัส</th>
                 <th>สินค้า</th>
                 <th>แบรนด์</th>
@@ -358,7 +385,7 @@
             </thead>
             <!-- เนื้อหาตารางสินค้าขายดีจะถูกเติมโดย admin.js -->
             <tbody id="topProductsTableBody">
-              <tr><td colspan="5">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>
+              <tr><td colspan="6">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>
             </tbody>
           </table>
         </div>
@@ -367,6 +394,7 @@
           <table>
             <thead>
               <tr>
+                <th>อันดับ</th>
                 <th>แบรนด์</th>
                 <th>จำนวนที่ขาย</th>
                 <th>ยอดขาย</th>
@@ -374,7 +402,7 @@
             </thead>
             <!-- เนื้อหาตารางแบรนด์ขายดีจะถูกเติมโดย admin.js -->
             <tbody id="topBrandsTableBody">
-              <tr><td colspan="3">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>
+              <tr><td colspan="4">เลือกช่วงวันที่เพื่อดูรายงาน</td></tr>
             </tbody>
           </table>
         </div>

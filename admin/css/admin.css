@@ -307,6 +307,54 @@ tr:last-child td {
   background: rgba(20, 20, 15, 0.02);
 }
 
+/* ป้ายอันดับ (1, 2, 3...) หน้าตารางสินค้า/แบรนด์ขายดี — ทรงกลมเลขตรงกลาง อันดับ 1-3 เด่นด้วยสีเน้น ที่เหลือเป็นสีเทาเรียบ ๆ */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.rank-badge.rank-top {
+  background: rgba(255, 106, 0, 0.14);
+  border-color: transparent;
+  color: var(--accent-dark);
+}
+
+/* แท่งวัดสัดส่วน (meter) เสริมข้างตัวเลข "จำนวนที่ขาย" ในตาราง 10 อันดับ ยาวสุด = อันดับ 1 เทียบกับรายการอื่นในตารางเดียวกัน
+   ตัวเลขจริงยังอยู่เป็นตัวหนังสือข้าง ๆ เสมอ (แท่งเป็นตัวเสริมให้เห็นสัดส่วนเร็วขึ้น ไม่ใช่ตัวแทนตัวเลข) */
+.meter-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.meter-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 106, 0, 0.14); /* แทร็ก: สีเน้นโทนอ่อน (ramp เดียวกับแท่งเติม) */
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent); /* แท่งเติม: สีเน้นทึบ */
+}
+.meter-value {
+  flex-shrink: 0;
+  min-width: 22px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* ตัวเลขในคอลัมน์เรียงกัน ให้ความกว้างตัวเลขเท่ากันทุกหลัก อ่านแนวตั้งง่ายกว่า */
+}
+
 /* รายการสินค้าในบิลเดียวกัน (คอลัมน์ "รายการ") แสดงเป็นลิสต์แนวตั้ง อ่านง่ายกว่าการต่อด้วย <br> ตรง ๆ */
 .order-items-list {
   list-style: none;    /* ไม่ต้องมีจุดนำหน้า เพราะมีจุดกลมเล็ก ๆ วาดเองด้านล่างแทน ให้คุมสีได้ */
@@ -791,6 +839,22 @@ td img {
 }
 .stat-card-accent .stat-value {
   color: var(--accent-dark);
+}
+
+/* การ์ดสถิติที่ค่าเปลี่ยนความหมายได้ (กำไร/ขาดทุน) ใช้สีเขียว/แดงมาตรฐานเดียวกับสถานะอื่นในระบบ (.order-status-select.status-delivered / .status-failed) แทนสีเน้นของแบรนด์ที่ตายตัว เพราะที่นี่สีต้องสื่อความหมายบวก/ลบ ไม่ใช่แค่ตกแต่ง */
+.stat-card-positive {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+.stat-card-positive .stat-value {
+  color: #15803d;
+}
+.stat-card-negative {
+  background: rgba(229, 72, 77, 0.08);
+  border-color: rgba(229, 72, 77, 0.35);
+}
+.stat-card-negative .stat-value {
+  color: #c0262b;
 }
 
 /* กล่องข้อความแจ้งเตือนลอย (toast) มุมล่างของจอ เช่น "เพิ่มสินค้าเรียบร้อย" */

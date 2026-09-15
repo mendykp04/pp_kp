@@ -1405,47 +1405,69 @@ async function loadAnalytics() {
   }
 }
 
+// ฟังก์ชันสร้างแท่งขนาดเล็ก (meter) แสดงสัดส่วนเทียบกับค่าสูงสุดในลิสต์เดียวกัน ใช้เสริมตัวเลขในตาราง 10 อันดับ ไม่ได้แทนที่ตัวเลข (ตัวเลขจริงยังอยู่ข้าง ๆ เสมอ)
+// ช่องแทร็กพื้นหลังใช้สีเน้นโทนอ่อนกว่า (ramp เดียวกัน) ส่วนแท่งที่ไหลเต็มใช้สีเน้นทึบ ตามรูปแบบ meter มาตรฐาน
+function renderMeterCell(value, max) {
+  const pct = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0; // ขั้นต่ำ 4% กันแท่งเล็กจนมองไม่เห็นเมื่อค่าน้อยมากเทียบกับค่าสูงสุด
+  return `
+    <div class="meter-cell">
+      <div class="meter-track"><div class="meter-fill" style="width:${pct}%"></div></div>
+      <span class="meter-value">${value}</span>
+    </div>
+  `;
+}
+
 // ฟังก์ชันวาด (render) ผลสรุปรายงานลงในหน้าเว็บ (ยอดขาย, รายจ่าย, กำไร/ขาดทุน, สินค้า/แบรนด์ขายดี)
 function renderAnalytics(data) {
   document.getElementById('analyticsRevenue').textContent = formatPrice(data.revenue);
   document.getElementById('analyticsOrderCount').textContent = data.orderCount;
   document.getElementById('analyticsExpenses').textContent = formatPrice(data.expenses);
-  // แสดงกำไร/ขาดทุน พร้อมเปลี่ยนสีตามผลลัพธ์ (เขียว = กำไร, แดง = ขาดทุน) ให้เห็นสถานะได้ทันทีโดยไม่ต้องอ่านตัวเลข
-  const profitEl = document.getElementById('analyticsProfit');
-  profitEl.textContent = formatPrice(data.profit);
-  profitEl.style.color = data.profit < 0 ? '#e5484d' : '#22c55e';
+  // แสดงกำไร/ขาดทุน พร้อมเปลี่ยนไอคอน+สีพื้นการ์ด+สีตัวเลขตามผลลัพธ์จริงทั้งชุด (เขียว+📈 = กำไร, แดง+📉 = ขาดทุน) ให้เห็นสถานะได้ทันทีโดยไม่ต้องอ่านตัวเลข
+  // (ไม่ใช้ .stat-card-accent สีส้มแบบการ์ดอื่น เพราะการ์ดนี้ค่าเปลี่ยนเป็นบวก/ลบได้ สีส้มคงที่จะขัดกับความหมายตอนขาดทุน)
+  const isProfit = data.profit >= 0;
+  document.getElementById('analyticsProfit').textContent = formatPrice(data.profit);
+  document.getElementById('analyticsProfitIcon').textContent = isProfit ? '📈' : '📉';
+  const profitCard = document.getElementById('analyticsProfitCard');
+  profitCard.classList.toggle('stat-card-positive', isProfit);
+  profitCard.classList.toggle('stat-card-negative', !isProfit);
+
+  // หาค่าสูงสุดในลิสต์สินค้า/แบรนด์ขายดี ใช้เป็นฐานคำนวณความยาวแท่ง meter (แท่งยาวสุด = อันดับ 1 เสมอ เพราะ backend เรียงมาให้แล้ว)
+  const maxProductCount = data.topProducts[0]?.count || 0;
+  const maxBrandCount = data.topBrands[0]?.count || 0;
 
   // วาดตารางสินค้าขายดี (ถ้าไม่มีข้อมูลเลยในช่วงที่เลือก ให้แสดงข้อความแจ้งแทน)
   document.getElementById('topProductsTableBody').innerHTML = data.topProducts.length
     ? data.topProducts
         .map(
-          (p) => `
+          (p, idx) => `
       <tr>
+        <td><span class="rank-badge ${idx < 3 ? 'rank-top' : ''}">${idx + 1}</span></td>
         <td>${p.code || '-'}</td>
         <td>${p.name}</td>
         <td>${p.brand || '-'}</td>
-        <td>${p.count}</td>
+        <td>${renderMeterCell(p.count, maxProductCount)}</td>
         <td>${formatPrice(p.revenue)}</td>
       </tr>
     `
         )
         .join('')
-    : '<tr><td colspan="5">ไม่มีคำสั่งซื้อในช่วงวันที่ที่เลือก</td></tr>';
+    : '<tr><td colspan="6">ไม่มีคำสั่งซื้อในช่วงวันที่ที่เลือก</td></tr>';
 
   // วาดตารางแบรนด์ขายดี (ถ้าไม่มีข้อมูลเลยในช่วงที่เลือก ให้แสดงข้อความแจ้งแทน)
   document.getElementById('topBrandsTableBody').innerHTML = data.topBrands.length
     ? data.topBrands
         .map(
-          (b) => `
+          (b, idx) => `
       <tr>
+        <td><span class="rank-badge ${idx < 3 ? 'rank-top' : ''}">${idx + 1}</span></td>
         <td>${b.brand}</td>
-        <td>${b.count}</td>
+        <td>${renderMeterCell(b.count, maxBrandCount)}</td>
         <td>${formatPrice(b.revenue)}</td>
       </tr>
     `
         )
         .join('')
-    : '<tr><td colspan="3">ไม่มีคำสั่งซื้อในช่วงวันที่ที่เลือก</td></tr>';
+    : '<tr><td colspan="4">ไม่มีคำสั่งซื้อในช่วงวันที่ที่เลือก</td></tr>';
 }
 
 // ตั้งค่าเริ่มต้นของช่วงวันที่ในหน้ารายงาน ให้เป็น "ต้นเดือนนี้ ถึง วันนี้" ตอนเปิดหน้าเว็บ (ช่วงที่มีประโยชน์ที่สุดโดยไม่ต้องเลือกเอง)
