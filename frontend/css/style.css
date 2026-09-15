@@ -944,9 +944,21 @@ img {
   margin: 0 auto;
   padding: 20px 0;
   border-top: 1px solid var(--border);
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 20px;
   color: var(--text-dim);
   font-size: 0.82rem;
+}
+/* ลิงก์ที่ตั้งร้านบน Google Maps ในแถบล่างสุดของ footer — ให้เปลี่ยนเป็นสีเน้นตอน hover เหมือนลิงก์อื่น ๆ ในหน้า เพื่อให้เห็นว่ากดได้ */
+.footer-bottom a {
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.footer-bottom a:hover {
+  color: var(--accent);
 }
 
 /* กล่องข้อความแจ้งเตือนลอย (toast) มุมล่างของจอ */
