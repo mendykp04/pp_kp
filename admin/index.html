@@ -9,6 +9,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- ข้อความที่แสดงบนแท็บเบราว์เซอร์ -->
   <title>Admin | SNEAK&apos;R</title>
+  <!-- ไอคอนแท็บเบราว์เซอร์ (favicon) ใช้ตัว SVG เดียวกันทุกหน้า ทั้งหน้าบ้านและหลังบ้าน อยู่ที่ frontend/favicon.svg แต่เข้าถึงได้ทุกหน้าผ่าน path "/favicon.svg" เพราะ backend เสิร์ฟ frontend เป็น static root ที่ "/" -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <!-- กันหน้าหลังบ้านหลุดไปโผล่ในผลค้นหา Google -->
+  <meta name="robots" content="noindex, nofollow" />
   <!-- เชื่อมไฟล์ CSS เฉพาะของหน้า admin (แยกจาก style.css ของหน้าร้านค้า) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,6 +99,8 @@
             </tbody>
           </table>
         </div>
+        <!-- แถบเปลี่ยนหน้าตาราง เติมโดย admin.js (ซ่อนเองถ้ามีแค่หน้าเดียว) -->
+        <div class="pagination" id="productPagination"></div>
       </section>
 
       <!-- Tab: Flash Sale -->
@@ -154,6 +160,8 @@
             </tbody>
           </table>
         </div>
+        <!-- แถบเปลี่ยนหน้าตาราง เติมโดย admin.js (ซ่อนเองถ้ามีแค่หน้าเดียว) -->
+        <div class="pagination" id="orderPagination"></div>
       </section>
 
       <!-- Tab: Customers (ฐานข้อมูลลูกค้า) -->
@@ -185,6 +193,8 @@
             </tbody>
           </table>
         </div>
+        <!-- แถบเปลี่ยนหน้าตาราง เติมโดย admin.js (ซ่อนเองถ้ามีแค่หน้าเดียว) -->
+        <div class="pagination" id="customerPagination"></div>
       </section>
 
       <!-- Tab: Employees -->
