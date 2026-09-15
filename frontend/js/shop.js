@@ -132,17 +132,24 @@ function renderProducts() {
         </div>
         <span class="flash-countdown" data-end="${sale.endAt}">กำลังคำนวณเวลา...</span>`
         : `<span class="price">${formatPrice(p.price)}</span>`;
+      // ป้ายเล็ก ๆ (รหัสสินค้า + เกรดสภาพ) รวมไว้ในแถวเดียวกัน แทนการแยกบรรทัดข้อความเปล่า ๆ ทีละแถว — ไม่แสดงแถวนี้เลยถ้าไม่มีทั้งคู่ กันเหลือช่องว่างเปล่า
+      const tagsBlock =
+        p.code || p.condition
+          ? `
+        <div class="card-tags">
+          ${p.code ? `<span class="tag">รหัส ${p.code}</span>` : ''}
+          ${p.condition ? `<span class="tag">${p.condition}</span>` : ''}
+        </div>`
+          : '';
       return `
     <div class="${cardClass}">
       <div class="img-wrap" data-detail-id="${p.id}"><img src="${p.image}" alt="${p.name}" loading="lazy" /></div>
       <div class="info">
         <span class="brand">${p.brand}</span>
         <span class="name">${p.name}</span>
-        ${p.code ? `<span class="product-code">รหัส: ${p.code}</span>` : ''}
-        ${p.condition ? `<span class="product-condition">สภาพ: ${p.condition}</span>` : ''}
-        <span class="stock">พร้อมขาย (มีคู่เดียว)</span>
+        ${tagsBlock}
         ${priceBlock}
-        <button class="btn btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''}>เพิ่มลงตะกร้า</button>
+        <button class="btn btn-card btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''}>เพิ่มลงตะกร้า</button>
       </div>
     </div>
   `;
@@ -379,7 +386,7 @@ function renderFlashSales() {
         </div>
         <!-- data-end เก็บเวลาสิ้นสุด Flash Sale ไว้ ให้ตัวนับถอยหลัง (updateFlashCountdowns) มาอ่านไปคำนวณเวลาที่เหลือ -->
         <span class="flash-countdown" data-end="${s.endAt}">กำลังคำนวณเวลา...</span>
-        <button class="btn btn-block" data-id="${s.productId}" data-flash-id="${s.id}">เพิ่มลงตะกร้า</button>
+        <button class="btn btn-card btn-block" data-id="${s.productId}" data-flash-id="${s.id}">เพิ่มลงตะกร้า</button>
       </div>
     </div>
   `
