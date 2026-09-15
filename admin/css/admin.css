@@ -56,8 +56,12 @@ h1, h2, h3, .brand, .btn {
   flex-shrink: 0;                             /* ห้ามแถบเมนูถูกบีบแคบลงแม้พื้นที่ไม่พอ (คงความกว้าง 240px เสมอ) */
 }
 
-/* โลโก้ร้าน + คำว่า Admin ในแถบเมนู */
+/* โลโก้ร้าน + คำว่า Admin ในแถบเมนู — จัดเป็นแถว flex (ไอคอน+ชื่อร้าน) แล้วให้ "Admin" ตกลงมาอยู่บรรทัดใหม่เองด้วย flex-basis:100% ด้านล่าง */
 .sidebar .brand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 1.2rem;  /* ขนาดตัวอักษรโลโก้ */
   font-weight: 800;   /* ตัวหนามาก */
 }
@@ -67,9 +71,17 @@ h1, h2, h3, .brand, .btn {
   color: var(--accent); /* ใช้สีเน้น (ส้ม) */
 }
 
+/* ไอคอนโลโก้เล็ก ๆ หน้าชื่อร้าน (ใช้ไฟล์เดียวกับ favicon) */
+.sidebar .brand .logo-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
 /* ตัวอักษรเล็ก <small> กำกับคำว่า "Admin" ใต้โลโก้ */
 .sidebar .brand small {
-  display: block;          /* ขึ้นบรรทัดใหม่ อยู่ใต้โลโก้ */
+  flex-basis: 100%;        /* บังคับให้ตกลงบรรทัดใหม่เสมอ แม้อยู่ใน flex row เดียวกับไอคอน+ชื่อร้าน */
   color: var(--text-dim);  /* สีจาง ไม่เด่นเท่าโลโก้หลัก */
   font-weight: 400;        /* น้ำหนักตัวอักษรปกติ (ไม่หนา) */
   font-size: 0.75rem;      /* ขนาดเล็ก */

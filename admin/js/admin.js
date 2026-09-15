@@ -872,7 +872,7 @@ function printReceipt(orderId) {
 <body>
   <div class="receipt">
     <div class="receipt-header">
-      <h1>SNEAK'R Shop</h1>
+      <h1>SneaKer มือสอง</h1>
       <p>รองเท้ามือสองคัดคุณภาพ</p>
     </div>
     <div class="receipt-dash"></div>

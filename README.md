@@ -1,4 +1,4 @@
-# SNEAK'R Shop
+# SneaKer มือสอง
 
 เว็บขายรองเท้า Sneaker แยกเป็นหน้าบ้าน (frontend), หลังบ้าน (admin), และ backend API
 

@@ -8,15 +8,15 @@
   <!-- ตั้งค่าให้หน้าเว็บ responsive คือปรับขนาดตามความกว้างของหน้าจออุปกรณ์ (มือถือ/แท็บเล็ต/คอม) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- ข้อความที่จะแสดงบนแท็บของเบราว์เซอร์ -->
-  <title>SNEAK&apos;R | ร้านรองเท้าสนีกเกอร์</title>
+  <title>SneaKer มือสอง | ร้านรองเท้าสนีกเกอร์</title>
   <!-- ไอคอนแท็บเบราว์เซอร์ (favicon) ใช้ตัว SVG เดียวกันทุกหน้า ทั้งหน้าบ้านและหลังบ้าน อยู่ที่ frontend/favicon.svg แต่เข้าถึงได้ทุกหน้าผ่าน path "/favicon.svg" เพราะ backend เสิร์ฟ frontend เป็น static root ที่ "/" -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <!-- คำอธิบายเว็บสำหรับผลการค้นหา Google -->
-  <meta name="description" content="SNEAK'R ร้านรองเท้าสนีกเกอร์มือสองคัดสภาพ ตรวจสภาพและแจ้งตำหนิจริงทุกคู่ก่อนลงขาย แต่ละคู่มีชิ้นเดียว เก็บเงินปลายทางได้ ติดตามพัสดุได้ทุกออเดอร์" />
+  <meta name="description" content="SneaKer มือสอง ร้านรองเท้าสนีกเกอร์คัดสภาพ ตรวจสภาพและแจ้งตำหนิจริงทุกคู่ก่อนลงขาย แต่ละคู่มีชิ้นเดียว เก็บเงินปลายทางได้ ติดตามพัสดุได้ทุกออเดอร์" />
   <!-- Open Graph tags: คุมหน้าตาพรีวิวตอนแชร์ลิงก์นี้ไปในไลน์/เฟซบุ๊ก/ทวิตเตอร์ ไม่งั้นจะขึ้นพรีวิวว่างๆ ไม่น่าเชื่อถือ (ยังไม่ใส่ og:image เพราะยังไม่มีรูปแบนเนอร์ร้านจริง ใส่ทีหลังได้เมื่อมีรูป) -->
   <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="SNEAK'R" />
-  <meta property="og:title" content="SNEAK'R | ร้านรองเท้าสนีกเกอร์มือสองคัดสภาพ" />
+  <meta property="og:site_name" content="SneaKer มือสอง" />
+  <meta property="og:title" content="SneaKer มือสอง | ร้านรองเท้าสนีกเกอร์คัดสภาพ" />
   <meta property="og:description" content="ตรวจสภาพและแจ้งตำหนิจริงทุกคู่ก่อนลงขาย แต่ละคู่มีชิ้นเดียว เก็บเงินปลายทางได้ ติดตามพัสดุได้ทุกออเดอร์" />
   <meta property="og:locale" content="th_TH" />
   <meta name="twitter:card" content="summary" />
@@ -30,7 +30,7 @@
   <!-- แถบเมนูด้านบนสุดของหน้าเว็บ (โลโก้ + ลิงก์ไปหน้าต่าง ๆ) -->
   <header class="navbar">
     <!-- โลโก้ร้าน กดแล้วกลับมาหน้าแรก -->
-    <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
+    <a href="index.html" class="logo"><img src="/favicon.svg" class="logo-icon" alt="" />SneaKer<span>มือสอง</span></a>
     <nav>
       <!-- ช่องนี้จะถูกเติมลิงก์ "เข้าสู่ระบบ" หรือ "บัญชีของฉัน" โดย common.js ตามสถานะล็อกอินปัจจุบัน -->
       <span id="authNav"></span>
@@ -45,7 +45,7 @@
 
   <!-- ส่วนหัวโฆษณาขนาดใหญ่ (hero banner) ต้อนรับผู้เข้าชม — คำโปรยระบุจุดขายจริงของร้าน (มือสองคัดสภาพ ทีละคู่) แทนคำโฆษณาลอย ๆ ทั่วไป ให้ลูกค้ารู้ทันทีว่ากำลังซื้ออะไร -->
   <section class="hero">
-    <span class="hero-eyebrow">SNEAK'R · SECOND HAND SNEAKERS</span>
+    <span class="hero-eyebrow">SNEAKER มือสอง · SECOND HAND SNEAKERS</span>
     <h1>รองเท้ามือสอง<br /><span>คัดสภาพ</span>ทุกคู่ก่อนลงขาย</h1>
     <p>แต่ละคู่มีชิ้นเดียว ตรวจสภาพจริงและแจ้งตำหนิให้เห็นในหน้าสินค้า ไม่ต้องเสี่ยงเปิดกล่องแล้วผิดหวัง</p>
     <!-- ปุ่มกดแล้วเลื่อนหน้าจอลงไปยัง section ที่มี id="products" ด้านล่าง -->
@@ -111,7 +111,7 @@
   <footer class="site-footer">
     <div class="footer-grid">
       <div class="footer-col footer-brand">
-        <a href="index.html" class="logo">SNEAK<span>&apos;R</span></a>
+        <a href="index.html" class="logo"><img src="/favicon.svg" class="logo-icon" alt="" />SneaKer<span>มือสอง</span></a>
         <p>ร้านรองเท้ามือสองคัดสภาพ ทุกคู่ตรวจสอบและแจ้งตำหนิจริงก่อนลงขาย ซื้อขายกันด้วยความจริงใจ</p>
       </div>
       <div class="footer-col">
@@ -129,7 +129,7 @@
     </div>
     <div class="footer-bottom">
       <a href="https://maps.app.goo.gl/1PSBF9kQH87i5HAd9" target="_blank" rel="noopener">📍 SneaKer มือสอง — ดูที่ตั้งร้านบน Google Maps</a>
-      <span class="footer-copyright">&copy; <span class="footer-year">2026</span> SNEAK'R Shop</span>
+      <span class="footer-copyright">&copy; <span class="footer-year">2026</span> SneaKer มือสอง</span>
     </div>
   </footer>
 
