@@ -23,6 +23,9 @@ const cloudinaryHelper = require('./cloudinary');
 
 // สร้างแอปพลิเคชัน Express ขึ้นมา 1 ตัว เก็บไว้ในตัวแปร app
 const app = express();
+// บอก Express ว่าเซิร์ฟเวอร์รันอยู่หลัง reverse proxy ของแพลตฟอร์ม deploy (เช่น Render) — จำเป็นสำหรับ req.ip ให้อ่านค่า IP ผู้ใช้จริงจาก header X-Forwarded-For
+// ถ้าไม่ตั้งค่านี้ req.ip จะได้ IP ของตัว proxy เองเสมอ (เหมือนกันทุก request) ทำให้ระบบจำกัดจำนวนครั้งล็อกอินผิด (ดูด้านล่าง) เข้าใจผิดว่าผู้ใช้ทุกคนเป็นคนเดียวกัน
+app.set('trust proxy', 1);
 // กำหนดพอร์ตที่จะรันเซิร์ฟเวอร์ ถ้ามีค่าจาก environment variable ให้ใช้ค่านั้น ถ้าไม่มีใช้ 3000
 const PORT = process.env.PORT || 3000;
 
@@ -167,21 +170,73 @@ function sanitizeCustomer(customer) {
   return rest;
 }
 
+// ---------- Login rate limiting (กันโดนสุ่มรหัสผ่าน / brute-force) ----------
+// เก็บสถิติล็อกอินผิดไว้ในหน่วยความจำ (ไม่ต้องพึ่ง Redis หรือไลบรารีเพิ่ม เพราะแอปนี้รันเซิร์ฟเวอร์เดียว ไม่ได้กระจายหลายเครื่อง)
+// key = "ip:ตัวระบุตัวตน" (username ของแอดมิน หรือเบอร์โทรของลูกค้า) แยกตามคู่นั้นจริง ๆ ไม่ใช่แค่ตาม IP เฉย ๆ
+// กันคนอื่นที่ใช้เน็ตวงเดียวกัน (เช่น wifi ร้าน) โดนบล็อกไปด้วยเวลามีคนสุ่มรหัสผ่านบัญชีอื่น
+const loginAttempts = new Map();
+const LOGIN_MAX_ATTEMPTS = 5; // พลาดได้ไม่เกิน 5 ครั้ง
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // ต่อช่วงเวลา 15 นาที ถ้าครบแล้วบล็อกอีก 15 นาทีถัดไป
+
+// ตรวจสอบว่า key นี้ (ip+ตัวระบุตัวตน) ถูกบล็อกอยู่ตอนนี้หรือไม่ เพราะพลาดครบจำนวนที่กำหนดในช่วงเวลาที่ยังไม่หมดอายุ
+// คืนค่าจำนวนวินาทีที่ต้องรออีก ถ้ายังโดนบล็อกอยู่ หรือ 0 ถ้ายังลองได้ตามปกติ
+function getLoginBlockSeconds(key) {
+  const record = loginAttempts.get(key);
+  if (!record || record.count < LOGIN_MAX_ATTEMPTS) return 0;
+  const elapsed = Date.now() - record.firstAttemptAt;
+  if (elapsed >= LOGIN_WINDOW_MS) {
+    // ครบช่วงเวลาบล็อกแล้ว ให้ล้างสถิติเก่าทิ้ง เริ่มนับใหม่รอบถัดไปได้ตามปกติ
+    loginAttempts.delete(key);
+    return 0;
+  }
+  return Math.ceil((LOGIN_WINDOW_MS - elapsed) / 1000);
+}
+
+// บันทึกว่าล็อกอินผิดอีกครั้งสำหรับ key นี้ (เรียกทุกครั้งที่ username/password หรือเบอร์โทร/รหัสผ่านไม่ตรง)
+function recordFailedLogin(key) {
+  const record = loginAttempts.get(key);
+  // ถ้ายังไม่เคยพลาดมาก่อน หรือช่วงเวลาก่อนหน้าหมดอายุไปแล้ว ให้เริ่มนับรอบใหม่
+  if (!record || Date.now() - record.firstAttemptAt >= LOGIN_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, firstAttemptAt: Date.now() });
+  } else {
+    record.count += 1;
+  }
+}
+
+// ล้างสถิติล็อกอินผิดของ key นี้ทิ้ง เรียกตอนล็อกอินสำเร็จ (ไม่ต้องแบกรอบนับเก่าไว้ต่อ)
+function resetLoginAttempts(key) {
+  loginAttempts.delete(key);
+}
+
 // ---------- Auth API (ระบบล็อกอินเข้าหลังบ้าน) ----------
 
 // เมื่อมีการเรียก POST ที่ /api/auth/login (กรอกฟอร์มล็อกอินแล้วกดเข้าสู่ระบบ)
 app.post('/api/auth/login', (req, res) => {
   // ดึงชื่อผู้ใช้และรหัสผ่านที่กรอกมาจาก body
   const { username, password } = req.body;
+
+  // เช็คก่อนว่า ip+username คู่นี้โดนบล็อกจากการล็อกอินผิดติดต่อกันหลายครั้งอยู่หรือไม่ (กัน brute-force สุ่มรหัสผ่าน)
+  const loginKey = `${req.ip}:${username}`;
+  const blockSeconds = getLoginBlockSeconds(loginKey);
+  if (blockSeconds > 0) {
+    return res.status(429).json({
+      error: `เข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารออีก ${Math.ceil(blockSeconds / 60)} นาทีแล้วลองใหม่`,
+    });
+  }
+
   // เทียบกับชื่อผู้ใช้/รหัสผ่านที่ตั้งไว้ (จาก environment variable หรือค่า default)
   // หมายเหตุ: เทียบแบบข้อความตรง ๆ เพราะระบบนี้มีผู้ดูแลคนเดียว ไม่ได้เก็บผู้ใช้หลายคนในฐานข้อมูล
   if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    // ล็อกอินสำเร็จ ล้างสถิติล็อกอินผิดของคู่นี้ทิ้ง
+    resetLoginAttempts(loginKey);
     // ตั้งค่าสถานะล็อกอินไว้ใน session (ผูกกับ cookie ที่ส่งกลับไปให้เบราว์เซอร์อัตโนมัติ)
     req.session.isAdmin = true;
     // เก็บชื่อผู้ใช้ไว้ใน session ด้วย เผื่อต้องการแสดงผลภายหลัง
     req.session.username = username;
     return res.json({ success: true, username });
   }
+  // ล็อกอินผิด บันทึกสถิติไว้นับจำนวนครั้ง
+  recordFailedLogin(loginKey);
   // ถ้าชื่อผู้ใช้หรือรหัสผ่านผิด ให้ตอบกลับ 401 พร้อมข้อความทั่วไป (ไม่บอกว่าผิดที่ชื่อผู้ใช้หรือรหัสผ่าน เพื่อความปลอดภัย)
   res.status(401).json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
 });
@@ -258,12 +313,24 @@ app.post('/api/auth/customer/login', async (req, res) => {
   if (!phone || !password) {
     return res.status(400).json({ error: 'กรุณาระบุเบอร์โทรและรหัสผ่าน' });
   }
+
+  // เช็คก่อนว่า ip+เบอร์โทรคู่นี้โดนบล็อกจากการล็อกอินผิดติดต่อกันหลายครั้งอยู่หรือไม่ (กัน brute-force สุ่มรหัสผ่านบัญชีลูกค้า)
+  const loginKey = `${req.ip}:${phone}`;
+  const blockSeconds = getLoginBlockSeconds(loginKey);
+  if (blockSeconds > 0) {
+    return res.status(429).json({
+      error: `เข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารออีก ${Math.ceil(blockSeconds / 60)} นาทีแล้วลองใหม่`,
+    });
+  }
+
   const customers = await db.readCustomers();
   const customer = customers.find((c) => c.phone === phone);
   // ไม่บอกว่าผิดที่เบอร์โทรหรือรหัสผ่าน (ข้อความเดียวกันทั้งสองกรณี) เพื่อความปลอดภัย เหมือนระบบล็อกอินแอดมิน
   if (!customer || !verifyPassword(password, customer.password)) {
+    recordFailedLogin(loginKey);
     return res.status(401).json({ error: 'เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง' });
   }
+  resetLoginAttempts(loginKey);
   req.session.customerId = customer.id;
   req.session.customerName = customer.name;
   req.session.customerPhone = customer.phone;
