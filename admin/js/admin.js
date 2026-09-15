@@ -234,14 +234,17 @@ function openProductModal(product = null) {
   document.getElementById('productType').value = product?.type || '';
   // เติมค่าราคาลงในช่องกรอก (ใช้ ?? เพราะราคาอาจเป็น 0 ซึ่งถือเป็นค่าที่ถูกต้อง ไม่ใช่ค่าว่าง)
   document.getElementById('productPrice').value = product?.price ?? '';
-  // เติมค่าไซส์ทั้งหมด โดยแปลง array ของไซส์ให้เป็นข้อความคั่นด้วยจุลภาค เช่น "40,41,42"
-  document.getElementById('productSizes').value = product?.sizes?.join(',') || '';
+  // ติ๊กช่องไซส์ที่สินค้านี้มีอยู่ (เทียบค่าตัวเลขกันตรง ๆ เพราะ checkbox value เป็น string เสมอ ส่วน product.sizes เก็บเป็นตัวเลข)
+  const productSizes = product?.sizes || [];
+  document.querySelectorAll('#productSizeGrid input[type="checkbox"]').forEach((cb) => {
+    cb.checked = productSizes.includes(Number(cb.value));
+  });
   // เติมค่ารูปภาพเดิมทั้งหมดลงในตัวแปรกลาง (ถ้าเป็นการแก้ไขและมีรูปอยู่แล้ว) แล้ววาดแถบรูปตัวอย่างใหม่
   currentProductImages = product?.images ? [...product.images] : [];
   renderImagesPreview();
   // เติมค่ารายละเอียดสินค้าลงในช่องกรอก
   document.getElementById('productDescription').value = product?.description || '';
-  // เติมค่าสภาพ/ตำหนิสินค้าลงในช่องกรอก
+  // เติมค่าเกรดสภาพสินค้าลงในดรอปดาวน์
   document.getElementById('productCondition').value = product?.condition || '';
   // เพิ่ม class "open" ให้กับ modal เพื่อแสดงหน้าต่างขึ้นมา
   productModal.classList.add('open');
@@ -351,16 +354,20 @@ productForm.addEventListener('submit', async (e) => {
     // ประเภทรองเท้า เช่น รองเท้าแฟชั่น, รองเท้าวิ่ง
     type: document.getElementById('productType').value,
     price: Number(document.getElementById('productPrice').value),
-    // แปลงข้อความไซส์ (คั่นด้วยจุลภาค) เป็น array ของตัวเลข
-    sizes: document
-      .getElementById('productSizes')
-      .value.split(',') // แยกข้อความออกเป็นชิ้น ๆ ตามจุลภาค
-      .map((s) => Number(s.trim())) // ตัดช่องว่างแต่ละชิ้นแล้วแปลงเป็นตัวเลข
-      .filter((s) => !Number.isNaN(s)), // กรองเอาเฉพาะค่าที่แปลงเป็นตัวเลขได้จริง (ตัดค่าผิดพลาดทิ้ง)
+    // เก็บไซส์ที่ติ๊กเลือกไว้ทั้งหมดจากตารางเทียบไซส์สากล (EU/US/UK) เป็น array ของตัวเลข (ค่า checkbox เก็บเป็น EU size)
+    sizes: Array.from(document.querySelectorAll('#productSizeGrid input[type="checkbox"]:checked')).map((cb) =>
+      Number(cb.value)
+    ),
     images: currentProductImages,
     description: document.getElementById('productDescription').value.trim(),
-    condition: document.getElementById('productCondition').value.trim(),
+    condition: document.getElementById('productCondition').value,
   };
+
+  // ต้องติ๊กไซส์อย่างน้อย 1 ไซส์ (เดิมช่องพิมพ์มี required แต่ checkbox หลายช่องบังคับแบบนั้นไม่ได้ ต้องเช็คเองตรงนี้)
+  if (payload.sizes.length === 0) {
+    showToast('กรุณาเลือกไซส์อย่างน้อย 1 ไซส์');
+    return;
+  }
 
   // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างเรียก API
   try {

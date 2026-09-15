@@ -385,53 +385,99 @@
   <!-- Modal เพิ่ม/แก้ไขสินค้า -->
   <!-- หน้าต่างลอย (popup) ใช้ทั้งตอนเพิ่มสินค้าใหม่และแก้ไขสินค้าเดิม (สลับโหมดด้วย JavaScript) -->
   <div class="modal-overlay" id="productModal">
-    <div class="modal">
+    <div class="modal modal-wide">
       <!-- ปุ่มกากบาทปิด modal -->
       <span class="close-btn" id="closeProductModal">&times;</span>
       <!-- หัวข้อ modal จะถูกเปลี่ยนข้อความระหว่าง "เพิ่มสินค้าใหม่" กับ "แก้ไขสินค้า" โดย JS -->
       <h3 id="productModalTitle">เพิ่มสินค้าใหม่</h3>
-      <!-- ฟอร์มกรอกข้อมูลสินค้า เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขสินค้าผ่าน API -->
+      <!-- ฟอร์มกรอกข้อมูลสินค้า จัดกลุ่มเป็นหมวดด้วย .form-section-title ให้อ่านง่ายขึ้น (เดิมเรียงช่องกรอกยาวรวดเดียว 8 ช่องไม่มีจุดพัก) เมื่อกด submit จะถูก JS ดักไว้เพื่อส่งไปสร้าง/แก้ไขสินค้าผ่าน API -->
       <form id="productForm">
         <!-- ช่องซ่อน เก็บ id ของสินค้า (มีค่า = โหมดแก้ไข, ว่าง = โหมดเพิ่มใหม่) ผู้ใช้มองไม่เห็นช่องนี้ -->
         <input type="hidden" id="productId" />
-        <div class="field">
-          <label for="productName">ชื่อสินค้า</label>
-          <input type="text" id="productName" required />
+
+        <h4 class="form-section-title">ข้อมูลสินค้า</h4>
+        <div class="field-row">
+          <div class="field">
+            <label for="productName">ชื่อสินค้า</label>
+            <input type="text" id="productName" required />
+          </div>
+          <div class="field">
+            <label for="productBrand">แบรนด์</label>
+            <input type="text" id="productBrand" required />
+          </div>
         </div>
-        <div class="field">
-          <label for="productBrand">แบรนด์</label>
-          <input type="text" id="productBrand" required />
+        <div class="field-row">
+          <!-- รหัสรองเท้า: ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (เช่น รุ่นเดียวกันแต่คนละคู่ ใช้ A1, A2) เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน -->
+          <div class="field">
+            <label for="productCode">รหัสรองเท้า (เช่น A1, A2)</label>
+            <input type="text" id="productCode" required />
+          </div>
+          <!-- ประเภทรองเท้า: ใช้กรอง/ค้นหาทั้งฝั่งแอดมินและหน้าร้านค้า รายชื่อตัวเลือกต้องตรงกับ frontend/index.html เพื่อให้ตัวกรองหน้าร้านค้าใช้งานได้ครบ -->
+          <div class="field">
+            <label for="productType">ประเภทรองเท้า</label>
+            <select id="productType">
+              <option value="">-- ไม่ระบุประเภท --</option>
+              <option value="รองเท้าแฟชั่น">รองเท้าแฟชั่น</option>
+              <option value="รองเท้าวิ่ง">รองเท้าวิ่ง</option>
+              <option value="รองเท้าบาสเก็ตบอล">รองเท้าบาสเก็ตบอล</option>
+              <option value="รองเท้าฟุตบอล">รองเท้าฟุตบอล</option>
+              <option value="รองเท้าเทรนนิ่ง/ฟิตเนส">รองเท้าเทรนนิ่ง/ฟิตเนส</option>
+              <option value="รองเท้าสเก็ต">รองเท้าสเก็ต</option>
+              <option value="รองเท้าลำลอง">รองเท้าลำลอง</option>
+              <option value="รองเท้าทางการ">รองเท้าทางการ</option>
+              <option value="อื่นๆ">อื่นๆ</option>
+            </select>
+          </div>
         </div>
-        <!-- รหัสรองเท้า: ใช้แยกแต่ละคู่ออกจากกัน แม้จะเป็นรุ่นเดียวกัน (เช่น รุ่นเดียวกันแต่คนละคู่ ใช้ A1, A2) เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน -->
-        <div class="field">
-          <label for="productCode">รหัสรองเท้า (เช่น A1, A2)</label>
-          <input type="text" id="productCode" required />
+
+        <h4 class="form-section-title">ราคาและสภาพ</h4>
+        <div class="field-row">
+          <div class="field">
+            <label for="productPrice">ราคา (บาท)</label>
+            <!-- type="number" + min="0" บังคับให้กรอกเฉพาะตัวเลขที่ไม่ติดลบ -->
+            <input type="number" id="productPrice" min="0" required />
+          </div>
+          <!-- สภาพสินค้า: เปลี่ยนจากช่องพิมพ์อิสระเป็นเกรดมาตรฐาน ให้ทุกประกาศใช้เกณฑ์เดียวกัน เทียบกันได้ ไม่ต้องเดาว่า "สภาพดี" ของแต่ละคนหมายถึงแค่ไหน — รายละเอียดตำหนิเฉพาะจุด (เช่น รอยขีดข่วนตรงไหน) ยังใส่เพิ่มได้ในช่อง "รายละเอียดสินค้า" ด้านล่าง -->
+          <div class="field">
+            <label for="productCondition">เกรดสภาพสินค้า</label>
+            <select id="productCondition">
+              <option value="">-- ยังไม่ระบุเกรด --</option>
+              <option value="สภาพนางฟ้า (98-100%)">สภาพนางฟ้า (98-100%)</option>
+              <option value="สภาพดีมาก (90-97%)">สภาพดีมาก (90-97%)</option>
+              <option value="สภาพดี ตามการใช้งาน (80-89%)">สภาพดี ตามการใช้งาน (80-89%)</option>
+              <option value="สภาพพอใช้ มีตำหนิให้เห็น (60-79%)">สภาพพอใช้ มีตำหนิให้เห็น (60-79%)</option>
+              <option value="สภาพแย่ ต้องซ่อม (ต่ำกว่า 60%)">สภาพแย่ ต้องซ่อม (ต่ำกว่า 60%)</option>
+            </select>
+          </div>
         </div>
-        <!-- ประเภทรองเท้า: ใช้กรอง/ค้นหาทั้งฝั่งแอดมินและหน้าร้านค้า รายชื่อตัวเลือกต้องตรงกับ frontend/index.html เพื่อให้ตัวกรองหน้าร้านค้าใช้งานได้ครบ -->
+
+        <!-- ไซส์: เปลี่ยนจากช่องพิมพ์ตัวเลขคั่นจุลภาคเอง (พิมพ์ผิด/ซ้ำง่าย) เป็นตัวเลือกไซส์สากลสำเร็จรูป เทียบ EU/US/UK ให้พร้อมกัน เลือกได้หลายไซส์ถ้ารุ่นเดียวกันมีของมากกว่า 1 คู่ -->
+        <h4 class="form-section-title">ไซส์ที่มี</h4>
         <div class="field">
-          <label for="productType">ประเภทรองเท้า</label>
-          <select id="productType">
-            <option value="">-- ไม่ระบุประเภท --</option>
-            <option value="รองเท้าแฟชั่น">รองเท้าแฟชั่น</option>
-            <option value="รองเท้าวิ่ง">รองเท้าวิ่ง</option>
-            <option value="รองเท้าบาสเก็ตบอล">รองเท้าบาสเก็ตบอล</option>
-            <option value="รองเท้าฟุตบอล">รองเท้าฟุตบอล</option>
-            <option value="รองเท้าเทรนนิ่ง/ฟิตเนส">รองเท้าเทรนนิ่ง/ฟิตเนส</option>
-            <option value="รองเท้าสเก็ต">รองเท้าสเก็ต</option>
-            <option value="รองเท้าลำลอง">รองเท้าลำลอง</option>
-            <option value="รองเท้าทางการ">รองเท้าทางการ</option>
-            <option value="อื่นๆ">อื่นๆ</option>
-          </select>
+          <div class="size-chip-grid" id="productSizeGrid">
+            <label class="size-chip"><input type="checkbox" value="36" /><span>EU 36 · US 4 · UK 3.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="36.5" /><span>EU 36.5 · US 4.5 · UK 4</span></label>
+            <label class="size-chip"><input type="checkbox" value="37" /><span>EU 37 · US 5 · UK 4.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="37.5" /><span>EU 37.5 · US 5.5 · UK 5</span></label>
+            <label class="size-chip"><input type="checkbox" value="38" /><span>EU 38 · US 6 · UK 5.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="38.5" /><span>EU 38.5 · US 6.5 · UK 6</span></label>
+            <label class="size-chip"><input type="checkbox" value="39" /><span>EU 39 · US 7 · UK 6</span></label>
+            <label class="size-chip"><input type="checkbox" value="40" /><span>EU 40 · US 7.5 · UK 6.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="40.5" /><span>EU 40.5 · US 8 · UK 7</span></label>
+            <label class="size-chip"><input type="checkbox" value="41" /><span>EU 41 · US 8.5 · UK 7.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="42" /><span>EU 42 · US 9 · UK 8</span></label>
+            <label class="size-chip"><input type="checkbox" value="42.5" /><span>EU 42.5 · US 9.5 · UK 8.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="43" /><span>EU 43 · US 10 · UK 9</span></label>
+            <label class="size-chip"><input type="checkbox" value="44" /><span>EU 44 · US 10.5 · UK 9.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="44.5" /><span>EU 44.5 · US 11 · UK 10</span></label>
+            <label class="size-chip"><input type="checkbox" value="45" /><span>EU 45 · US 11.5 · UK 10.5</span></label>
+            <label class="size-chip"><input type="checkbox" value="46" /><span>EU 46 · US 12 · UK 11</span></label>
+            <label class="size-chip"><input type="checkbox" value="47" /><span>EU 47 · US 13 · UK 12</span></label>
+          </div>
+          <p class="field-hint">* ตารางเทียบไซส์มาตรฐานทั่วไป อาจคลาดเคลื่อนเล็กน้อยตามแต่ละแบรนด์/รุ่น</p>
         </div>
-        <div class="field">
-          <label for="productPrice">ราคา (บาท)</label>
-          <!-- type="number" + min="0" บังคับให้กรอกเฉพาะตัวเลขที่ไม่ติดลบ -->
-          <input type="number" id="productPrice" min="0" required />
-        </div>
-        <div class="field">
-          <label for="productSizes">ไซส์ (คั่นด้วยจุลภาคถ้ามีมากกว่า 1 ไซส์ เช่น 40,41,42)</label>
-          <input type="text" id="productSizes" required />
-        </div>
+
+        <h4 class="form-section-title">รูปภาพและรายละเอียด</h4>
         <div class="field">
           <label for="productImageFile">รูปภาพสินค้า (เลือกได้หลายรูป ถ่ายหลายมุมให้เห็นสภาพจริง)</label>
           <!-- ช่องเลือกไฟล์รูปภาพจากเครื่อง accept="image/*" กรองให้เลือกได้เฉพาะไฟล์รูปภาพ multiple อนุญาตให้เลือกได้หลายไฟล์พร้อมกัน -->
@@ -440,14 +486,10 @@
           <div id="productImagesPreview" class="images-preview"></div>
         </div>
         <div class="field">
-          <label for="productDescription">รายละเอียดสินค้า</label>
-          <input type="text" id="productDescription" />
+          <label for="productDescription">รายละเอียดสินค้า / ตำหนิเฉพาะจุด (ถ้ามี)</label>
+          <textarea id="productDescription" rows="3" placeholder="เช่น มีรอยขีดข่วนเล็กน้อยที่ส้นรองเท้าด้านขวา"></textarea>
         </div>
-        <!-- สภาพ/ตำหนิสินค้า: แยกจากรายละเอียดสินค้าด้านบน เพราะสินค้ามือสองแต่ละคู่มีสภาพไม่เหมือนกัน ต้องระบุให้ลูกค้าเห็นชัดก่อนตัดสินใจซื้อ -->
-        <div class="field">
-          <label for="productCondition">สภาพ/ตำหนิสินค้า (ถ้ามี)</label>
-          <input type="text" id="productCondition" placeholder="เช่น มีรอยขีดข่วนเล็กน้อยที่ส้นรองเท้าด้านขวา" />
-        </div>
+
         <!-- ปุ่ม submit ฟอร์ม -->
         <button type="submit" class="btn btn-block">บันทึกสินค้า</button>
       </form>

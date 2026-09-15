@@ -537,9 +537,10 @@ td img {
   color: var(--text-dim);  /* สีจาง เพราะเป็นป้ายกำกับ */
 }
 
-/* ช่องกรอกข้อมูล (input) และดรอปดาวน์ (select) ภายในฟอร์ม ใช้สไตล์ร่วมกัน */
+/* ช่องกรอกข้อมูล (input), ดรอปดาวน์ (select), และช่องข้อความหลายบรรทัด (textarea) ภายในฟอร์ม ใช้สไตล์ร่วมกัน */
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;                        /* กว้างเต็มพื้นที่ของ .field */
   background: var(--bg);              /* สีพื้นหลังเข้มกว่า card เล็กน้อย */
   border: 1px solid var(--border);    /* เส้นขอบช่องกรอก */
@@ -547,6 +548,74 @@ td img {
   padding: 10px 12px;                  /* ระยะห่างภายในช่องกรอก */
   border-radius: 8px;                  /* มุมโค้ง */
   font-size: 0.95rem;                  /* ขนาดตัวอักษร */
+}
+/* textarea เพิ่มเติม: ใช้ฟอนต์เดียวกับหน้าเว็บ (ไม่งั้นบางเบราว์เซอร์ใช้ฟอนต์ monospace ให้อัตโนมัติ) และให้ลากขยายได้แค่แนวตั้ง ไม่ทำให้ layout ฟอร์มพังตอนลากขยายกว้าง */
+.field textarea {
+  font-family: inherit;
+  resize: vertical;
+  min-height: 76px;
+}
+
+/* modal ที่ต้องการความกว้างมากกว่าปกติ (เช่นฟอร์มสินค้าที่มีตารางเทียบไซส์) ใช้คู่กับ class "modal" เดิม */
+.modal.modal-wide {
+  max-width: 640px;
+}
+
+/* หัวข้อคั่นหมวดภายในฟอร์มยาว ๆ (เช่นฟอร์มสินค้า) ช่วยแบ่งช่องกรอกที่เกี่ยวข้องกันเป็นกลุ่ม อ่าน/กรอกตามลำดับง่ายขึ้น แทนการเรียงช่องกรอกรวดเดียวยาว ๆ */
+.form-section-title {
+  margin: 24px 0 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--accent);
+}
+/* หัวข้อหมวดแรกสุดไม่ต้องมีเส้นคั่น/ระยะห่างด้านบน เพราะติดกับช่องซ่อน productId อยู่แล้ว ไม่มีอะไรให้คั่น */
+.form-section-title:first-of-type {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* ตารางเลือกไซส์รองเท้าแบบ chip (เทียบ EU/US/UK พร้อมกันในตัวเลือกเดียว) แทนช่องพิมพ์ตัวเลขคั่นจุลภาคแบบเดิม */
+.size-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* แต่ละ chip คือ label ครอบ checkbox ไว้ข้างใน (กดที่ไหนในกล่องก็ติ๊กได้ ไม่ต้องเล็งกดแค่ตัว checkbox เล็ก ๆ) */
+.size-chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  user-select: none;
+}
+.size-chip:hover {
+  border-color: var(--accent);
+}
+/* สถานะที่ถูกเลือกแล้ว (checkbox ข้างในถูกติ๊ก) ใช้ :has() เพื่อให้ทั้งกล่อง label เปลี่ยนสีตามสถานะ checkbox ข้างในโดยไม่ต้องพึ่ง JavaScript เพิ่ม */
+.size-chip:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(255, 106, 0, 0.12);
+  color: var(--accent);
+}
+/* ซ่อนกล่อง checkbox เริ่มต้นของเบราว์เซอร์ทิ้ง เพราะทั้ง label ทำหน้าที่เป็นปุ่มกดแทนอยู่แล้ว (สไตล์เดียวกับ .size-option ฝั่งหน้าร้านค้า) */
+.size-chip input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
 /* แถบรูปตัวอย่างสินค้า (หลายรูป) ในฟอร์มเพิ่ม/แก้ไขสินค้า */
