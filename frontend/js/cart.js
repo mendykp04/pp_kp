@@ -15,8 +15,10 @@ const slipUploadField = document.getElementById('slipUploadField');
 
 // ตัวแปรเก็บข้อมูลบัญชีธนาคารที่โหลดมาจาก backend ไว้ (โหลดครั้งเดียวพอ ไม่ต้องยิง API ซ้ำทุกครั้งที่สลับตัวเลือก)
 let cachedPaymentInfo = null;
-// ตัวแปรเก็บ URL ของสลิปที่อัปโหลดสำเร็จแล้ว (ว่างไว้ถ้ายังไม่ได้แนบ ยังสั่งซื้อได้ตามปกติ แนบทีหลังผ่านหน้า "ตรวจสอบคำสั่งซื้อ" ก็ได้)
+// ตัวแปรเก็บ URL ของสลิปที่อัปโหลดสำเร็จแล้ว (ว่างไว้ถ้ายังไม่ได้แนบ ยังสั่งซื้อได้ตามปกติ แนบทีหลังผ่านหน้า "บัญชีของฉัน" หลังล็อกอินก็ได้)
 let uploadedSlipUrl = '';
+// ตัวแปรเก็บสถานะล็อกอินของลูกค้าปัจจุบัน (เช็คตอนโหลดหน้าจาก /api/auth/customer/me ด้านล่างสุดของไฟล์นี้) ใช้ตัดสินใจว่าหลังสั่งซื้อสำเร็จ ปุ่ม "ตรวจสอบสถานะ" ควรพาไปหน้าไหน
+let isCustomerLoggedIn = false;
 
 // ฟังก์ชันแสดง/ซ่อนกล่องรายละเอียดการชำระเงิน ให้ตรงกับตัวเลือกที่ผู้ใช้เลือกอยู่ตอนนี้
 async function updatePaymentMethodDisplay() {
@@ -241,8 +243,15 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     successMessage.style.display = 'block';
     // แสดงหมายเลขคำสั่งซื้อ (id) ที่ backend ส่งกลับมา ให้ผู้ใช้เก็บไว้อ้างอิง
     document.getElementById('orderRef').textContent = `หมายเลขคำสั่งซื้อ: ${order.id}`;
-    // เติมหมายเลขคำสั่งซื้อลงในลิงก์ "ตรวจสอบสถานะ" ให้อัตโนมัติ กดแล้วไปหน้า track.html พร้อมกรอกหมายเลขไว้ให้เลย (เหลือแค่กรอกเบอร์โทรยืนยัน)
-    document.getElementById('trackOrderLink').href = `track.html?orderId=${encodeURIComponent(order.id)}`;
+    // ปุ่ม "ตรวจสอบสถานะ": ถ้าล็อกอินอยู่แล้ว พาไปหน้า "บัญชีของฉัน" ดูออเดอร์นี้ได้เลย ถ้ายังไม่ได้ล็อกอิน พาไปหน้าเข้าสู่ระบบก่อน (ระบบจับคู่ประวัติออเดอร์ด้วยเบอร์โทรอัตโนมัติ ไม่ต้องจำหมายเลขคำสั่งซื้อเอง)
+    const trackOrderLink = document.getElementById('trackOrderLink');
+    if (isCustomerLoggedIn) {
+      trackOrderLink.href = 'account.html';
+      trackOrderLink.textContent = 'ดูสถานะที่บัญชีของฉัน';
+    } else {
+      trackOrderLink.href = 'login.html';
+      trackOrderLink.textContent = 'เข้าสู่ระบบเพื่อตรวจสอบสถานะ';
+    }
     // ถ้าลูกค้าเลือกวิธีชำระเงินที่ต้องโอนล่วงหน้า (ไม่ใช่เก็บเงินปลายทาง) ให้ย้ำเตือนอีกครั้งว่ายังต้องโอนเงินตามที่แจ้งไว้
     const paymentReminder = document.getElementById('paymentReminder');
     if (order.paymentMethod !== 'cod') {
@@ -268,6 +277,7 @@ renderCart();
     const res = await fetch(`${API_BASE}/auth/customer/me`);
     const me = await res.json();
     if (me.loggedIn) {
+      isCustomerLoggedIn = true;
       document.getElementById('customerName').value = me.name;
       document.getElementById('phone').value = me.phone;
       if (me.address) document.getElementById('address').value = me.address;
