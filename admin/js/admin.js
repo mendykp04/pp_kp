@@ -35,6 +35,34 @@ let customers = [];
 // ตัวแปรเก็บรายการ Flash Sale ทั้งหมดที่โหลดมาจาก API
 let flashSales = [];
 
+// ---------- Pagination ----------
+// แบ่งหน้าตารางที่ข้อมูลอาจมีเยอะ (สินค้า/คำสั่งซื้อ/ลูกค้า) ฝั่ง client เพราะข้อมูลทั้งหมดถูกโหลดมาไว้ในหน่วยความจำอยู่แล้ว (ไม่ต้องยิง API ขอทีละหน้าเพิ่ม)
+const PAGE_SIZE = 20;
+// หน้าปัจจุบันของแต่ละตาราง แยกกันคนละตัวแปร เพราะแต่ละแท็บเปิด/ปิดอิสระจากกัน
+let productPage = 1;
+let orderPage = 1;
+let customerPage = 1;
+
+// ฟังก์ชันวาดแถบเปลี่ยนหน้า (ปุ่มก่อนหน้า/ถัดไป + "หน้า X จาก Y") ใช้ร่วมกันได้กับทุกตารางที่แบ่งหน้า
+// totalItems คือจำนวนรายการทั้งหมดหลังกรอง/ค้นหาแล้ว (ไม่ใช่จำนวนที่แสดงในหน้านี้) ส่วน onChange จะถูกเรียกพร้อมเลขหน้าใหม่ตอนกดปุ่ม
+function renderPagination(containerId, totalItems, currentPage, onChange) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  // มีข้อมูลพอแค่หน้าเดียว (หรือไม่มีเลย) ไม่ต้องโชว์แถบเปลี่ยนหน้าให้รกจอ
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = `
+    <button type="button" class="btn-icon" data-page="prev" ${currentPage <= 1 ? 'disabled' : ''}>← ก่อนหน้า</button>
+    <span class="pagination-status">หน้า ${currentPage} จาก ${totalPages}</span>
+    <button type="button" class="btn-icon" data-page="next" ${currentPage >= totalPages ? 'disabled' : ''}>ถัดไป →</button>
+  `;
+  container.querySelector('[data-page="prev"]').addEventListener('click', () => onChange(currentPage - 1));
+  container.querySelector('[data-page="next"]').addEventListener('click', () => onChange(currentPage + 1));
+}
+
 // อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการสินค้า
 const productTableBody = document.getElementById('productTableBody');
 // อ้างอิง element ตาราง (tbody) ที่ใช้แสดงรายการคำสั่งซื้อ
@@ -152,6 +180,8 @@ async function loadProducts() {
   const res = await fetch(`${API_BASE}/products`);
   // แปลง response เป็น array ของสินค้า แล้วเก็บลงตัวแปรกลาง
   products = await res.json();
+  // กลับไปหน้า 1 เสมอตอนโหลดข้อมูลใหม่ กันค้างอยู่หน้าที่อาจไม่มีอยู่แล้ว (เช่นลบสินค้าจนรายการสั้นลง)
+  productPage = 1;
   // วาดตารางสินค้าใหม่ตามข้อมูลที่เพิ่งโหลดมา
   renderProductTable();
 }
@@ -169,7 +199,7 @@ function getFilteredProducts() {
   );
 }
 
-// ฟังก์ชันวาด (render) ตารางแสดงรายการสินค้า (ตามผลการค้นหาปัจจุบัน)
+// ฟังก์ชันวาด (render) ตารางแสดงรายการสินค้า (ตามผลการค้นหาปัจจุบัน) — แบ่งหน้าละ PAGE_SIZE รายการ กันตารางยาวเป็นร้อยแถวเลื่อนหาลำบากเมื่อสินค้าเยอะขึ้น
 function renderProductTable() {
   const filtered = getFilteredProducts();
   // ถ้าไม่มีสินค้าที่ตรงกับเงื่อนไขเลย
@@ -178,10 +208,13 @@ function renderProductTable() {
     productTableBody.innerHTML = `<tr><td colspan="9">${
       products.length === 0 ? 'ยังไม่มีสินค้า' : 'ไม่พบสินค้าที่ค้นหา'
     }</td></tr>`;
+    renderPagination('productPagination', 0, 1, () => {});
     return; // ออกจากฟังก์ชันทันที
   }
-  // วนสร้างแถวตาราง (tr) สำหรับสินค้าแต่ละชิ้น แล้วรวมเป็นข้อความเดียว
-  productTableBody.innerHTML = filtered
+  // ตัดเอาเฉพาะรายการของหน้าปัจจุบัน (productPage) มาแสดง ไม่ใช่ทั้งหมดที่กรองได้
+  const pageItems = filtered.slice((productPage - 1) * PAGE_SIZE, productPage * PAGE_SIZE);
+  // วนสร้างแถวตาราง (tr) สำหรับสินค้าแต่ละชิ้นในหน้านี้ แล้วรวมเป็นข้อความเดียว
+  productTableBody.innerHTML = pageItems
     .map(
       (p) => `
     <tr>
@@ -212,6 +245,12 @@ function renderProductTable() {
       // ถ้าเป็นปุ่ม "ลบ" ให้เรียกฟังก์ชันลบสินค้า
       if (btn.dataset.action === 'delete') deleteProduct(product);
     });
+  });
+
+  // วาดแถบเปลี่ยนหน้าตามจำนวนรายการที่กรองได้ทั้งหมด (ไม่ใช่แค่ในหน้านี้)
+  renderPagination('productPagination', filtered.length, productPage, (newPage) => {
+    productPage = newPage;
+    renderProductTable();
   });
 }
 
@@ -324,7 +363,11 @@ document.getElementById('productImageFile').addEventListener('change', async (e)
 });
 
 // ผูก event ให้ค้นหาแบบ real-time ทุกครั้งที่ผู้ใช้พิมพ์ในช่องค้นหาสินค้า
-productSearchInput.addEventListener('input', renderProductTable);
+productSearchInput.addEventListener('input', () => {
+  // ค้นหาใหม่ทุกครั้งให้กลับไปหน้า 1 เสมอ (ผลค้นหาชุดใหม่อาจมีจำนวนหน้าน้อยกว่าที่ค้างอยู่)
+  productPage = 1;
+  renderProductTable();
+});
 
 // ผูก event ให้กับปุ่ม "+ เพิ่มสินค้าใหม่" เมื่อคลิกให้เปิด modal แบบไม่ส่งสินค้าเดิม (โหมดเพิ่มใหม่)
 document.getElementById('addProductBtn').addEventListener('click', () => openProductModal());
@@ -424,6 +467,8 @@ async function loadOrders() {
   const res = await fetch(`${API_BASE}/orders`);
   // แปลง response เป็น array ของคำสั่งซื้อ แล้วเก็บลงตัวแปรกลาง
   orders = await res.json();
+  // กลับไปหน้า 1 เสมอตอนโหลดข้อมูลใหม่ กันค้างอยู่หน้าที่อาจไม่มีอยู่แล้ว
+  orderPage = 1;
   // วาดตารางคำสั่งซื้อใหม่ตามข้อมูลที่เพิ่งโหลดมา
   renderOrderTable();
 }
@@ -464,15 +509,19 @@ const PAYMENT_STATUS_CLASS_MAP = {
   ชำระเงินแล้ว: 'payment-status-paid',
 };
 
+// แบ่งหน้าตารางคำสั่งซื้อละ PAGE_SIZE รายการ (orders ถูกเรียงใหม่ไปเก่าโดย backend มาแล้ว)
 function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
     // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 11 คอลัมน์)
     orderTableBody.innerHTML = '<tr><td colspan="11">ยังไม่มีคำสั่งซื้อ</td></tr>';
+    renderPagination('orderPagination', 0, 1, () => {});
     return; // ออกจากฟังก์ชันทันที
   }
-  // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการ แล้วรวมเป็นข้อความเดียว
-  orderTableBody.innerHTML = orders
+  // ตัดเอาเฉพาะรายการของหน้าปัจจุบัน (orderPage) มาแสดง
+  const pageItems = orders.slice((orderPage - 1) * PAGE_SIZE, orderPage * PAGE_SIZE);
+  // วนสร้างแถวตาราง (tr) สำหรับคำสั่งซื้อแต่ละรายการในหน้านี้ แล้วรวมเป็นข้อความเดียว
+  orderTableBody.innerHTML = pageItems
     .map((o) => {
       // รายการสถานะที่เลือกได้ตามปกติ (ชื่อ label ล้วน ๆ)
       const statusLabels = ORDER_STATUS_OPTIONS.map((s) => s.label);
@@ -588,6 +637,12 @@ function renderOrderTable() {
         loadOrders();
       }
     });
+  });
+
+  // วาดแถบเปลี่ยนหน้าตามจำนวนคำสั่งซื้อทั้งหมด (ไม่ใช่แค่ในหน้านี้)
+  renderPagination('orderPagination', orders.length, orderPage, (newPage) => {
+    orderPage = newPage;
+    renderOrderTable();
   });
 }
 
@@ -876,20 +931,25 @@ async function loadCustomers(query = '') {
   const res = await fetch(url);
   // แปลง response เป็น array ของลูกค้า แล้วเก็บลงตัวแปรกลาง
   customers = await res.json();
+  // กลับไปหน้า 1 เสมอตอนโหลด/ค้นหาใหม่ กันค้างอยู่หน้าที่ผลลัพธ์ชุดใหม่อาจไม่มี
+  customerPage = 1;
   // วาดตารางลูกค้าใหม่ตามข้อมูลที่เพิ่งโหลดมา
   renderCustomerTable();
 }
 
-// ฟังก์ชันวาด (render) ตารางแสดงรายการลูกค้า พร้อมสรุปรองเท้าที่เคยสั่งของแต่ละคน
+// ฟังก์ชันวาด (render) ตารางแสดงรายการลูกค้า พร้อมสรุปรองเท้าที่เคยสั่งของแต่ละคน — แบ่งหน้าละ PAGE_SIZE รายการ
 function renderCustomerTable() {
   // ถ้าไม่มีลูกค้าที่ตรงกับเงื่อนไข (หรือยังไม่มีลูกค้าเลย)
   if (customers.length === 0) {
     // แสดงข้อความแจ้งว่าไม่พบข้อมูล (ครอบคลุม 5 คอลัมน์)
     customerTableBody.innerHTML = '<tr><td colspan="5">ไม่พบข้อมูลลูกค้า</td></tr>';
+    renderPagination('customerPagination', 0, 1, () => {});
     return; // ออกจากฟังก์ชันทันที
   }
-  // วนสร้างแถวตาราง (tr) สำหรับลูกค้าแต่ละคน แล้วรวมเป็นข้อความเดียว
-  customerTableBody.innerHTML = customers
+  // ตัดเอาเฉพาะรายการของหน้าปัจจุบัน (customerPage) มาแสดง
+  const pageItems = customers.slice((customerPage - 1) * PAGE_SIZE, customerPage * PAGE_SIZE);
+  // วนสร้างแถวตาราง (tr) สำหรับลูกค้าแต่ละคนในหน้านี้ แล้วรวมเป็นข้อความเดียว
+  customerTableBody.innerHTML = pageItems
     .map((c) => {
       // รวมรายการรองเท้าจากทุกคำสั่งซื้อของลูกค้าคนนี้ให้เป็น array เดียว (แต่ละคำสั่งซื้ออาจมีหลายคู่)
       const allItems = c.orders.flatMap((o) => o.items);
@@ -923,6 +983,12 @@ function renderCustomerTable() {
       // ถ้าเป็นปุ่ม "ลบ" ให้เรียกฟังก์ชันลบลูกค้า
       if (btn.dataset.action === 'delete') deleteCustomer(customer);
     });
+  });
+
+  // วาดแถบเปลี่ยนหน้าตามจำนวนลูกค้าทั้งหมด (ไม่ใช่แค่ในหน้านี้)
+  renderPagination('customerPagination', customers.length, customerPage, (newPage) => {
+    customerPage = newPage;
+    renderCustomerTable();
   });
 }
 

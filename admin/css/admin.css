@@ -272,6 +272,24 @@ h1, h2, h3, .brand, .btn {
   box-shadow: var(--shadow-sm);      /* เงาบางให้ตารางแยกจากพื้นหลังชัดเจนขึ้น */
 }
 
+/* แถบเปลี่ยนหน้าตาราง (ก่อนหน้า/ถัดไป + "หน้า X จาก Y") อยู่ใต้ตารางที่ข้อมูลอาจมีหลายสิบ/ร้อยแถว (สินค้า/คำสั่งซื้อ/ลูกค้า) — ว่างเปล่าอัตโนมัติถ้ามีแค่หน้าเดียว (ดู renderPagination ใน admin.js) */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.pagination-status {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.pagination .btn-icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ตัวตารางเอง */
 table {
   width: 100%;             /* กว้างเต็มพื้นที่กล่อง table-wrap */
