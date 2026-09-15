@@ -786,6 +786,91 @@ img {
   color: var(--text-dim);  /* สีจาง เพราะเป็นข้อความแจ้งเตือนทั่วไป ไม่ใช่เนื้อหาหลัก */
 }
 
+/* แถบสร้างความมั่นใจใต้ hero (จุดเด่นจริงของร้าน ไม่ใช่คำโฆษณาลอย ๆ) — ตัดสีพื้นหลังไล่สีของ hero มาเป็นแถบเรียบ ๆ แยกส่วนชัดเจน */
+.trust-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 36px;
+  padding: 22px 32px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+/* แต่ละจุดเด่นในแถบความมั่นใจ (ไอคอน + ข้อความสั้น ๆ) */
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.trust-item span {
+  font-size: 1.1rem;
+}
+
+/* ท้ายเว็บไซต์ (footer) — แสดงข้อมูลร้าน + เมนูลัด + ช่องทางติดต่อจริง ให้ลูกค้ารู้ว่ามีร้านจริงติดต่อได้ ก่อนตัดสินใจโอนเงิน */
+.site-footer {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  margin-top: 48px;
+  padding: 44px 32px 0;
+}
+
+/* กริด 3 คอลัมน์ของ footer (แบรนด์ / เมนู / ติดต่อ) ห่อบรรทัดได้เองบนจอแคบ */
+.footer-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px 48px;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-bottom: 32px;
+}
+.footer-col {
+  flex: 1;
+  min-width: 200px;
+}
+.footer-col h4 {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+/* ลิงก์/ข้อความแต่ละบรรทัดในคอลัมน์ เรียงเป็นแนวตั้ง */
+.footer-col a,
+.footer-col .footer-static {
+  display: block;
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+  transition: color 0.2s;
+}
+.footer-col a:hover {
+  color: var(--accent);
+}
+/* คอลัมน์แรก (โลโก้ + คำโปรยร้าน) เว้นระยะระหว่างโลโก้กับคำโปรยมากกว่าคอลัมน์อื่นเล็กน้อย */
+.footer-brand p {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 12px 0 0;
+  max-width: 320px;
+}
+
+/* แถบล่างสุดของ footer (ลิขสิทธิ์) แยกด้วยเส้นคั่นจากกริดด้านบน */
+.footer-bottom {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
 /* กล่องข้อความแจ้งเตือนลอย (toast) มุมล่างของจอ */
 .toast {
   position: fixed;                                       /* ยึดตำแหน่งกับหน้าจอ ไม่เลื่อนตามการ scroll */
@@ -826,5 +911,14 @@ img {
   /* ลดระยะห่างภายใน section บนจอเล็ก เช่นกัน */
   .section {
     padding: 32px 18px;
+  }
+  /* ลดระยะห่างภายในแถบความมั่นใจและ footer บนจอเล็ก และจัดจุดเด่นในแถบความมั่นใจให้ชิดซ้ายแทนกึ่งกลาง อ่านง่ายกว่าตอนห่อบรรทัดหลายแถว */
+  .trust-bar {
+    padding: 18px 20px;
+    justify-content: flex-start;
+    gap: 12px 24px;
+  }
+  .site-footer {
+    padding: 36px 20px 0;
   }
 }

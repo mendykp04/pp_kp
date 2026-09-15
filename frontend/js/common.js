@@ -201,3 +201,10 @@ async function updateAuthNav() {
 document.addEventListener('DOMContentLoaded', updateCartBadge);
 // เรียกอัปเดตแถบเมนูให้ตรงกับสถานะล็อกอินทันทีที่เปิดหน้าเว็บเช่นกัน
 document.addEventListener('DOMContentLoaded', updateAuthNav);
+
+// เติมปีปัจจุบันลงในข้อความลิขสิทธิ์ท้ายเว็บ (.footer-year ในทุกหน้า) อัตโนมัติ กันเลขปีค้างเป็นปีเก่าเมื่อเวลาผ่านไป
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.footer-year').forEach((el) => {
+    el.textContent = new Date().getFullYear();
+  });
+});
