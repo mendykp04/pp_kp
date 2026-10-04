@@ -278,6 +278,8 @@ function openProductModal(product = null) {
   document.querySelectorAll('#productSizeGrid input[type="checkbox"]').forEach((cb) => {
     cb.checked = productSizes.includes(Number(cb.value));
   });
+  // เติมค่าความยาวพื้นใน (ซม.) ลงในช่องกรอก (ว่างไว้ถ้าไม่เคยระบุ)
+  document.getElementById('productInsoleCm').value = product?.insoleCm ?? '';
   // เติมค่ารูปภาพเดิมทั้งหมดลงในตัวแปรกลาง (ถ้าเป็นการแก้ไขและมีรูปอยู่แล้ว) แล้ววาดแถบรูปตัวอย่างใหม่
   currentProductImages = product?.images ? [...product.images] : [];
   renderImagesPreview();
@@ -401,6 +403,10 @@ productForm.addEventListener('submit', async (e) => {
     sizes: Array.from(document.querySelectorAll('#productSizeGrid input[type="checkbox"]:checked')).map((cb) =>
       Number(cb.value)
     ),
+    // ความยาวพื้นใน (ซม.) ไม่บังคับ — ถ้าเว้นว่างส่งเป็น null (ล้างค่าเดิมได้ตอนแก้ไข)
+    insoleCm: document.getElementById('productInsoleCm').value
+      ? Number(document.getElementById('productInsoleCm').value)
+      : null,
     images: currentProductImages,
     description: document.getElementById('productDescription').value.trim(),
     condition: document.getElementById('productCondition').value,

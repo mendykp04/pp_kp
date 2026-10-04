@@ -19,6 +19,10 @@ const brandFilter = document.getElementById('brandFilter');
 const typeFilter = document.getElementById('typeFilter');
 // อ้างอิง element dropdown เลือกกรองตามช่วงราคา (เช่น 0-5,000 / 5,001-10,000)
 const priceRangeFilter = document.getElementById('priceRangeFilter');
+// อ้างอิง element dropdown เลือกกรองตามไซส์ (EU)
+const sizeFilter = document.getElementById('sizeFilter');
+// อ้างอิง element dropdown เลือกวิธีเรียงลำดับสินค้า
+const sortSelect = document.getElementById('sortSelect');
 // อ้างอิง element กล่อง modal สำหรับเลือกไซส์
 const sizeModal = document.getElementById('sizeModal');
 // อ้างอิง element ที่แสดงปุ่มไซส์ทั้งหมดภายใน modal
@@ -40,6 +44,8 @@ async function loadProducts() {
     allProducts = await res.json();
     // เติมตัวเลือกแบรนด์ทั้งหมดลงใน dropdown filter ตามสินค้าที่โหลดมาได้
     populateBrandFilter();
+    // เติมตัวเลือกไซส์ที่มีของจริงในร้านตอนนี้ลงใน dropdown filter ไซส์
+    populateSizeFilter();
     // แสดงผลสินค้าทั้งหมดลงในหน้าเว็บ
     renderProducts();
   } catch (err) {
@@ -63,6 +69,26 @@ function populateBrandFilter() {
     // เพิ่ม option นี้เข้าไปในตัวเลือกของ dropdown brandFilter
     brandFilter.appendChild(opt);
   });
+}
+
+// ฟังก์ชันเติมตัวเลือกไซส์ (EU) ลงใน dropdown filter ไซส์ — เอาเฉพาะไซส์ของสินค้าที่ยังไม่ขาย (stock > 0) เรียงจากเล็กไปใหญ่
+// จะได้ไม่มีตัวเลือกไซส์ที่กดแล้วไม่เจอสินค้าเลย
+function populateSizeFilter() {
+  const sizes = [
+    ...new Set(allProducts.filter((p) => p.stock > 0).flatMap((p) => p.sizes || [])),
+  ].sort((a, b) => a - b);
+  sizes.forEach((size) => {
+    const opt = document.createElement('option');
+    opt.value = size;
+    opt.textContent = `ไซส์ ${size}`;
+    sizeFilter.appendChild(opt);
+  });
+}
+
+// ฟังก์ชันคืนราคาที่ลูกค้าจ่ายจริงตอนนี้ของสินค้า 1 ชิ้น (ราคา Flash Sale ถ้ากำลังลดอยู่ ไม่งั้นราคาปกติ) ใช้ตอนเรียงลำดับตามราคา
+function getEffectivePrice(product) {
+  const sale = activeFlashSales.find((s) => s.productId === product.id);
+  return sale ? sale.salePrice : product.price;
 }
 
 // ฟังก์ชันคำนวณรายการสินค้าที่ผ่านการค้นหา/กรอง/เรียงลำดับ ตามค่าปัจจุบันของ input ต่าง ๆ
@@ -100,7 +126,21 @@ function getFilteredProducts() {
   // ตัดสินค้าที่ขายไปแล้ว (stock = 0) ออกจากหน้าร้าน ไม่ต้องแสดงให้ลูกค้าเห็นอีก
   // (สินค้าที่ยังไม่ขายที่เหลือจะเลื่อนขึ้นมาแทนที่ตำแหน่งเองโดยอัตโนมัติ เพราะเป็นแค่การกรอง list ไม่ใช่การเรียงลำดับใหม่)
   list = list.filter((p) => p.stock > 0);
-  // คืนค่ารายการสินค้าที่ผ่านการกรองแล้ว
+  // ถ้ามีการเลือกไซส์ใน dropdown (ไม่ใช่ค่าว่าง "ทุกไซส์") ให้กรองเฉพาะสินค้าที่มีไซส์นั้น
+  if (sizeFilter.value) {
+    const size = Number(sizeFilter.value);
+    list = list.filter((p) => (p.sizes || []).includes(size));
+  }
+  // เรียงลำดับตามที่เลือก (ค่าว่าง = คงลำดับเดิมตามที่ลงขาย) — list เป็นสำเนาอยู่แล้ว เรียงตรง ๆ ได้ไม่กระทบ allProducts
+  if (sortSelect.value === 'newest') {
+    // ลำดับเดิมคือเก่าไปใหม่ (สินค้าที่ลงขายทีหลังอยู่ท้ายสุด) กลับด้านจึงได้มาใหม่ล่าสุดขึ้นก่อน
+    list.reverse();
+  } else if (sortSelect.value === 'price-asc') {
+    list.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+  } else if (sortSelect.value === 'price-desc') {
+    list.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
+  }
+  // คืนค่ารายการสินค้าที่ผ่านการกรองและเรียงลำดับแล้ว
   return list;
 }
 
@@ -260,12 +300,15 @@ const detailNextBtn = document.getElementById('detailNextBtn');
 // ตัวแปรเก็บรายการรูปทั้งหมดของสินค้าที่กำลังเปิดดูอยู่ และรูปที่กำลังแสดงอยู่ตอนนี้ (ตำแหน่งใน array)
 let detailImages = [];
 let detailIndex = 0;
+// ตัวแปรเก็บสินค้าที่กำลังเปิดดูรายละเอียดอยู่ (ใช้ตอนกดปุ่ม "เพิ่มลงตะกร้า" ใน modal นี้)
+let detailProduct = null;
 
 // ฟังก์ชันเปิด modal ดูรายละเอียด/รูปสินค้าแบบเต็ม รับ id ของสินค้าที่ถูกคลิก
 function openProductDetailModal(productId) {
   // หาสินค้าจาก allProducts ที่โหลดไว้แล้วในหน่วยความจำ (ไม่ต้องยิง API ซ้ำ)
   const product = allProducts.find((p) => p.id === productId);
   if (!product) return;
+  detailProduct = product;
 
   // ถ้าสินค้ามีหลายรูป (images) ให้ใช้ทั้งหมด ถ้าไม่มีเลย (ข้อมูลเก่า) ให้ใช้รูปเดียวจาก image แทน กันจอว่างเปล่า
   detailImages = product.images && product.images.length > 0 ? product.images : [product.image];
@@ -278,7 +321,20 @@ function openProductDetailModal(productId) {
   document.getElementById('detailType').textContent = product.type ? `ประเภท: ${product.type}` : '';
   document.getElementById('detailCondition').textContent = product.condition ? `สภาพ: ${product.condition}` : '';
   document.getElementById('detailSizes').innerHTML = renderDetailSizes(product.sizes);
-  document.getElementById('detailPrice').textContent = formatPrice(product.price);
+  document.getElementById('detailInsole').textContent = product.insoleCm
+    ? `ความยาวพื้นใน: ${product.insoleCm} ซม.`
+    : '';
+  // รายละเอียด/ตำหนิเฉพาะจุดที่ร้านกรอกไว้ — ใช้ textContent (ไม่ใช่ innerHTML) ข้อความจะถูกแสดงตามที่พิมพ์ไว้ตรง ๆ ส่วนการขึ้นบรรทัดใหม่จัดการด้วย CSS
+  // ซ่อนทั้งกล่อง (รวมหัวข้อ) ถ้าไม่ได้กรอกไว้ กันเหลือหัวข้อเปล่า ๆ
+  document.getElementById('detailDescription').textContent = product.description || '';
+  document.getElementById('detailDescriptionBox').classList.toggle('hidden', !product.description);
+  // ราคา: ถ้าสินค้านี้กำลัง Flash Sale อยู่ ให้โชว์ราคาปกติขีดฆ่า + ราคาลด + ป้ายส่วนลด เหมือนบนการ์ด (ปุ่มเพิ่มลงตะกร้าด้านล่างจะใช้ราคาลดนี้เช่นกัน)
+  const sale = activeFlashSales.find((s) => s.productId === product.id);
+  document.getElementById('detailPrice').innerHTML = sale
+    ? `<span class="price-strike">${formatPrice(product.price)}</span>
+       <span class="price flash-price">${formatPrice(sale.salePrice)}</span>
+       <span class="discount-badge">-${Math.round((1 - sale.salePrice / product.price) * 100)}%</span>`
+    : `<span class="price">${formatPrice(product.price)}</span>`;
 
   // วาดรูปใหญ่ + แถบรูปย่อตามรูปแรก แล้วเปิด modal ขึ้นมา
   renderProductDetailGallery();
@@ -362,6 +418,23 @@ detailNextBtn.addEventListener('click', () => {
   renderProductDetailGallery();
 });
 
+// ผูก event ให้ปุ่ม "เพิ่มลงตะกร้า" ใน modal รายละเอียดสินค้า
+document.getElementById('detailAddToCart').addEventListener('click', () => {
+  if (!detailProduct) return;
+  // ถ้าสินค้านี้กำลัง Flash Sale อยู่ ให้ใช้ราคาลด (ตรงกับราคาที่โชว์ใน modal นี้)
+  const sale = activeFlashSales.find((s) => s.productId === detailProduct.id) || null;
+  const sizes = detailProduct.sizes || [];
+  productDetailModal.classList.remove('open');
+  if (sizes.length === 1) {
+    // มีไซส์เดียว (กรณีปกติของรองเท้ามือสอง) ไม่ต้องถามไซส์ซ้ำ เพราะเห็นไซส์ในหน้ารายละเอียดอยู่แล้ว เพิ่มลงตะกร้าได้เลย
+    addToCart(detailProduct, sizes[0], 1, sale ? { price: sale.salePrice, flashSaleId: sale.id } : {});
+    showToast(`เพิ่ม ${detailProduct.name} (ไซส์ ${sizes[0]}) ลงตะกร้าแล้ว`);
+  } else {
+    // มีหลายไซส์ ให้เปิด modal เลือกไซส์ต่อเหมือนกดจากการ์ด
+    openSizeModal(detailProduct.id, sale);
+  }
+});
+
 // ผูก event ให้ปุ่มกากบาทปิด modal ดูรายละเอียด/รูปสินค้า
 document.getElementById('closeDetailModal').addEventListener('click', () => {
   productDetailModal.classList.remove('open');
@@ -373,6 +446,9 @@ productDetailModal.addEventListener('click', (e) => {
 
 // เมื่อผู้ใช้พิมพ์ในช่องค้นหา (ทุกครั้งที่ตัวอักษรเปลี่ยน) ให้วาดรายการสินค้าใหม่ตามคำค้นหา
 searchInput.addEventListener('input', renderProducts);
+// เมื่อผู้ใช้เปลี่ยนตัวเลือกไซส์ หรือวิธีเรียงลำดับ ให้วาดรายการสินค้าใหม่
+sizeFilter.addEventListener('change', renderProducts);
+sortSelect.addEventListener('change', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกแบรนด์ ให้วาดรายการสินค้าใหม่ตามแบรนด์ที่เลือก
 brandFilter.addEventListener('change', renderProducts);
 // เมื่อผู้ใช้เปลี่ยนตัวเลือกประเภทรองเท้า ให้วาดรายการสินค้าใหม่ตามประเภทที่เลือก

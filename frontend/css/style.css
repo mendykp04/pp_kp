@@ -705,10 +705,35 @@ img {
   padding: 4px 10px;
 }
 
+/* กล่องรายละเอียด / ตำหนิเฉพาะจุดของสินค้า — white-space: pre-line ให้ขึ้นบรรทัดใหม่ตามที่ร้านพิมพ์ไว้ในหลังบ้าน */
+.detail-description {
+  margin-top: 6px;
+}
+.detail-description.hidden {
+  display: none;
+}
+.detail-description p {
+  margin: 2px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* แถวราคาในกล่องรายละเอียดสินค้า (ราคาปกติ หรือ ราคาขีดฆ่า + ราคาลด + ป้ายส่วนลด ตอน Flash Sale) */
+.detail-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
 .detail-info .price {
   font-size: 1.2rem;
   font-weight: 800;
-  margin-top: 6px;
+}
+.detail-info #detailAddToCart {
+  margin-top: 12px;
 }
 
 /* กล่องครอบแต่ละช่องกรอกข้อมูลในฟอร์ม (label + input) */

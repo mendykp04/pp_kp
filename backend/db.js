@@ -38,7 +38,8 @@ async function init() {
         images TEXT,
         description TEXT,
         condition TEXT,
-        type TEXT
+        type TEXT,
+        insoleCm REAL
       )`,
       `CREATE TABLE IF NOT EXISTS employees (
         id TEXT PRIMARY KEY,
@@ -107,6 +108,10 @@ async function init() {
   if (!existingProductColumns.includes('type')) {
     await client.execute('ALTER TABLE products ADD COLUMN type TEXT');
   }
+  // ความยาวพื้นในรองเท้า (ซม.) ที่วัดจริงจากคู่นั้น — ไซส์เดียวกันแต่ละแบรนด์ใหญ่เล็กไม่เท่ากัน ลูกค้าใช้ตัวเลขนี้เทียบกับเท้าตัวเองได้แม่นกว่าเลขไซส์ (ไม่บังคับกรอก ว่างได้)
+  if (!existingProductColumns.includes('insoleCm')) {
+    await client.execute('ALTER TABLE products ADD COLUMN insoleCm REAL');
+  }
 
   // Migration: เติมคอลัมน์ password ให้ตาราง customers ที่มีอยู่แล้วจากก่อนหน้านี้ (ใช้ตอนลูกค้าสมัครสมาชิก/ล็อกอินหน้าร้านค้าเอง)
   const customerColumnsResult = await client.execute('PRAGMA table_info(customers)');
@@ -164,8 +169,8 @@ async function writeProducts(products) {
     // รูปแรกใน images ถือเป็นรูปหลัก/ปก เก็บซ้ำไว้ในคอลัมน์ image ด้วย เพื่อให้ส่วนอื่นที่ยังอ้างอิงรูปเดียว (การ์ดสินค้า/ตะกร้า/Flash Sale) ใช้งานได้ตามปกติ
     const images = Array.isArray(p.images) ? p.images : p.image ? [p.image] : [];
     statements.push({
-      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, images, description, condition, type)
-            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @images, @description, @condition, @type)`,
+      sql: `INSERT INTO products (id, name, brand, code, price, categoryId, stock, sizes, image, images, description, condition, type, insoleCm)
+            VALUES (@id, @name, @brand, @code, @price, @categoryId, @stock, @sizes, @image, @images, @description, @condition, @type, @insoleCm)`,
       args: {
         ...p,
         brand: p.brand ?? '',
@@ -176,6 +181,7 @@ async function writeProducts(products) {
         description: p.description ?? '',
         condition: p.condition ?? '',
         type: p.type ?? '',
+        insoleCm: p.insoleCm ?? null,
         sizes: JSON.stringify(p.sizes || []),
       },
     });
