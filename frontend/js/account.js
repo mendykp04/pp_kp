@@ -129,7 +129,7 @@ async function loadOrders() {
         const attachRes = await fetch(`${API_BASE}/orders/${orderId}/slip`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: accountPhone, slipUrl: uploadData.url }),
+          body: JSON.stringify({ slipUrl: uploadData.url }),
         });
         if (!attachRes.ok) throw new Error('บันทึกสลิปไม่สำเร็จ');
         showToast('แนบสลิปสำเร็จ');
@@ -218,7 +218,7 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
     if (!res.ok) throw new Error(data.error || 'บันทึกข้อมูลไม่สำเร็จ');
     // อัปเดตชื่อที่แสดงบนหน้านี้และบนแถบเมนูให้ตรงกับที่เพิ่งบันทึกทันที
     document.getElementById('accountInfo').textContent = `${data.name} · ${data.phone}`;
-    updateAuthNav();
+    updateAuthNav(true);
     showToast('บันทึกข้อมูลเรียบร้อย');
   } catch (err) {
     showToast(err.message);

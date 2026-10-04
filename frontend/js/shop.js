@@ -241,9 +241,11 @@ function renderProducts() {
 // ฟังก์ชันเพิ่มสินค้าลงตะกร้าเมื่อกดปุ่ม "เพิ่มลงตะกร้า" (จากการ์ดสินค้า, การ์ด Flash Sale หรือหน้ารายละเอียด)
 // ร้านขายรองเท้ามือสอง ลงขายไซส์ละคู่ แต่ละรายการจึงมีไซส์เดียว (โชว์อยู่บนการ์ดแล้ว) — กดแล้วเพิ่มลงตะกร้าได้เลย ไม่ต้องถามไซส์ซ้ำ
 // รับพารามิเตอร์ flashSale เสริม (ค่า default เป็น null) เพื่อใช้ราคาลดแทนราคาปกติ
-function addProductToCart(productId, flashSale = null) {
+async function addProductToCart(productId, flashSale = null) {
   const product = allProducts.find((p) => p.id === productId);
   if (!product) return;
+  // ต้องเข้าสู่ระบบก่อนถึงจะสั่งซื้อได้ ถ้ายังไม่ได้ล็อกอินจะถูกพาไปหน้าเข้าสู่ระบบ (แล้วกลับมาที่รองเท้าคู่นี้หลังล็อกอินสำเร็จ)
+  if (!(await requireCustomerLogin(`index.html?p=${productId}`))) return;
   const sizes = product.sizes || [];
   // เผื่อข้อมูลเก่าที่เคยติ๊กไว้หลายไซส์ในรายการเดียว ยังต้องให้ลูกค้าเลือกไซส์ก่อน (กรณีเดียวที่ modal เลือกไซส์ยังถูกใช้)
   if (sizes.length > 1) {

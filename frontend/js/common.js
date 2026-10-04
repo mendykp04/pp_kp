@@ -201,29 +201,61 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
-// ฟังก์ชัน async อัปเดตลิงก์ในแถบเมนู (navbar) ให้ตรงกับสถานะล็อกอินของลูกค้าปัจจุบัน
-// ถ้าล็อกอินอยู่ → โชว์ชื่อ + ลิงก์ไปหน้า "บัญชีของฉัน" ถ้ายังไม่ล็อกอิน → โชว์ลิงก์ "เข้าสู่ระบบ"
-// ทุกหน้าที่มี <span id="authNav"></span> ในแถบเมนูจะถูกอัปเดตอัตโนมัติ (หน้าไหนไม่มีก็แค่ไม่ทำอะไร ไม่ error)
-async function updateAuthNav() {
-  const el = document.getElementById('authNav');
-  if (!el) return;
+// ฟังก์ชัน async ถามสถานะล็อกอินของลูกค้าจาก backend คืนค่าเป็น { loggedIn, name, phone, address }
+// ถ้าเช็คไม่ได้ (เช่นเน็ตหลุด) ให้ถือว่ายังไม่ได้ล็อกอินไว้ก่อน
+async function fetchCustomerSession() {
   try {
     const res = await fetch(`${API_BASE}/auth/customer/me`);
-    const data = await res.json();
-    el.innerHTML = data.loggedIn
-      ? `<a href="account.html">👤 ${escapeHtml(data.name)}</a>`
-      : `<a href="login.html">เข้าสู่ระบบ</a>`;
+    return await res.json();
   } catch {
-    // ถ้าเช็คสถานะไม่ได้ (เช่นเน็ตหลุด) ให้แสดงลิงก์เข้าสู่ระบบไว้ก่อนเป็นค่าเริ่มต้น ไม่ปล่อยให้ช่องว่างเปล่า
-    el.innerHTML = `<a href="login.html">เข้าสู่ระบบ</a>`;
+    return { loggedIn: false };
   }
+}
+
+// สถานะล็อกอินของลูกค้าสำหรับหน้านี้ เช็คครั้งเดียวตอนโหลดหน้า แล้วให้ทุกส่วนใช้ร่วมกัน (แถบเมนู, ปุ่มเพิ่มลงตะกร้า, หน้าตะกร้า)
+// ร้านให้สั่งซื้อได้เฉพาะลูกค้าที่เข้าสู่ระบบแล้ว (กันคนไม่มีบัญชีเข้ามากดสั่งเล่น ๆ) ตะกร้าจึงโผล่มาเฉพาะตอนล็อกอินอยู่
+let customerSessionPromise = fetchCustomerSession();
+
+// ฟังก์ชันใช้ก่อนทำอะไรที่ต้องล็อกอิน (เพิ่มลงตะกร้า) — คืนค่า true ถ้าล็อกอินอยู่ ถ้ายัง จะแจ้งเตือนแล้วพาไปหน้าเข้าสู่ระบบ
+// next คือหน้าที่จะให้พากลับมาหลังเข้าสู่ระบบสำเร็จ (ดู login.js)
+async function requireCustomerLogin(next = 'index.html') {
+  const session = await customerSessionPromise;
+  if (session.loggedIn) return true;
+  showToast('กรุณาเข้าสู่ระบบก่อนสั่งซื้อ');
+  setTimeout(() => {
+    window.location.href = `login.html?next=${encodeURIComponent(next)}`;
+  }, 900);
+  return false;
+}
+
+// ฟังก์ชันอ่านหน้าที่ต้องพากลับไปหลังเข้าสู่ระบบ/สมัครสมาชิกสำเร็จ จาก ?next=... ใน URL (ใช้ในหน้า login.html และ register.html)
+// รับเฉพาะหน้าในเว็บนี้ที่กำหนดไว้เท่านั้น (index.html / cart.html) กันลิงก์หลอกพาไปเว็บอื่นหลังล็อกอิน — คืนค่าว่างถ้าไม่มีหรือไม่ผ่าน
+function getSafeNextPage() {
+  const next = new URLSearchParams(window.location.search).get('next') || '';
+  return /^(index|cart)\.html(\?p=[A-Za-z0-9_-]+)?$/.test(next) ? next : '';
+}
+
+// ฟังก์ชัน async อัปเดตแถบเมนู (navbar) ให้ตรงกับสถานะล็อกอินของลูกค้าปัจจุบัน
+// ถ้าล็อกอินอยู่ → โชว์ชื่อ + ลิงก์ไปหน้า "บัญชีของฉัน" และโชว์ตะกร้า ถ้ายังไม่ล็อกอิน → โชว์ลิงก์ "เข้าสู่ระบบ" และซ่อนตะกร้า
+// ทุกหน้าที่มี <span id="authNav"></span> ในแถบเมนูจะถูกอัปเดตอัตโนมัติ (หน้าไหนไม่มีก็แค่ไม่ทำอะไร ไม่ error)
+// ส่ง refresh = true เมื่อข้อมูลบัญชีเพิ่งเปลี่ยน (เช่นเพิ่งแก้ชื่อ) เพื่อถาม backend ใหม่
+async function updateAuthNav(refresh = false) {
+  if (refresh) customerSessionPromise = fetchCustomerSession();
+  const data = await customerSessionPromise;
+  // class "logged-in" บน <body> เป็นตัวเปิดให้ลิงก์ตะกร้าทุกจุดในหน้าแสดงขึ้นมา (ค่าเริ่มต้นใน style.css คือซ่อนไว้)
+  document.body.classList.toggle('logged-in', !!data.loggedIn);
+  const el = document.getElementById('authNav');
+  if (!el) return;
+  el.innerHTML = data.loggedIn
+    ? `<a href="account.html">👤 ${escapeHtml(data.name)}</a>`
+    : `<a href="login.html">เข้าสู่ระบบ</a>`;
 }
 
 // เมื่อโหลดหน้าเว็บเสร็จ (DOM พร้อมใช้งานแล้ว) ให้เรียกอัปเดตตัวเลขบนไอคอนตะกร้าทันที
 // เพื่อให้ตัวเลขตรงกับข้อมูลที่เก็บไว้ใน localStorage ตั้งแต่เปิดหน้ามา
 document.addEventListener('DOMContentLoaded', updateCartBadge);
 // เรียกอัปเดตแถบเมนูให้ตรงกับสถานะล็อกอินทันทีที่เปิดหน้าเว็บเช่นกัน
-document.addEventListener('DOMContentLoaded', updateAuthNav);
+document.addEventListener('DOMContentLoaded', () => updateAuthNav());
 
 // เติมปีปัจจุบันลงในข้อความลิขสิทธิ์ท้ายเว็บ (.footer-year ในทุกหน้า) อัตโนมัติ กันเลขปีค้างเป็นปีเก่าเมื่อเวลาผ่านไป
 document.addEventListener('DOMContentLoaded', () => {

@@ -285,18 +285,16 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
 // เรียกฟังก์ชันวาดตะกร้าทันทีที่ไฟล์นี้ถูกโหลด เพื่อแสดงข้อมูลตะกร้าล่าสุดตั้งแต่เปิดหน้ามา
 renderCart();
 
-// ถ้าลูกค้าล็อกอินอยู่ ให้เติมชื่อ/เบอร์โทร/ที่อยู่ในฟอร์มจัดส่งให้อัตโนมัติจากบัญชีที่สมัครไว้ (ลูกค้ายังแก้ไขเองได้ตามปกติ แค่ช่วยประหยัดเวลาไม่ต้องพิมพ์ซ้ำทุกครั้ง)
+// หน้าตะกร้าใช้ได้เฉพาะลูกค้าที่เข้าสู่ระบบแล้ว (backend ก็ไม่รับคำสั่งซื้อจากคนที่ไม่ได้ล็อกอินเช่นกัน) ถ้ายังไม่ได้ล็อกอินให้พาไปหน้าเข้าสู่ระบบก่อน
+// ถ้าล็อกอินอยู่ ให้เติมชื่อ/เบอร์โทร/ที่อยู่ในฟอร์มจัดส่งจากบัญชีที่สมัครไว้ (ชื่อ/ที่อยู่แก้เฉพาะออเดอร์นี้ได้ ส่วนเบอร์โทรใช้ของบัญชีเสมอ)
 (async () => {
-  try {
-    const res = await fetch(`${API_BASE}/auth/customer/me`);
-    const me = await res.json();
-    if (me.loggedIn) {
-      isCustomerLoggedIn = true;
-      document.getElementById('customerName').value = me.name;
-      document.getElementById('phone').value = me.phone;
-      if (me.address) document.getElementById('address').value = me.address;
-    }
-  } catch {
-    // ถ้าเช็คสถานะล็อกอินไม่ได้ ก็แค่ปล่อยให้ลูกค้ากรอกฟอร์มเองตามปกติ ไม่ต้องแจ้ง error
+  const me = await customerSessionPromise;
+  if (!me.loggedIn) {
+    window.location.href = 'login.html?next=cart.html';
+    return;
   }
+  isCustomerLoggedIn = true;
+  document.getElementById('customerName').value = me.name;
+  document.getElementById('phone').value = me.phone;
+  if (me.address) document.getElementById('address').value = me.address;
 })();

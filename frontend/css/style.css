@@ -127,6 +127,11 @@ img {
   color: var(--text) !important;   /* บังคับให้ใช้สีตัวอักษรหลัก (ทับกฎ .navbar nav a ด้านบนด้วย !important) */
 }
 
+/* ลิงก์ตะกร้าทุกจุด (แถบเมนู + ท้ายเว็บ) ซ่อนไว้ก่อน จะโผล่มาเมื่อลูกค้าเข้าสู่ระบบแล้วเท่านั้น (common.js เติม class "logged-in" ให้ <body>) */
+body:not(.logged-in) a[href="cart.html"] {
+  display: none !important; /* ต้องชนะกฎ display ของลิงก์ในแถบเมนู/ท้ายเว็บเสมอ */
+}
+
 /* ตัวเลขนับจำนวนสินค้าบนไอคอนตะกร้า (badge) */
 .cart-count {
   background: var(--accent);  /* พื้นหลังสีเน้น (ส้ม) ให้เด่น */

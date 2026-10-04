@@ -32,7 +32,8 @@ registerForm.addEventListener('submit', async (e) => {
       throw new Error(data.error || 'สมัครสมาชิกไม่สำเร็จ');
     }
     // สมัครสำเร็จแล้ว backend ล็อกอินให้อัตโนมัติ พาไปหน้า "บัญชีของฉัน" ทันที
-    window.location.href = 'account.html';
+    // (ถ้าถูกพามาจากการกดเพิ่มลงตะกร้า ?next=... ให้พากลับไปที่เดิมแทน)
+    window.location.href = getSafeNextPage() || 'account.html';
   } catch (err) {
     showToast(err.message);
   }

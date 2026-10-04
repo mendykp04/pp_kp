@@ -22,9 +22,14 @@ loginForm.addEventListener('submit', async (e) => {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
     }
-    // เข้าสู่ระบบสำเร็จ พาไปหน้า "บัญชีของฉัน" ทันที
-    window.location.href = 'account.html';
+    // เข้าสู่ระบบสำเร็จ: ถ้าถูกพามาจากการกดเพิ่มลงตะกร้า/เปิดหน้าตะกร้า (?next=...) ให้พากลับไปที่เดิม ไม่งั้นไปหน้า "บัญชีของฉัน"
+    window.location.href = getSafeNextPage() || 'account.html';
   } catch (err) {
     showToast(err.message);
   }
 });
+
+// ถ้าถูกพามาหน้านี้พร้อม ?next=... ให้ส่งต่อไปที่ลิงก์ "สมัครสมาชิก" ด้วย ลูกค้าใหม่ที่ยังไม่มีบัญชีจะได้กลับไปที่รองเท้าคู่เดิมหลังสมัครเสร็จเช่นกัน
+if (getSafeNextPage()) {
+  document.getElementById('registerLink').href = `register.html?next=${encodeURIComponent(getSafeNextPage())}`;
+}

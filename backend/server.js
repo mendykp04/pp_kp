@@ -610,7 +610,7 @@ app.post('/api/upload', requireAuth, upload.single('image'), async (req, res) =>
 });
 
 // เมื่อมีการเรียก POST ที่ /api/upload/slip (ลูกค้าอัปโหลดรูปสลิปโอนเงินตอนสั่งซื้อ/แนบทีหลัง) — เปิดสาธารณะ ไม่ต้องล็อกอิน (คนละสิทธิ์กับ /api/upload ที่สงวนไว้สำหรับแอดมินอัปโหลดรูปสินค้าเท่านั้น)
-app.post('/api/upload/slip', upload.single('image'), async (req, res) => {
+app.post('/api/upload/slip', requireCustomerAuth, upload.single('image'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'กรุณาเลือกไฟล์รูปภาพ' });
 
   if (cloudinaryHelper.isConfigured) {
@@ -794,20 +794,19 @@ function calcShippingFee(subtotal) {
 }
 
 // เมื่อมีการเรียก POST ที่ /api/orders (ลูกค้ากดยืนยันสั่งซื้อจากตะกร้า)
-app.post('/api/orders', async (req, res) => {
+// ต้องเข้าสู่ระบบก่อนถึงจะสั่งซื้อได้ (requireCustomerAuth) กันคนที่ไม่มีบัญชีเข้ามากดสั่งเล่น ๆ — ทุกออเดอร์จึงผูกกับบัญชีลูกค้าที่ตามตัวได้เสมอ
+app.post('/api/orders', requireCustomerAuth, async (req, res) => {
   // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body — slipUrl (ไม่บังคับ) คือรูปสลิปโอนเงินที่อัปโหลดไว้แล้ว (ถ้ามีตอนกดสั่งซื้อ)
   const { items, paymentMethod, slipUrl } = req.body;
   // ชื่อ/เบอร์โทร/ที่อยู่ เป็นข้อความที่ลูกค้าพิมพ์เอง จำกัดความยาวไว้ก่อนเก็บ (ฝั่งหลังบ้านจะ escape อีกชั้นตอนแสดงผล)
   const customerName = cleanText(req.body.customerName, 100);
-  const phone = cleanText(req.body.phone, 20);
+  // เบอร์โทรใช้ของบัญชีที่ล็อกอินอยู่เสมอ (ไม่รับจากฟอร์ม) ออเดอร์จะได้ขึ้นในหน้า "บัญชีของฉัน" ของคนสั่งจริง และสั่งในชื่อเบอร์คนอื่นไม่ได้
+  const phone = req.session.customerPhone;
   const address = cleanText(req.body.address, 500);
   // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่ (ชื่อ, เบอร์โทร, ที่อยู่ และต้องมีรายการสินค้าอย่างน้อย 1 ชิ้น)
   if (!customerName || !phone || !address || !Array.isArray(items) || items.length === 0) {
     // ถ้าข้อมูลไม่ครบ ตอบกลับ error 400
     return res.status(400).json({ error: 'ข้อมูลคำสั่งซื้อไม่ครบถ้วน' });
-  }
-  if (!isValidPhone(phone)) {
-    return res.status(400).json({ error: 'เบอร์โทรไม่ถูกต้อง กรุณากรอกเป็นตัวเลข' });
   }
   // สลิป (ถ้าแนบมา) ต้องเป็นไฟล์ที่อัปโหลดผ่านระบบนี้เท่านั้น
   if (slipUrl && !isValidSlipUrl(slipUrl)) {
@@ -940,11 +939,12 @@ app.put('/api/orders/:id/status', requireAuth, async (req, res) => {
   res.json(orders[idx]);
 });
 
-// เมื่อมีการเรียก POST ที่ /api/orders/:id/slip (ลูกค้าแนบ/เปลี่ยนรูปสลิปโอนเงินของคำสั่งซื้อตัวเอง จากหน้า "บัญชีของฉัน") — ไม่ต้องล็อกอินก็เรียกได้ แต่ต้องระบุเบอร์โทรให้ตรงกับออเดอร์นั้น กันคนอื่นมาแนบสลิปมั่วใส่ออเดอร์คนอื่น
-app.post('/api/orders/:id/slip', async (req, res) => {
-  const { phone, slipUrl } = req.body;
-  if (!phone || !slipUrl) {
-    return res.status(400).json({ error: 'กรุณาระบุเบอร์โทรและแนบรูปสลิป' });
+// เมื่อมีการเรียก POST ที่ /api/orders/:id/slip (ลูกค้าแนบ/เปลี่ยนรูปสลิปโอนเงินของคำสั่งซื้อตัวเอง จากหน้า "บัญชีของฉัน") — เฉพาะลูกค้าที่ล็อกอินแล้ว และแนบได้เฉพาะออเดอร์ของเบอร์ตัวเองเท่านั้น (อ่านเบอร์จาก session ไม่รับจาก body)
+app.post('/api/orders/:id/slip', requireCustomerAuth, async (req, res) => {
+  const { slipUrl } = req.body;
+  const phone = req.session.customerPhone;
+  if (!slipUrl) {
+    return res.status(400).json({ error: 'กรุณาแนบรูปสลิป' });
   }
   // สลิปต้องเป็นไฟล์ที่อัปโหลดผ่านระบบนี้เท่านั้น
   if (!isValidSlipUrl(slipUrl)) {

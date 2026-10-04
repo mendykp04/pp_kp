@@ -79,7 +79,8 @@
         <div class="field">
           <label for="phone">เบอร์โทรศัพท์</label>
           <!-- type="tel" ช่วยให้มือถือขึ้นคีย์บอร์ดตัวเลขให้อัตโนมัติ -->
-          <input type="tel" id="phone" required />
+          <!-- เบอร์โทรใช้ของบัญชีที่เข้าสู่ระบบอยู่เสมอ จึงแก้ไม่ได้ (ออเดอร์จะได้ขึ้นในหน้า "บัญชีของฉัน" ของคนสั่ง) -->
+          <input type="tel" id="phone" required readonly />
         </div>
         <div class="field">
           <label for="address">ที่อยู่จัดส่ง</label>
