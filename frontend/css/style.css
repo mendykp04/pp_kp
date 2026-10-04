@@ -680,6 +680,31 @@ img {
   font-family: monospace; /* ให้ดูเป็นรหัส/โค้ด อ่านง่ายไม่สับสนกับข้อความอื่น */
 }
 
+/* ส่วนไซส์ที่มีในกล่องรายละเอียดสินค้า — ไซส์ละ 1 ป้าย เทียบ EU / US / UK ในบรรทัดเดียวกัน */
+.detail-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.detail-sizes:empty {
+  display: none;
+}
+.detail-sizes-label {
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.detail-size-row {
+  font-size: 0.88rem;
+  font-weight: 700;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+}
+
 .detail-info .price {
   font-size: 1.2rem;
   font-weight: 800;

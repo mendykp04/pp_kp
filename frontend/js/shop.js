@@ -277,11 +277,50 @@ function openProductDetailModal(productId) {
   document.getElementById('detailCode').textContent = product.code ? `รหัส: ${product.code}` : '';
   document.getElementById('detailType').textContent = product.type ? `ประเภท: ${product.type}` : '';
   document.getElementById('detailCondition').textContent = product.condition ? `สภาพ: ${product.condition}` : '';
+  document.getElementById('detailSizes').innerHTML = renderDetailSizes(product.sizes);
   document.getElementById('detailPrice').textContent = formatPrice(product.price);
 
   // วาดรูปใหญ่ + แถบรูปย่อตามรูปแรก แล้วเปิด modal ขึ้นมา
   renderProductDetailGallery();
   productDetailModal.classList.add('open');
+}
+
+// ตารางเทียบไซส์ EU → US / UK (ชุดเดียวกับตัวเลือกไซส์ในฟอร์มเพิ่มสินค้าหน้า admin — ถ้าแก้ที่นั่นต้องแก้ที่นี่ให้ตรงกันด้วย)
+// ในฐานข้อมูลเก็บไซส์เป็นเลข EU อย่างเดียว จึงต้องแปลงเป็น US/UK ตอนแสดงผล
+const SIZE_CHART = {
+  36: { us: 4, uk: 3.5 },
+  36.5: { us: 4.5, uk: 4 },
+  37: { us: 5, uk: 4.5 },
+  37.5: { us: 5.5, uk: 5 },
+  38: { us: 6, uk: 5.5 },
+  38.5: { us: 6.5, uk: 6 },
+  39: { us: 7, uk: 6 },
+  40: { us: 7.5, uk: 6.5 },
+  40.5: { us: 8, uk: 7 },
+  41: { us: 8.5, uk: 7.5 },
+  42: { us: 9, uk: 8 },
+  42.5: { us: 9.5, uk: 8.5 },
+  43: { us: 10, uk: 9 },
+  44: { us: 10.5, uk: 9.5 },
+  44.5: { us: 11, uk: 10 },
+  45: { us: 11.5, uk: 10.5 },
+  46: { us: 12, uk: 11 },
+  47: { us: 13, uk: 12 },
+};
+
+// ฟังก์ชันสร้าง HTML ส่วนไซส์ใน modal รายละเอียดสินค้า: ไซส์ละ 1 บรรทัด เทียบ EU / US / UK
+// ไซส์ที่ไม่อยู่ในตารางเทียบ (ข้อมูลเก่าที่เคยพิมพ์เลขเอง) จะโชว์เฉพาะ EU ไม่เดาค่า US/UK ให้
+function renderDetailSizes(sizes) {
+  if (!sizes || sizes.length === 0) return '';
+  return (
+    '<span class="detail-sizes-label">ไซส์ที่มี</span>' +
+    sizes
+      .map((size) => {
+        const match = SIZE_CHART[size];
+        return `<span class="detail-size-row">EU ${size}${match ? ` · US ${match.us} · UK ${match.uk}` : ''}</span>`;
+      })
+      .join('')
+  );
 }
 
 // ฟังก์ชันวาด (render) รูปใหญ่ + แถบรูปย่อ ตามตำแหน่ง detailIndex ปัจจุบัน
