@@ -796,14 +796,14 @@ function printReceipt(orderId) {
 <title>ใบเสร็จ ${escapeHtml(order.id)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
   body {
     margin: 0;
     padding: 24px 12px;
     background: #ececec;
-    font-family: 'Sarabun', system-ui, sans-serif;
+    font-family: 'Noto Sans Thai', 'Helvetica Neue', Arial, sans-serif;
     color: #1a1a1a;
     display: flex;
     justify-content: center;
@@ -820,7 +820,7 @@ function printReceipt(orderId) {
     margin-bottom: 14px;
   }
   .receipt-header h1 {
-    font-family: 'Prompt', sans-serif;
+    font-family: 'Noto Sans Thai', 'Helvetica Neue', Arial, sans-serif;
     font-size: 1.35rem;
     font-weight: 800;
     letter-spacing: 1px;
@@ -859,7 +859,7 @@ function printReceipt(orderId) {
     white-space: nowrap;
   }
   .receipt-total-row.grand {
-    font-family: 'Prompt', sans-serif;
+    font-family: 'Noto Sans Thai', 'Helvetica Neue', Arial, sans-serif;
     font-size: 1.05rem;
     font-weight: 700;
     color: #d95700;
@@ -890,9 +890,9 @@ function printReceipt(orderId) {
     padding: 10px;
     border: none;
     border-radius: 8px;
-    background: #ff6a00;
+    background: #ee4d2d;
     color: #fff;
-    font-family: 'Prompt', sans-serif;
+    font-family: 'Noto Sans Thai', 'Helvetica Neue', Arial, sans-serif;
     font-weight: 700;
     font-size: 0.9rem;
     cursor: pointer;

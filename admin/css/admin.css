@@ -1,41 +1,48 @@
 /* ตัวแปรสี/ค่ามาตรฐานที่ใช้ร่วมกันทั้งหน้า admin (คล้ายกับ style.css ของหน้าร้านค้า แต่แยกไฟล์กัน) */
 :root {
-  --bg: #f7f7f5;          /* สีพื้นหลังหลักของหน้า admin (ขาวนวลสบายตา) */
-  --sidebar: #ffffff;     /* สีพื้นหลังแถบเมนูซ้าย และพื้นหลัง modal */
-  --card: #ffffff;        /* สีพื้นหลังตาราง/กล่องต่าง ๆ */
-  --text: #111111;        /* สีตัวอักษรหลัก (เกือบดำสนิท ให้ตรงกับความคมชัดของหน้าร้านค้า) */
-  --text-dim: #6b7280;    /* สีตัวอักษรรอง (เทา) */
-  --accent: #ff6a00;      /* สีเน้น (ส้ม) ให้ตรงกับธีมหน้าร้านค้า */
-  --accent-dark: #d95700; /* สีเน้นเข้มขึ้น ใช้ตอน hover ปุ่ม */
-  --border: #e5e5e0;      /* สีเส้นขอบ */
-  --radius: 6px;          /* มุมคมขึ้นกว่าเดิม (12px) ให้เข้าธีมเดียวกับหน้าร้านค้าที่เปลี่ยนเป็นมุมคมแบบร้านค้าปลีกจริงจัง */
-  --shadow-sm: 0 1px 2px rgba(20, 20, 15, 0.05), 0 1px 1px rgba(20, 20, 15, 0.03); /* เงาบางสำหรับสถานะปกติ */
-  --shadow-md: 0 12px 24px -8px rgba(20, 20, 15, 0.16); /* เงานุ่มขนาดใหญ่ขึ้น ใช้ตอน hover/ลอย */
+  --bg: #f5f5f5;          /* สีพื้นหลังหลัก (เทาอ่อน) */
+  --sidebar: #ffffff;     /* สีพื้นหลังแถบเมนูด้านข้าง */
+  --card: #ffffff;        /* สีพื้นหลังการ์ด/ตาราง */
+  --text: #222222;        /* สีตัวอักษรหลัก */
+  --text-dim: #757575;    /* สีตัวอักษรรอง */
+  --accent: #ee4d2d;      /* สีเน้นของร้าน (ส้มแดง) ชุดเดียวกับหน้าร้าน */
+  --accent-dark: #d73211; /* สีเน้นเข้มขึ้น ใช้ตอน hover ปุ่ม */
+  --accent-soft: rgba(238, 77, 45, 0.08); /* สีเน้นแบบจางมาก ใช้เป็นพื้นหลังของเมนูที่เลือกอยู่ */
+  --border: #e8e8e8;      /* สีเส้นขอบ */
+  --radius: 4px;          /* มุมโค้งเล็กน้อย */
+  --shadow-sm: 0 1px 1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --font: 'Noto Sans Thai', 'Helvetica Neue', Helvetica, Arial, sans-serif; /* ฟอนต์เดียวทั้งระบบ ชุดเดียวกับหน้าร้าน */
 }
 
 /* ตั้งค่าพื้นฐานให้ทุก element นับ padding/border รวมอยู่ในขนาดที่กำหนด */
+/* ปุ่ม/ช่องกรอก/ดรอปดาวน์ ไม่รับฟอนต์จาก body เองโดยค่าเริ่มต้นของเบราว์เซอร์ ต้องสั่งให้ใช้ฟอนต์เดียวกับทั้งระบบ */
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 * {
   box-sizing: border-box;
 }
 
 /* กำหนดขนาดฟอนต์พื้นฐานของทั้งหน้า ปรับให้ใหญ่ขึ้นเล็กน้อยจากค่ามาตรฐาน 16px ให้อ่านสบายตาขึ้นตอนใช้งานนาน ๆ */
 html {
-  font-size: 16.5px;
+  font-size: 15.5px;
 }
 
 /* สไตล์พื้นฐานของหน้า admin ทั้งหน้า */
 body {
   margin: 0;                                                 /* ลบระยะขอบเริ่มต้นของเบราว์เซอร์ */
-  font-family: 'Sarabun', 'Segoe UI', system-ui, sans-serif;   /* ฟอนต์ไทยอ่านง่าย ดูเป็นงานออกแบบจริงมากกว่าฟอนต์ระบบทั่วไป */
+  font-family: var(--font);
   background: var(--bg);                                     /* สีพื้นหลัง */
   color: var(--text);                                        /* สีตัวอักษร */
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
-/* หัวข้อและโลโก้ใช้ฟอนต์ Prompt แยกจากฟอนต์เนื้อหา ให้ดูมีลำดับชั้นชัดเจน */
+/* หัวข้อและโลโก้ใช้ฟอนต์เดียวกับเนื้อหา ต่างกันที่ความหนา */
 h1, h2, h3, .brand, .btn {
-  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-family: var(--font);
 }
 
 /* โครงหลักของหน้า admin แบ่งเป็นแถบเมนูซ้าย + เนื้อหาขวา อยู่แถวเดียวกัน */
@@ -62,8 +69,8 @@ h1, h2, h3, .brand, .btn {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 1.2rem;  /* ขนาดตัวอักษรโลโก้ */
-  font-weight: 800;   /* ตัวหนามาก */
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 /* ตัวอักษร <span> ในโลโก้ (ส่วนที่ไฮไลต์สี) */
@@ -115,30 +122,30 @@ h1, h2, h3, .brand, .btn {
 
 /* ปุ่มเมนูแต่ละอันในแถบเมนู (ยังไม่ถูกเลือก) — เส้นซ้ายโปร่งใสเตรียมไว้ตั้งแต่สถานะปกติ (border ไม่ใช่แค่สี) กันข้อความขยับตอนเปลี่ยนเป็น active ที่ต้องมีเส้นสีทึบ */
 .nav-btn {
-  text-align: left;        /* จัดข้อความชิดซ้าย (ต่างจากปุ่มทั่วไปที่มักจัดกึ่งกลาง) */
-  background: none;        /* ไม่มีพื้นหลัง เป็นค่าเริ่มต้น */
-  border: none;            /* ไม่มีเส้นขอบ เพราะเป็น <button> ที่อยากให้ดูเหมือนเมนู ไม่ใช่ปุ่มทั่วไป */
-  border-left: 3px solid transparent; /* เผื่อที่ไว้สำหรับเส้นบอกสถานะ active ด้านล่าง กันเนื้อหาขยับตอนสลับ */
-  color: var(--text-dim);  /* สีตัวอักษรจาง (ยังไม่ถูกเลือก) */
-  padding: 12px 14px;       /* ระยะห่างภายในปุ่ม */
-  border-radius: 0 6px 6px 0; /* มุมโค้งเฉพาะฝั่งขวา ฝั่งซ้ายคมชิดกับเส้น active */
-  cursor: pointer;          /* เปลี่ยนเมาส์เป็นรูปมือ */
-  font-size: 0.95rem;       /* ขนาดตัวอักษร */
-  font-weight: 600;         /* ตัวค่อนข้างหนา */
+  text-align: left;
+  background: none;
+  border: none;
+  border-left: 3px solid transparent;
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  cursor: pointer;
+  font-size: 0.93rem;
+  font-weight: 500;
 }
 
 /* สไตล์เมื่อเอาเมาส์ไปชี้ปุ่มเมนู (ที่ยังไม่ถูกเลือกเป็น active) */
 .nav-btn:hover {
-  background: var(--card);  /* เติมพื้นหลังจาง ๆ */
-  color: var(--text);       /* เปลี่ยนสีตัวอักษรให้เด่นขึ้น */
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text);
 }
 
 /* สถานะของปุ่มเมนูที่กำลังถูกเลือกอยู่ (แท็บที่เปิดอยู่ในขณะนั้น) — เพิ่มเส้นสีเน้นชิดขอบซ้ายของแถบเมนู แบบแดชบอร์ดพรีเมียมทั่วไป แทนที่จะพึ่งพื้นหลังสีจาง ๆ อย่างเดียว ให้เห็นชัดกว่าเดิมว่ากำลังอยู่แท็บไหน */
 .nav-btn.active {
-  background: rgba(255, 106, 0, 0.12);  /* พื้นหลังสีส้มจาง ๆ โปร่งแสง */
-  border-left-color: var(--accent);      /* เส้นสีเน้นชิดขอบซ้าย */
-  color: var(--accent);                  /* ตัวอักษรเป็นสีเน้น (ส้ม) ให้รู้ว่ากำลังอยู่แท็บนี้ */
-  font-weight: 700;
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* ลิงก์ "กลับหน้าร้านค้า" ที่อยู่ล่างสุดของแถบเมนู */
@@ -181,15 +188,14 @@ h1, h2, h3, .brand, .btn {
 
 /* หัวข้อ <h1> ภายในแถวหัวข้อของแท็บ */
 .panel-header h1 {
-  font-size: 1.6rem;   /* ขนาดตัวอักษรหัวข้อ ใหญ่ขึ้นเล็กน้อยให้ดูมั่นใจกว่าเดิม */
-  font-weight: 800;    /* ตัวหนามาก แทนค่า default ของ h1 (ปกติ 700 จาก h1,h2,h3 ที่กำหนดไว้รวมกันตอนต้นไฟล์) */
-  letter-spacing: -0.01em;
-  margin: 0;           /* ลบระยะขอบเริ่มต้นของ h1 */
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
 }
 
 /* หัวข้อย่อย <h3> คั่นระหว่างตาราง (เช่น "สินค้าขายดี" / "แบรนด์ขายดี" ในแท็บรายงาน) — เดิมไม่มีสไตล์เลย ใช้ค่า default ของเบราว์เซอร์ ดูไม่เข้าธีม */
 .content h3 {
-  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 1.05rem;
   font-weight: 600;
   margin: 28px 0 12px;
@@ -216,7 +222,7 @@ h1, h2, h3, .brand, .btn {
   margin-bottom: 0;
 }
 .cart-summary .row.total {
-  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 1.2rem;
   font-weight: 700;
   border-top: 1px solid var(--border);
@@ -226,25 +232,23 @@ h1, h2, h3, .brand, .btn {
 
 /* ปุ่มหลัก เช่น "+ เพิ่มสินค้าใหม่" */
 .btn {
-  display: inline-block;   /* ทำให้กำหนด padding ได้ */
-  padding: 11px 22px;       /* ระยะห่างภายในปุ่ม */
-  background: var(--accent); /* พื้นหลังสีเน้น (ส้ม) */
-  color: #fff;               /* ตัวอักษรสีขาว */
-  border: none;              /* ไม่มีเส้นขอบ */
-  border-radius: var(--radius); /* มุมคมตามธีม แทนมุมโค้งมนแบบเดิม */
-  font-weight: 700;          /* ตัวหนาขึ้นเล็กน้อย ให้เข้าธีมเดียวกับปุ่มหน้าร้านค้า */
-  font-size: 0.9rem;         /* ขนาดตัวอักษร */
-  letter-spacing: 0.02em;
-  cursor: pointer;           /* เปลี่ยนเมาส์เป็นรูปมือ */
+  display: inline-block;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 /* สไตล์เมื่อเอาเมาส์ไปชี้ปุ่มหลัก */
 .btn:hover {
-  background: var(--accent-dark); /* เปลี่ยนเป็นสีเข้มขึ้นตอน hover */
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
 }
 
 /* ปุ่มที่ต้องการให้กว้างเต็มพื้นที่ (เช่นปุ่ม "บันทึกสินค้า" ใน modal) */
@@ -254,14 +258,14 @@ h1, h2, h3, .brand, .btn {
 
 /* ปุ่มไอคอนเล็ก ๆ ในตาราง เช่นปุ่ม "แก้ไข" / "ลบ" */
 .btn-icon {
-  background: var(--card);          /* สีพื้นหลังจาง */
-  border: 1px solid var(--border);  /* เส้นขอบบาง */
-  color: var(--text);               /* สีตัวอักษรปกติ */
-  padding: 6px 10px;                 /* ระยะห่างภายในเล็ก เพราะเป็นปุ่มเล็ก */
-  border-radius: 6px;                /* มุมโค้งเล็กน้อย */
-  cursor: pointer;                   /* เปลี่ยนเมาส์เป็นรูปมือ */
-  font-size: 0.85rem;                /* ขนาดตัวอักษรเล็ก */
-  margin-right: 6px;                  /* ระยะห่างจากปุ่มถัดไป (เช่นระหว่างปุ่มแก้ไขกับปุ่มลบ) */
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-right: 6px;
 }
 
 /* ปุ่มไอคอนแบบอันตราย (เช่นปุ่ม "ลบ") ใช้คู่กับ .btn-icon */
@@ -272,7 +276,14 @@ h1, h2, h3, .brand, .btn {
 
 /* สไตล์เมื่อเอาเมาส์ไปชี้ปุ่มไอคอน */
 .btn-icon:hover {
-  opacity: 0.85; /* ลดความทึบแสงลงเล็กน้อย ให้ดูตอบสนองต่อการชี้เมาส์ */
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* ปุ่มอันตราย (ลบ) ตอน hover ยังคงเป็นสีแดง ไม่เปลี่ยนเป็นสีเน้นของร้าน */
+.btn-icon.danger:hover {
+  border-color: #c0262b;
+  color: #c0262b;
+  background: rgba(229, 72, 77, 0.06);
 }
 
 /* กล่องครอบตาราง ทำให้เลื่อนซ้าย-ขวาได้เมื่อตารางกว้างเกินจอ (เช่นบนมือถือ) */
@@ -319,12 +330,12 @@ th, td {
 }
 
 /* สไตล์เฉพาะของหัวตาราง (th) เพิ่มเติมจาก th, td ด้านบน */
+/* สไตล์เฉพาะของหัวตาราง (th): พื้นเทาอ่อน ตัวอักษรสีรอง */
 th {
-  color: var(--text-dim);       /* สีจาง ให้แยกจากข้อมูลจริงในแถว */
-  font-weight: 600;              /* ตัวค่อนข้างหนา */
-  text-transform: uppercase;     /* บังคับตัวพิมพ์ใหญ่ทั้งหมด */
-  font-size: 0.75rem;            /* ขนาดเล็กกว่าข้อมูลในตาราง */
-  letter-spacing: 0.5px;         /* เพิ่มระยะห่างตัวอักษรเล็กน้อย ให้ดูเป็นหัวข้อ/label */
+  color: var(--text-dim);
+  background: #fafafa;
+  font-weight: 600;
+  font-size: 0.8rem;
 }
 
 /* เอาเส้นคั่นด้านล่างออกจากแถวสุดท้ายของตาราง เพื่อความเรียบร้อยตอนจบตาราง */
@@ -352,7 +363,7 @@ tr:last-child td {
   font-weight: 700;
 }
 .rank-badge.rank-top {
-  background: rgba(255, 106, 0, 0.14);
+  background: rgba(238, 77, 45, 0.14);
   border-color: transparent;
   color: var(--accent-dark);
 }
@@ -369,7 +380,7 @@ tr:last-child td {
   flex: 1;
   height: 8px;
   border-radius: 999px;
-  background: rgba(255, 106, 0, 0.14); /* แทร็ก: สีเน้นโทนอ่อน (ramp เดียวกับแท่งเติม) */
+  background: rgba(238, 77, 45, 0.14); /* แทร็ก: สีเน้นโทนอ่อน (ramp เดียวกับแท่งเติม) */
   overflow: hidden;
 }
 .meter-fill {
@@ -450,7 +461,7 @@ td img {
   border-radius: 999px;                      /* มุมโค้งสูงมาก ทำให้เป็นทรงแคปซูล */
   font-size: 0.75rem;                        /* ขนาดตัวอักษรเล็ก */
   font-weight: 700;                          /* ตัวหนา */
-  background: rgba(255, 106, 0, 0.15);       /* พื้นหลังสีส้มจาง ๆ */
+  background: var(--accent-soft);       /* พื้นหลังสีส้มจาง ๆ */
   color: var(--accent);                      /* ตัวอักษรสีเน้น (ส้ม) */
 }
 
@@ -762,7 +773,7 @@ td img {
 /* สถานะที่ถูกเลือกแล้ว (checkbox ข้างในถูกติ๊ก) ใช้ :has() เพื่อให้ทั้งกล่อง label เปลี่ยนสีตามสถานะ checkbox ข้างในโดยไม่ต้องพึ่ง JavaScript เพิ่ม */
 .size-chip:has(input:checked) {
   border-color: var(--accent);
-  background: rgba(255, 106, 0, 0.12);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 /* ซ่อนกล่อง checkbox เริ่มต้นของเบราว์เซอร์ทิ้ง เพราะทั้ง label ทำหน้าที่เป็นปุ่มกดแทนอยู่แล้ว (สไตล์เดียวกับ .size-option ฝั่งหน้าร้านค้า) */
@@ -847,7 +858,7 @@ td img {
   margin-bottom: 20px;     /* ระยะห่างด้านล่างก่อนตาราง */
 }
 .print-header h2 {
-  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -929,14 +940,14 @@ td img {
   font-weight: 600;
 }
 .stat-value {
-  font-family: 'Prompt', 'Sarabun', system-ui, sans-serif;
+  font-family: var(--font);
   font-size: 1.4rem;
   font-weight: 700;
 }
 /* การ์ด "ยอดขายรวมทั้งวัน" เป็นตัวที่สำคัญที่สุดในหน้านี้ ให้เด่นกว่าการ์ดอื่นด้วยสีเน้น (ส้ม) ของร้าน */
 .stat-card-accent {
-  background: rgba(255, 106, 0, 0.08);
-  border-color: rgba(255, 106, 0, 0.35);
+  background: rgba(238, 77, 45, 0.08);
+  border-color: rgba(238, 77, 45, 0.35);
 }
 .stat-card-accent .stat-value {
   color: var(--accent-dark);
