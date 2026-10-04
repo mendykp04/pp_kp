@@ -132,11 +132,14 @@ function renderProducts() {
         </div>
         <span class="flash-countdown" data-end="${sale.endAt}">กำลังคำนวณเวลา...</span>`
         : `<span class="price">${formatPrice(p.price)}</span>`;
-      // ป้ายเล็ก ๆ (รหัสสินค้า + เกรดสภาพ) รวมไว้ในแถวเดียวกัน แทนการแยกบรรทัดข้อความเปล่า ๆ ทีละแถว — ไม่แสดงแถวนี้เลยถ้าไม่มีทั้งคู่ กันเหลือช่องว่างเปล่า
+      // ป้ายเล็ก ๆ (ไซส์ + รหัสสินค้า + เกรดสภาพ) รวมไว้ในแถวเดียวกัน แทนการแยกบรรทัดข้อความเปล่า ๆ ทีละแถว — ไม่แสดงแถวนี้เลยถ้าไม่มีสักอย่าง กันเหลือช่องว่างเปล่า
+      // ไซส์โชว์บนการ์ดเลย ลูกค้าจะได้รู้ว่าคู่นี้ใส่ได้ไหมโดยไม่ต้องกด "เพิ่มลงตะกร้า" เพื่อเปิดดูไซส์ก่อน
+      const hasSizes = p.sizes && p.sizes.length > 0;
       const tagsBlock =
-        p.code || p.condition
+        hasSizes || p.code || p.condition
           ? `
         <div class="card-tags">
+          ${hasSizes ? `<span class="tag tag-size">ไซส์ ${p.sizes.join(', ')}</span>` : ''}
           ${p.code ? `<span class="tag">รหัส ${p.code}</span>` : ''}
           ${p.condition ? `<span class="tag">${p.condition}</span>` : ''}
         </div>`
@@ -379,6 +382,11 @@ function renderFlashSales() {
       <div class="info">
         <span class="brand">${s.productBrand}</span>
         <span class="name">${s.productName}</span>
+        ${
+          s.productSizes && s.productSizes.length > 0
+            ? `<div class="card-tags"><span class="tag tag-size">ไซส์ ${s.productSizes.join(', ')}</span></div>`
+            : ''
+        }
         <div class="flash-price-row">
           <span class="price-strike">${formatPrice(s.productPrice)}</span>
           <span class="price flash-price">${formatPrice(s.salePrice)}</span>

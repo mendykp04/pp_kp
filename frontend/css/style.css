@@ -408,6 +408,11 @@ img {
   border-radius: var(--radius);
   padding: 2px 8px;
 }
+/* ป้ายไซส์ — ตัวหนาและสีเข้มกว่าป้ายอื่น เพราะเป็นข้อมูลแรกที่ลูกค้าใช้ตัดสินใจว่าคู่นี้ใส่ได้หรือไม่ */
+.card-tags .tag-size {
+  color: var(--text);
+  font-weight: 700;
+}
 
 /* ข้อความราคาสินค้าบนการ์ด */
 .product-card .price {
