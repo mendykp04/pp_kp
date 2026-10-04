@@ -384,6 +384,17 @@ productModal.addEventListener('click', (e) => {
   if (e.target === productModal) productModal.classList.remove('open');
 });
 
+// รองเท้ามือสองลงขายไซส์ละคู่ แต่ละรายการจึงมีได้ไซส์เดียว — ติ๊กไซส์ใหม่แล้วให้เอาติ๊กไซส์อื่นออกอัตโนมัติ
+// (หน้าร้านจะได้กด "เพิ่มลงตะกร้า" ได้ทันทีโดยไม่ต้องถามไซส์)
+document.querySelectorAll('#productSizeGrid input[type="checkbox"]').forEach((cb) => {
+  cb.addEventListener('change', () => {
+    if (!cb.checked) return;
+    document.querySelectorAll('#productSizeGrid input[type="checkbox"]').forEach((other) => {
+      if (other !== cb) other.checked = false;
+    });
+  });
+});
+
 // ผูก event เมื่อผู้ใช้กดปุ่ม "บันทึกสินค้า" (submit ฟอร์ม)
 productForm.addEventListener('submit', async (e) => {
   // ป้องกันเบราว์เซอร์รีโหลดหน้าตามพฤติกรรมปกติของฟอร์ม
@@ -414,7 +425,7 @@ productForm.addEventListener('submit', async (e) => {
 
   // ต้องติ๊กไซส์อย่างน้อย 1 ไซส์ (เดิมช่องพิมพ์มี required แต่ checkbox หลายช่องบังคับแบบนั้นไม่ได้ ต้องเช็คเองตรงนี้)
   if (payload.sizes.length === 0) {
-    showToast('กรุณาเลือกไซส์อย่างน้อย 1 ไซส์');
+    showToast('กรุณาเลือกไซส์ของรองเท้าคู่นี้');
     return;
   }
 

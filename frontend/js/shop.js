@@ -206,8 +206,8 @@ function renderProducts() {
       const sale = btn.dataset.flashId
         ? activeFlashSales.find((s) => s.id === btn.dataset.flashId)
         : null;
-      // เปิด modal เลือกไซส์ โดยส่ง id ของสินค้าและข้อมูล Flash Sale (ถ้ามี) ไปด้วย
-      openSizeModal(btn.dataset.id, sale);
+      // เพิ่มลงตะกร้าทันที โดยส่ง id ของสินค้าและข้อมูล Flash Sale (ถ้ามี) ไปด้วย
+      addProductToCart(btn.dataset.id, sale);
     });
   });
   // ผูก event คลิกที่รูปสินค้าทุกใบที่เพิ่งวาดใหม่ กดแล้วเปิด modal ดูรูปแบบเต็ม (เลื่อนดูได้หลายรูป)
@@ -216,6 +216,22 @@ function renderProducts() {
   });
   // อัปเดตตัวนับถอยหลังทันทีหลังวาดการ์ดเสร็จ (การ์ดที่มี Flash Sale ในตารางสินค้าทั้งหมดก็ต้องเห็นเวลานับถอยหลังทันที ไม่ต้องรอรอบ setInterval แรก)
   updateFlashCountdowns();
+}
+
+// ฟังก์ชันเพิ่มสินค้าลงตะกร้าเมื่อกดปุ่ม "เพิ่มลงตะกร้า" (จากการ์ดสินค้า, การ์ด Flash Sale หรือหน้ารายละเอียด)
+// ร้านขายรองเท้ามือสอง ลงขายไซส์ละคู่ แต่ละรายการจึงมีไซส์เดียว (โชว์อยู่บนการ์ดแล้ว) — กดแล้วเพิ่มลงตะกร้าได้เลย ไม่ต้องถามไซส์ซ้ำ
+// รับพารามิเตอร์ flashSale เสริม (ค่า default เป็น null) เพื่อใช้ราคาลดแทนราคาปกติ
+function addProductToCart(productId, flashSale = null) {
+  const product = allProducts.find((p) => p.id === productId);
+  if (!product) return;
+  const sizes = product.sizes || [];
+  // เผื่อข้อมูลเก่าที่เคยติ๊กไว้หลายไซส์ในรายการเดียว ยังต้องให้ลูกค้าเลือกไซส์ก่อน (กรณีเดียวที่ modal เลือกไซส์ยังถูกใช้)
+  if (sizes.length > 1) {
+    openSizeModal(productId, flashSale);
+    return;
+  }
+  addToCart(product, sizes[0] ?? null, 1, flashSale ? { price: flashSale.salePrice, flashSaleId: flashSale.id } : {});
+  showToast(`เพิ่ม ${product.name}${sizes.length ? ` (ไซส์ ${sizes[0]})` : ''} ลงตะกร้าแล้ว`);
 }
 
 // ฟังก์ชันเปิดหน้าต่าง (modal) สำหรับเลือกไซส์ของสินค้าที่ต้องการเพิ่มลงตะกร้า
@@ -423,16 +439,8 @@ document.getElementById('detailAddToCart').addEventListener('click', () => {
   if (!detailProduct) return;
   // ถ้าสินค้านี้กำลัง Flash Sale อยู่ ให้ใช้ราคาลด (ตรงกับราคาที่โชว์ใน modal นี้)
   const sale = activeFlashSales.find((s) => s.productId === detailProduct.id) || null;
-  const sizes = detailProduct.sizes || [];
   productDetailModal.classList.remove('open');
-  if (sizes.length === 1) {
-    // มีไซส์เดียว (กรณีปกติของรองเท้ามือสอง) ไม่ต้องถามไซส์ซ้ำ เพราะเห็นไซส์ในหน้ารายละเอียดอยู่แล้ว เพิ่มลงตะกร้าได้เลย
-    addToCart(detailProduct, sizes[0], 1, sale ? { price: sale.salePrice, flashSaleId: sale.id } : {});
-    showToast(`เพิ่ม ${detailProduct.name} (ไซส์ ${sizes[0]}) ลงตะกร้าแล้ว`);
-  } else {
-    // มีหลายไซส์ ให้เปิด modal เลือกไซส์ต่อเหมือนกดจากการ์ด
-    openSizeModal(detailProduct.id, sale);
-  }
+  addProductToCart(detailProduct.id, sale);
 });
 
 // ผูก event ให้ปุ่มกากบาทปิด modal ดูรายละเอียด/รูปสินค้า
@@ -521,8 +529,8 @@ function renderFlashSales() {
     btn.addEventListener('click', () => {
       // หาข้อมูล Flash Sale ที่ตรงกับปุ่มที่ถูกคลิก (ใช้ flashId เผื่อสินค้าตัวเดียวมีหลาย Flash Sale ในอดีต)
       const sale = activeFlashSales.find((s) => s.id === btn.dataset.flashId);
-      // เปิด modal เลือกไซส์ พร้อมแนบข้อมูล Flash Sale ไปด้วย เพื่อให้ใช้ราคาลดตอนเพิ่มลงตะกร้า
-      openSizeModal(btn.dataset.id, sale);
+      // เพิ่มลงตะกร้าทันที พร้อมแนบข้อมูล Flash Sale ไปด้วย เพื่อให้ใช้ราคาลด
+      addProductToCart(btn.dataset.id, sale);
     });
   });
   // ผูก event คลิกที่รูปสินค้าทุกใบในโซน Flash Sale ที่เพิ่งวาดใหม่ กดแล้วเปิด modal ดูรูปแบบเต็ม
