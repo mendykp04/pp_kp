@@ -890,6 +890,12 @@ function printReceipt(orderId) {
     <div class="receipt-dash"></div>
     ${itemsHTML}
     <div class="receipt-dash"></div>
+    ${
+      // ออเดอร์เก่าก่อนมีระบบค่าจัดส่งจะไม่มีค่านี้ (null) ไม่ต้องแสดงแถวนี้
+      order.shippingFee != null
+        ? `<div class="receipt-meta-row"><span>ค่าจัดส่ง</span><span>${order.shippingFee === 0 ? 'ฟรี' : formatPrice(order.shippingFee)}</span></div>`
+        : ''
+    }
     <div class="receipt-total-row grand"><span>ยอดรวมทั้งหมด</span><span>${formatPrice(order.total)}</span></div>
     <div class="receipt-meta-row"><span>วิธีชำระเงิน</span><span>${escapeHtml(formatPaymentMethod(order.paymentMethod))}</span></div>
     <div class="receipt-meta-row"><span>สถานะการชำระเงิน</span><span>${escapeHtml(order.paymentStatus || '-')}</span></div>

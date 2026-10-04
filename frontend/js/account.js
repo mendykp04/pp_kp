@@ -37,6 +37,15 @@ function renderOrderCard(order) {
         <span>รายการสินค้า</span>
         <span>${order.items.map((i) => `${i.name} (ไซส์ ${i.size})`).join(', ')}</span>
       </div>
+      ${
+        // ออเดอร์เก่าก่อนมีระบบค่าจัดส่งจะไม่มีค่านี้ (null) ไม่ต้องแสดงแถวนี้
+        order.shippingFee != null
+          ? `<div class="row">
+        <span>ค่าจัดส่ง</span>
+        <span>${order.shippingFee === 0 ? 'ฟรี' : formatPrice(order.shippingFee)}</span>
+      </div>`
+          : ''
+      }
       <div class="row total">
         <span>ยอดรวม</span>
         <span>${formatPrice(order.total)}</span>

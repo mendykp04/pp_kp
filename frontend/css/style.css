@@ -867,6 +867,45 @@ img {
   padding-top: 12px;                        /* ระยะห่างจากเส้นคั่นด้านบน */
 }
 
+/* ข้อความเล็ก ๆ ข้างแถวค่าจัดส่ง บอกว่าซื้อเพิ่มอีกเท่าไรจะได้ส่งฟรี */
+.shipping-hint {
+  color: var(--accent);
+  font-size: 0.8rem;
+  margin-left: 6px;
+}
+
+/* แถบเงื่อนไขร้าน (จัดส่ง / ค่าส่ง / การคืนสินค้า) — 3 ช่องเรียงกันบนจอกว้าง ซ้อนลงมาเป็นแถวเดียวบนมือถือ */
+.shop-policy {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 40px;
+}
+.shop-policy .policy-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.shop-policy .policy-item strong {
+  font-size: 0.95rem;
+}
+.shop-policy .policy-item span {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+/* สรุปเงื่อนไขร้านแบบสั้น ๆ ใต้ปุ่มเพิ่มลงตะกร้าในหน้ารายละเอียดสินค้า */
+.detail-policy-note {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-align: center;
+}
+
 /* Payment method */
 /* กล่องรวมตัวเลือกวิธีการชำระเงินทั้ง 3 แบบ */
 .payment-options {

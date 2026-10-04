@@ -61,6 +61,7 @@ async function init() {
         address TEXT,
         items TEXT,
         total REAL,
+        shippingFee REAL,
         paymentMethod TEXT,
         status TEXT,
         paymentStatus TEXT,
@@ -125,6 +126,10 @@ async function init() {
   const existingOrderColumns = orderColumnsResult.rows.map((c) => c.name);
   if (!existingOrderColumns.includes('paymentStatus')) {
     await client.execute('ALTER TABLE orders ADD COLUMN paymentStatus TEXT');
+  }
+  // ค่าจัดส่งของออเดอร์ (รวมอยู่ใน total แล้ว เก็บแยกไว้ให้แสดงในใบเสร็จ/ประวัติคำสั่งซื้อได้) — ออเดอร์เก่าก่อนมีฟีเจอร์นี้จะเป็น NULL
+  if (!existingOrderColumns.includes('shippingFee')) {
+    await client.execute('ALTER TABLE orders ADD COLUMN shippingFee REAL');
   }
   if (!existingOrderColumns.includes('slipUrl')) {
     await client.execute('ALTER TABLE orders ADD COLUMN slipUrl TEXT');
@@ -230,10 +235,11 @@ async function writeOrders(orders) {
   const statements = [{ sql: 'DELETE FROM orders', args: [] }];
   orders.forEach((o) =>
     statements.push({
-      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, paymentMethod, status, paymentStatus, slipUrl, shippingCarrier, trackingNumber, createdAt)
-            VALUES (@id, @customerName, @phone, @address, @items, @total, @paymentMethod, @status, @paymentStatus, @slipUrl, @shippingCarrier, @trackingNumber, @createdAt)`,
+      sql: `INSERT INTO orders (id, customerName, phone, address, items, total, shippingFee, paymentMethod, status, paymentStatus, slipUrl, shippingCarrier, trackingNumber, createdAt)
+            VALUES (@id, @customerName, @phone, @address, @items, @total, @shippingFee, @paymentMethod, @status, @paymentStatus, @slipUrl, @shippingCarrier, @trackingNumber, @createdAt)`,
       args: {
         ...o,
+        shippingFee: o.shippingFee ?? null,
         items: JSON.stringify(o.items || []),
         paymentMethod: o.paymentMethod ?? 'cod',
         paymentStatus: o.paymentStatus ?? '',

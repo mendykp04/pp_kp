@@ -57,8 +57,8 @@ async function updatePaymentMethodDisplay() {
   if (selected.value === 'promptpay') {
     // แสดงกล่อง QR code
     promptpayDetail.style.display = 'block';
-    // คำนวณยอดรวมปัจจุบันของตะกร้า เพื่อฝังยอดเงินนี้ลงใน QR code (ให้ลูกค้าสแกนแล้วยอดขึ้นให้อัตโนมัติ ไม่ต้องพิมพ์เอง)
-    const amount = cartTotalPrice();
+    // คำนวณยอดที่ต้องจ่ายจริงของตะกร้า (ยอดสินค้า + ค่าจัดส่ง) เพื่อฝังยอดเงินนี้ลงใน QR code (ให้ลูกค้าสแกนแล้วยอดขึ้นให้อัตโนมัติ ไม่ต้องพิมพ์เอง)
+    const amount = cartGrandTotal();
     // แสดงยอดเงินที่ต้องชำระกำกับไว้เหนือ QR code ด้วย
     document.getElementById('promptpayAmount').textContent = formatPrice(amount);
     // ใช้ try/catch ดักจับข้อผิดพลาดระหว่างขอรูป QR code จาก backend
@@ -148,7 +148,14 @@ function renderCart() {
   // อัปเดตตัวเลขจำนวนสินค้ารวมในกล่องสรุป (เรียกฟังก์ชันจาก common.js)
   document.getElementById('summaryCount').textContent = cartTotalCount();
   // อัปเดตยอดรวมราคาทั้งหมดในกล่องสรุป พร้อมจัดรูปแบบเป็นสกุลเงินบาท
-  document.getElementById('summaryTotal').textContent = formatPrice(cartTotalPrice());
+  const subtotal = cartTotalPrice();
+  const shippingFee = calcShippingFee(subtotal);
+  document.getElementById('summarySubtotal').textContent = formatPrice(subtotal);
+  document.getElementById('summaryShipping').textContent = shippingFee === 0 ? 'ฟรี' : formatPrice(shippingFee);
+  // ถ้ายังไม่ถึงยอดส่งฟรี บอกลูกค้าว่าขาดอีกเท่าไร (ซ่อนข้อความนี้ไปเลยถ้าได้ส่งฟรีแล้ว)
+  document.getElementById('summaryShippingHint').textContent =
+    shippingFee === 0 ? '' : `ซื้อเพิ่มอีก ${formatPrice(FREE_SHIPPING_MIN - subtotal)} ส่งฟรี`;
+  document.getElementById('summaryTotal').textContent = formatPrice(subtotal + shippingFee);
   // แสดงกล่องสรุปยอดรวม เพราะตอนนี้มีสินค้าแล้ว
   cartSummaryEl.style.display = 'block';
   // แสดงฟอร์มกรอกข้อมูลจัดส่ง เพื่อให้ผู้ใช้กรอกและกดสั่งซื้อได้
@@ -242,7 +249,10 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     // แสดงข้อความ "สั่งซื้อสำเร็จ" แทน
     successMessage.style.display = 'block';
     // แสดงหมายเลขคำสั่งซื้อ (id) ที่ backend ส่งกลับมา ให้ผู้ใช้เก็บไว้อ้างอิง
-    document.getElementById('orderRef').textContent = `หมายเลขคำสั่งซื้อ: ${order.id}`;
+    // แสดงยอดที่ต้องชำระจริง (รวมค่าจัดส่งแล้ว ตามที่ backend คำนวณ) กำกับไว้ด้วย เพราะตะกร้าถูกล้างไปแล้ว ลูกค้าจะได้ไม่ต้องจำยอดเอง
+    document.getElementById('orderRef').textContent =
+      `หมายเลขคำสั่งซื้อ: ${order.id} · ยอดที่ต้องชำระ ${formatPrice(order.total)}` +
+      (order.shippingFee > 0 ? ` (รวมค่าจัดส่ง ${formatPrice(order.shippingFee)})` : ' (ส่งฟรี)');
     // ปุ่ม "ตรวจสอบสถานะ": ถ้าล็อกอินอยู่แล้ว พาไปหน้า "บัญชีของฉัน" ดูออเดอร์นี้ได้เลย ถ้ายังไม่ได้ล็อกอิน พาไปหน้าเข้าสู่ระบบก่อน (ระบบจับคู่ประวัติออเดอร์ด้วยเบอร์โทรอัตโนมัติ ไม่ต้องจำหมายเลขคำสั่งซื้อเอง)
     const trackOrderLink = document.getElementById('trackOrderLink');
     if (isCustomerLoggedIn) {

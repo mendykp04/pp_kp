@@ -79,6 +79,22 @@ function cartTotalPrice() {
   return getCart().reduce((sum, i) => sum + i.qty * i.price, 0);
 }
 
+// ค่าจัดส่ง: คิดเหมา SHIPPING_FEE บาทต่อออเดอร์ และส่งฟรีเมื่อยอดสินค้าถึง FREE_SHIPPING_MIN บาท
+// (ต้องตรงกับค่าใน backend/server.js เสมอ — ฝั่งนี้ใช้แสดงผลให้ลูกค้าเห็นก่อนสั่งซื้อ ส่วนยอดที่เก็บจริงคำนวณที่เซิร์ฟเวอร์)
+const SHIPPING_FEE = 50;
+const FREE_SHIPPING_MIN = 2000;
+
+// ฟังก์ชันคำนวณค่าจัดส่งจากยอดสินค้าในตะกร้า
+function calcShippingFee(subtotal) {
+  return subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
+}
+
+// ฟังก์ชันคำนวณยอดที่ลูกค้าต้องจ่ายจริงทั้งหมด (ยอดสินค้า + ค่าจัดส่ง) ใช้กับยอดรวมในตะกร้าและยอดใน QR พร้อมเพย์
+function cartGrandTotal() {
+  const subtotal = cartTotalPrice();
+  return subtotal + calcShippingFee(subtotal);
+}
+
 // ฟังก์ชันอัปเดตตัวเลขบนไอคอนตะกร้า (badge) ที่แสดงอยู่บน navbar
 function updateCartBadge() {
   // หา element ที่มี id="cartCount" ในหน้าเว็บปัจจุบัน

@@ -636,6 +636,14 @@ app.get('/api/orders', requireAuth, async (req, res) => {
   res.json(orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
 });
 
+// ค่าจัดส่ง: คิดเหมา SHIPPING_FEE บาทต่อออเดอร์ และส่งฟรีเมื่อยอดสินค้าถึง FREE_SHIPPING_MIN บาท
+// (ตัวเลขชุดเดียวกันอยู่ที่ frontend/js/common.js ใช้แสดงผลในตะกร้า — ถ้าแก้ที่นี่ต้องแก้ที่นั่นให้ตรงกัน ยอดที่เก็บจริงยึดตามฝั่งเซิร์ฟเวอร์นี้เสมอ)
+const SHIPPING_FEE = 50;
+const FREE_SHIPPING_MIN = 2000;
+function calcShippingFee(subtotal) {
+  return subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
+}
+
 // เมื่อมีการเรียก POST ที่ /api/orders (ลูกค้ากดยืนยันสั่งซื้อจากตะกร้า)
 app.post('/api/orders', async (req, res) => {
   // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body — slipUrl (ไม่บังคับ) คือรูปสลิปโอนเงินที่อัปโหลดไว้แล้ว (ถ้ามีตอนกดสั่งซื้อ)
@@ -706,6 +714,10 @@ app.post('/api/orders', async (req, res) => {
     });
   }
 
+  // คิดค่าจัดส่งจากยอดสินค้าที่ตรวจสอบราคาแล้ว (ไม่เชื่อยอดจากฝั่งลูกค้า) แล้วบวกเข้ายอดรวมที่ลูกค้าต้องจ่ายจริง
+  const shippingFee = calcShippingFee(total);
+  total += shippingFee;
+
   // ตัดสต็อกสินค้าที่ถูกสั่งซื้อออกจากฐานข้อมูลสินค้าจริง (กันไม่ให้ลูกค้าคนอื่นสั่งซื้อคู่เดียวกันซ้ำ)
   Object.keys(reservedQtyByProductId).forEach((productId) => {
     const product = products.find((p) => p.id === productId);
@@ -722,7 +734,9 @@ app.post('/api/orders', async (req, res) => {
     phone,
     address,
     items: orderItems,
+    // total = ยอดสินค้า + ค่าจัดส่ง (ยอดที่ลูกค้าต้องจ่ายจริง) ส่วน shippingFee เก็บแยกไว้ให้แสดงรายละเอียดได้
     total,
+    shippingFee,
     // เก็บวิธีชำระเงินที่ลูกค้าเลือกไว้ด้วย ให้ default เป็น "เก็บเงินปลายทาง" (cod) ถ้าไม่ได้ระบุมา
     paymentMethod: paymentMethod || 'cod',
     status: 'รอดำเนินการ',

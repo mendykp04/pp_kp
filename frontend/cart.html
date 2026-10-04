@@ -43,7 +43,26 @@
       <!-- กล่องสรุปจำนวน/ยอดรวม เริ่มต้นซ่อนไว้ก่อน (style="display:none") จะถูกแสดงโดย JS เมื่อมีสินค้า -->
       <div class="cart-summary" id="cartSummary" style="display:none;">
         <div class="row"><span>จำนวนสินค้า</span><span id="summaryCount">0</span></div>
+        <div class="row"><span>ค่าสินค้า</span><span id="summarySubtotal">0 บาท</span></div>
+        <!-- ค่าจัดส่ง: โชว์ "ฟรี" เมื่อยอดสินค้าถึงเกณฑ์ส่งฟรี ไม่งั้นโชว์ค่าส่ง + ข้อความบอกว่าขาดอีกเท่าไรจะได้ส่งฟรี (เติมโดย cart.js) -->
+        <div class="row"><span>ค่าจัดส่ง <small class="shipping-hint" id="summaryShippingHint"></small></span><span id="summaryShipping">0 บาท</span></div>
         <div class="row total"><span>ยอดรวม</span><span id="summaryTotal">0 บาท</span></div>
+      </div>
+    </div>
+
+    <!-- เงื่อนไขการจัดส่งและการคืนสินค้าของร้าน ให้ลูกค้าเห็นก่อนตัดสินใจสั่งซื้อ (ข้อความชุดเดียวกันอยู่ทั้งหน้าแรกและหน้าตะกร้า — ถ้าแก้ต้องแก้ทั้งสองที่ และค่าส่งต้องตรงกับ SHIPPING_FEE / FREE_SHIPPING_MIN ใน common.js กับ server.js) -->
+    <div class="shop-policy" style="margin-top: 24px;">
+      <div class="policy-item">
+        <strong>🚚 จัดส่งภายใน 1-3 วันทำการ</strong>
+        <span>มีเลขพัสดุให้ติดตามในหน้า "บัญชีของฉัน"</span>
+      </div>
+      <div class="policy-item">
+        <strong>📦 ค่าส่ง 50 บาทต่อออเดอร์</strong>
+        <span>ส่งฟรีเมื่อซื้อครบ 2,000 บาท</span>
+      </div>
+      <div class="policy-item">
+        <strong>↩️ คืนได้ภายใน 3 วัน ถ้าไม่ตรงปก</strong>
+        <span>กรณีสินค้าไม่ตรงกับรูปหรือตำหนิที่แจ้งไว้ นับจากวันที่ได้รับของ ต้องมีวิดีโอตอนแกะกล่อง</span>
       </div>
     </div>
 
