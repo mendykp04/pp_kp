@@ -361,6 +361,40 @@ app.get('/api/auth/customer/me', (req, res) => {
   res.json({ loggedIn: false });
 });
 
+// เมื่อมีการเรียก POST ที่ /api/auth/customer/change-password (ลูกค้าเปลี่ยนรหัสผ่านเองในหน้า "บัญชีของฉัน") — เฉพาะลูกค้าที่ล็อกอินแล้วเท่านั้น
+// ใช้ทั้งกรณีอยากเปลี่ยนรหัสเอง และกรณีเพิ่งได้รหัสชั่วคราวจากแอดมิน (ลืมรหัสผ่าน) แล้วเข้ามาตั้งรหัสใหม่ที่จำได้เอง
+app.post('/api/auth/customer/change-password', requireCustomerAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'กรุณาระบุรหัสผ่านปัจจุบันและรหัสผ่านใหม่' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร' });
+  }
+
+  // ใช้ตัวนับเดียวกับตอนล็อกอิน กันคนที่มานั่งเครื่องที่ล็อกอินค้างไว้สุ่มเดารหัสผ่านปัจจุบันไปเรื่อย ๆ
+  const loginKey = `${req.ip}:${req.session.customerPhone}`;
+  const blockSeconds = getLoginBlockSeconds(loginKey);
+  if (blockSeconds > 0) {
+    return res.status(429).json({
+      error: `กรอกรหัสผ่านผิดหลายครั้งเกินไป กรุณารออีก ${Math.ceil(blockSeconds / 60)} นาทีแล้วลองใหม่`,
+    });
+  }
+
+  const customers = await db.readCustomers();
+  // หาจาก id ใน session เท่านั้น (ไม่รับ id/เบอร์โทรจาก body ป้องกันเปลี่ยนรหัสผ่านของคนอื่น)
+  const idx = customers.findIndex((c) => c.id === req.session.customerId);
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบบัญชีลูกค้า' });
+  if (!verifyPassword(currentPassword, customers[idx].password)) {
+    recordFailedLogin(loginKey);
+    return res.status(401).json({ error: 'รหัสผ่านปัจจุบันไม่ถูกต้อง' });
+  }
+  resetLoginAttempts(loginKey);
+  customers[idx] = { ...customers[idx], password: hashPassword(newPassword) };
+  await db.writeCustomers(customers);
+  res.json({ success: true });
+});
+
 // เมื่อมีการเรียก GET ที่ /api/customer/orders (ขอประวัติคำสั่งซื้อทั้งหมดของลูกค้าที่ล็อกอินอยู่) — เฉพาะลูกค้าที่ล็อกอินแล้วเท่านั้น
 app.get('/api/customer/orders', requireCustomerAuth, async (req, res) => {
   const orders = await db.readOrders();
@@ -889,7 +923,8 @@ function enrichCustomerWithOrders(customer, orders) {
     .filter((o) => o.phone === customer.phone)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   // ส่งคืนข้อมูลลูกค้าเดิม (ตัดฟิลด์ password ออกก่อนเสมอ) รวมกับรายการคำสั่งซื้อที่เจอ (ใช้ดูว่าลูกค้าคนนี้เคยสั่งรองเท้ารุ่นไหนไปบ้าง)
-  return { ...sanitizeCustomer(customer), orders: customerOrders };
+  // hasAccount บอกหน้า admin ว่าลูกค้าคนนี้สมัครสมาชิกไว้แล้วหรือยัง (มีรหัสผ่านหรือไม่) โดยไม่ต้องส่งแฮชรหัสผ่านออกไป
+  return { ...sanitizeCustomer(customer), hasAccount: !!customer.password, orders: customerOrders };
 }
 
 // เมื่อมีการเรียก GET ที่ /api/customers (ขอรายการลูกค้าทั้งหมด รองรับค้นหาด้วย query string ?q=)
@@ -968,6 +1003,38 @@ app.delete('/api/customers/:id', requireAuth, async (req, res) => {
   await db.writeCustomers(customers);
   // ตอบกลับข้อมูลลูกค้าที่ถูกลบไป เพื่อยืนยันว่าลบคนไหน
   res.json(removed[0]);
+});
+
+// ฟังก์ชันสุ่มรหัสผ่านชั่วคราว 8 ตัว ใช้ตอนแอดมินรีเซ็ตรหัสผ่านให้ลูกค้าที่ลืมรหัส
+// ตัดตัวอักษรที่อ่านสับสนง่ายออก (0/o, 1/l/i) เพราะแอดมินต้องพิมพ์/บอกต่อให้ลูกค้าทาง LINE หรือโทรศัพท์
+function generateTempPassword() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) result += chars[crypto.randomInt(chars.length)];
+  return result;
+}
+
+// เมื่อมีการเรียก POST ที่ /api/customers/:id/reset-password (แอดมินรีเซ็ตรหัสผ่านให้ลูกค้าที่ลืมรหัส)
+// ระบบสุ่มรหัสชั่วคราวให้ใหม่ แล้วส่งกลับไปให้แอดมินเห็น "ครั้งเดียว" ตรงนี้ (ในฐานข้อมูลเก็บเฉพาะค่าแฮชเหมือนเดิม ดูย้อนหลังไม่ได้)
+app.post('/api/customers/:id/reset-password', requireAuth, async (req, res) => {
+  const customers = await db.readCustomers();
+  const idx = customers.findIndex((c) => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบลูกค้า' });
+  // รีเซ็ตได้เฉพาะลูกค้าที่สมัครสมาชิกไว้แล้ว (คนที่ยังไม่เคยสมัครให้ไปสมัครเองที่หน้าร้านค้าด้วยเบอร์เดิมได้เลย)
+  if (!customers[idx].password) {
+    return res.status(400).json({ error: 'ลูกค้าคนนี้ยังไม่ได้สมัครสมาชิก ให้ลูกค้าสมัครสมาชิกด้วยเบอร์นี้ได้เลย' });
+  }
+
+  const tempPassword = generateTempPassword();
+  customers[idx] = { ...customers[idx], password: hashPassword(tempPassword) };
+  await db.writeCustomers(customers);
+
+  // ล้างสถิติล็อกอินผิดของเบอร์นี้ทิ้งทุก IP (ลูกค้าที่ลืมรหัสมักลองผิดจนโดนบล็อกไปแล้ว จะได้ใช้รหัสชั่วคราวล็อกอินได้ทันที)
+  for (const key of loginAttempts.keys()) {
+    if (key.endsWith(`:${customers[idx].phone}`)) loginAttempts.delete(key);
+  }
+
+  res.json({ success: true, tempPassword });
 });
 
 // ---------- Flash Sale API ----------

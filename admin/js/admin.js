@@ -966,6 +966,7 @@ function renderCustomerTable() {
       <td>${itemsSummary}</td>
       <td>
         <button class="btn-icon" data-action="edit" data-id="${c.id}">แก้ไข</button>
+        ${c.hasAccount ? `<button class="btn-icon" data-action="reset-password" data-id="${c.id}">รีเซ็ตรหัสผ่าน</button>` : ''}
         <button class="btn-icon danger" data-action="delete" data-id="${c.id}">ลบ</button>
       </td>
     </tr>
@@ -973,13 +974,15 @@ function renderCustomerTable() {
     })
     .join(''); // รวม HTML ทุกแถวเป็นข้อความเดียว แล้วใส่ลงในตาราง
 
-  // ผูก event คลิกให้กับปุ่ม "แก้ไข" และ "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
+  // ผูก event คลิกให้กับปุ่ม "แก้ไข", "รีเซ็ตรหัสผ่าน" และ "ลบ" ทุกปุ่มที่เพิ่งวาดใหม่
   customerTableBody.querySelectorAll('button[data-action]').forEach((btn) => {
     btn.addEventListener('click', () => {
       // หาข้อมูลลูกค้าที่ตรงกับ id ของปุ่มที่ถูกคลิก
       const customer = customers.find((c) => c.id === btn.dataset.id);
       // ถ้าเป็นปุ่ม "แก้ไข" ให้เปิด modal พร้อมข้อมูลลูกค้าเดิม
       if (btn.dataset.action === 'edit') openCustomerModal(customer);
+      // ถ้าเป็นปุ่ม "รีเซ็ตรหัสผ่าน" (แสดงเฉพาะลูกค้าที่สมัครสมาชิกแล้ว) ให้เรียกฟังก์ชันรีเซ็ตรหัสผ่าน
+      if (btn.dataset.action === 'reset-password') resetCustomerPassword(customer);
       // ถ้าเป็นปุ่ม "ลบ" ให้เรียกฟังก์ชันลบลูกค้า
       if (btn.dataset.action === 'delete') deleteCustomer(customer);
     });
@@ -1059,6 +1062,30 @@ customerForm.addEventListener('submit', async (e) => {
     showToast(err.message);
   }
 });
+
+// ฟังก์ชัน async สำหรับรีเซ็ตรหัสผ่านให้ลูกค้าที่ลืมรหัส (ลูกค้าติดต่อร้านมาทาง LINE/โทรศัพท์)
+// ระบบจะสุ่มรหัสชั่วคราวให้ใหม่ แอดมินส่งต่อให้ลูกค้า แล้วลูกค้าไปเปลี่ยนเป็นรหัสของตัวเองในหน้า "บัญชีของฉัน"
+async function resetCustomerPassword(customer) {
+  // ยืนยันก่อนเสมอ เพราะรหัสผ่านเดิมของลูกค้าจะใช้ไม่ได้ทันที
+  if (
+    !confirm(
+      `รีเซ็ตรหัสผ่านของ "${customer.name}" (${customer.phone}) ใช่หรือไม่?\n\nรหัสผ่านเดิมจะใช้ไม่ได้ทันที — ควรยืนยันก่อนว่าคนที่ติดต่อมาเป็นเจ้าของเบอร์นี้จริง (เช่น ถามหมายเลขคำสั่งซื้อล่าสุด)`
+    )
+  )
+    return;
+  try {
+    const res = await fetch(`${API_BASE}/customers/${customer.id}/reset-password`, { method: 'POST' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+    // ใช้ prompt แทน alert เพื่อให้เลือก/คัดลอกรหัสชั่วคราวไปวางส่งให้ลูกค้าได้ทันที (รหัสนี้แสดงครั้งเดียว ดูย้อนหลังไม่ได้)
+    prompt(
+      `รหัสผ่านชั่วคราวของ "${customer.name}" (แสดงครั้งเดียว)\nคัดลอกส่งให้ลูกค้า แล้วแจ้งให้เปลี่ยนรหัสผ่านใหม่ในหน้า "บัญชีของฉัน"`,
+      data.tempPassword
+    );
+  } catch (err) {
+    showToast(err.message);
+  }
+}
 
 // ฟังก์ชัน async สำหรับลบลูกค้า รับพารามิเตอร์เป็น object ลูกค้าที่ต้องการลบ
 async function deleteCustomer(customer) {

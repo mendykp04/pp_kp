@@ -45,6 +45,26 @@
     <h3 style="margin-bottom: 16px;">ประวัติคำสั่งซื้อ</h3>
     <!-- รายการคำสั่งซื้อทั้งหมดของบัญชีนี้จะถูกวาดลงในนี้โดย account.js -->
     <div id="orderList"><p>กำลังโหลด...</p></div>
+
+    <!-- ฟอร์มเปลี่ยนรหัสผ่าน (พับเก็บไว้ กดเพื่อเปิด) ใช้ตอนอยากเปลี่ยนรหัสเอง หรือเพิ่งได้รหัสชั่วคราวจากร้านหลังลืมรหัสผ่าน -->
+    <details style="margin-top: 32px; max-width: 420px;">
+      <summary style="cursor: pointer; font-weight: 600;">เปลี่ยนรหัสผ่าน</summary>
+      <form id="changePasswordForm" style="margin-top: 16px;">
+        <div class="field">
+          <label for="currentPassword">รหัสผ่านปัจจุบัน (หรือรหัสชั่วคราวที่ได้จากร้าน)</label>
+          <input type="password" id="currentPassword" autocomplete="current-password" required />
+        </div>
+        <div class="field">
+          <label for="newPassword">รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
+          <input type="password" id="newPassword" autocomplete="new-password" minlength="6" required />
+        </div>
+        <div class="field">
+          <label for="confirmNewPassword">ยืนยันรหัสผ่านใหม่</label>
+          <input type="password" id="confirmNewPassword" autocomplete="new-password" minlength="6" required />
+        </div>
+        <button type="submit" class="btn btn-block">บันทึกรหัสผ่านใหม่</button>
+      </form>
+    </details>
   </main>
 
   <!-- ท้ายเว็บไซต์ (footer) — เหมือนกันทุกหน้า ดูรายละเอียดคอมเมนต์ที่ index.html -->

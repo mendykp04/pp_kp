@@ -123,3 +123,33 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   await fetch(`${API_BASE}/auth/customer/logout`, { method: 'POST' });
   window.location.href = 'index.html';
 });
+
+// ผูก event ให้ฟอร์ม "เปลี่ยนรหัสผ่าน" ยิงไปที่ backend (ต้องกรอกรหัสผ่านปัจจุบันถูกต้องก่อน จึงจะเปลี่ยนได้)
+const changePasswordForm = document.getElementById('changePasswordForm');
+changePasswordForm.addEventListener('submit', async (e) => {
+  // ป้องกันเบราว์เซอร์รีโหลดหน้าตามพฤติกรรมปกติของฟอร์ม
+  e.preventDefault();
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  // เช็คฝั่งหน้าเว็บก่อนว่ากรอกรหัสใหม่ 2 ช่องตรงกัน กันพิมพ์ผิดแล้วล็อกอินไม่ได้อีกรอบ
+  if (newPassword !== document.getElementById('confirmNewPassword').value) {
+    showToast('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/auth/customer/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
+    }
+    changePasswordForm.reset();
+    showToast('เปลี่ยนรหัสผ่านเรียบร้อย');
+  } catch (err) {
+    showToast(err.message);
+  }
+});
