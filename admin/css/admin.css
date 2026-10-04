@@ -517,6 +517,77 @@ td img {
   align-self: flex-start;
 }
 
+/* ตารางคำสั่งซื้อแบบกระทัดรัด — เห็นครบในจอเดียว ไม่ต้องเลื่อนซ้ายขวา
+   ต่างจากตารางอื่นตรงที่: ความกว้างคอลัมน์ตายตัวตาม <colgroup> (table-layout: fixed), ข้อความตัดขึ้นบรรทัดใหม่ได้, ช่องไฟแคบลง, ตัวอักษรเล็กลงเล็กน้อย
+   (จอที่แคบกว่า min-width ด้านล่าง เช่นมือถือ ยังเลื่อนแนวนอนได้ตามปกติผ่าน .table-wrap) */
+.orders-table {
+  table-layout: fixed;
+  min-width: 860px;
+}
+.orders-table th,
+.orders-table td {
+  padding: 10px 10px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  white-space: normal;        /* ทับค่า nowrap ของตารางทั่วไป ให้ชื่อ/ที่อยู่/รายการยาว ๆ ตัดลงบรรทัดใหม่ */
+  overflow-wrap: anywhere;    /* ข้อความยาวไม่มีช่องว่าง (เช่นรหัสออเดอร์) ก็ตัดได้ ไม่ดันตารางให้กว้างออก */
+  vertical-align: top;
+}
+.orders-table th {
+  font-size: 0.72rem;
+}
+/* รหัสออเดอร์: ตัวเล็กแบบรหัส อ่านแยกจากข้อความอื่นง่าย */
+.orders-table .order-id {
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+/* ข้อความรอง (วันที่, ที่อยู่, วิธีชำระเงิน) สีจางและเล็กกว่าข้อความหลัก */
+.orders-table .order-sub {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+/* ข้อความหลักของช่อง (ชื่อลูกค้า, ยอดรวม) */
+.orders-table .order-main {
+  font-weight: 700;
+}
+.orders-table .order-total {
+  margin-top: 4px;
+}
+/* ดรอปดาวน์/ช่องกรอกในคอลัมน์การจัดส่ง ยืดเต็มความกว้างคอลัมน์ */
+.orders-table .order-status-select,
+.orders-table .shipping-form select,
+.orders-table .shipping-form input {
+  width: 100%;
+  min-width: 0;
+}
+.orders-table .shipping-form {
+  min-width: 0;
+  margin-top: 6px;
+}
+/* เลขพัสดุ + ปุ่มบันทึก อยู่แถวเดียวกัน ประหยัดความสูงของแถว */
+.orders-table .shipping-tracking-row {
+  display: flex;
+  gap: 4px;
+}
+.orders-table .shipping-tracking-row .btn-icon {
+  flex-shrink: 0;
+  margin-right: 0;
+}
+/* ปุ่มในตารางนี้เล็กลงเล็กน้อย */
+.orders-table .btn-icon {
+  padding: 5px 8px;
+  font-size: 0.8rem;
+}
+.orders-table .payment-status-badge {
+  margin-top: 2px;
+}
+/* คอลัมน์จัดการ: ปุ่มเรียงแนวตั้ง */
+.orders-table .order-actions .btn-icon {
+  display: block;
+  width: 100%;
+  margin: 0 0 6px;
+}
+
 /* ป้ายสถานะการชำระเงิน (คนละสถานะกับสถานะจัดส่งด้านบน) ในตารางคำสั่งซื้อ — ใช้ชุดสีเดียวกับหน้าร้านค้า (ดู style.css .status-badge.payment-status-*) */
 .payment-status-badge {
   display: inline-block;

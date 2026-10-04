@@ -531,7 +531,7 @@ function renderOrderTable() {
   // ถ้าไม่มีคำสั่งซื้อเลย
   if (orders.length === 0) {
     // แสดงข้อความแจ้งว่ายังไม่มีคำสั่งซื้อ (ครอบคลุม 11 คอลัมน์)
-    orderTableBody.innerHTML = '<tr><td colspan="11">ยังไม่มีคำสั่งซื้อ</td></tr>';
+    orderTableBody.innerHTML = '<tr><td colspan="6">ยังไม่มีคำสั่งซื้อ</td></tr>';
     renderPagination('orderPagination', 0, 1, () => {});
     return; // ออกจากฟังก์ชันทันที
   }
@@ -549,15 +549,24 @@ function renderOrderTable() {
       const optionsHTML = statusLabels
         .map((s) => `<option value="${escapeHtml(s)}" ${s === o.status ? 'selected' : ''}>${escapeHtml(s)}</option>`)
         .join('');
+      // แต่ละแถวรวมข้อมูลที่เกี่ยวข้องกันไว้ในช่องเดียว (ออเดอร์+วันที่ / ลูกค้า+เบอร์+ที่อยู่ / รายการ+ยอดรวม / การชำระเงิน / การจัดส่ง / ปุ่มจัดการ) ให้เห็นครบในจอเดียว
       return `
     <tr>
-      <td>${escapeHtml(o.id)}</td>
-      <td>${escapeHtml(o.customerName)}<br /><small>${escapeHtml(o.address)}</small></td>
-      <td>${escapeHtml(o.phone)}</td>
-      <td>${o.items.map((i) => `${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)}) x${escapeHtml(i.qty)}`).join('<br />')}</td>
-      <td>${formatPrice(o.total)}</td>
-      <td>${formatPaymentMethod(o.paymentMethod)}</td>
       <td>
+        <div class="order-id">${escapeHtml(o.id)}</div>
+        <div class="order-sub">${new Date(o.createdAt).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}</div>
+      </td>
+      <td>
+        <div class="order-main">${escapeHtml(o.customerName)}</div>
+        <div>${escapeHtml(o.phone)}</div>
+        <div class="order-sub">${escapeHtml(o.address)}</div>
+      </td>
+      <td>
+        ${o.items.map((i) => `<div>${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)})${i.qty > 1 ? ` x${escapeHtml(i.qty)}` : ''}</div>`).join('')}
+        <div class="order-main order-total">${formatPrice(o.total)}</div>
+      </td>
+      <td>
+        <div class="order-sub">${formatPaymentMethod(o.paymentMethod)}</div>
         <!-- ป้ายสถานะการชำระเงิน (คนละสถานะกับสถานะจัดส่ง) -->
         <span class="payment-status-badge ${PAYMENT_STATUS_CLASS_MAP[o.paymentStatus] || ''}">${escapeHtml(o.paymentStatus || '-')}</span>
         <!-- ลิงก์ดูรูปสลิปที่ลูกค้าแนบมา (ถ้ามี) -->
@@ -567,41 +576,40 @@ function renderOrderTable() {
             ? `<div><a href="${escapeHtml(o.slipUrl)}" target="_blank" rel="noopener">ดูสลิป</a></div>`
             : ''
         }
-        <!-- ปุ่มยืนยันการชำระเงิน แสดงเฉพาะตอนที่ยังต้องโอนเงิน (ไม่ใช่เก็บเงินปลายทาง) และยังไม่เคยยืนยันมาก่อน -->
+        <!-- ปุ่มยืนยันการชำระเงิน แสดงเฉพาะตอนที่ยังต้องโอนเงิน (ไม่ใช่เก็บเงินปลายทาง) ยังไม่เคยยืนยันมาก่อน และออเดอร์ยังไม่ถูกยกเลิก -->
         ${
-          o.paymentMethod !== 'cod' && o.paymentStatus !== 'ชำระเงินแล้ว'
-            ? `<div><button class="btn-icon" data-action="confirm-payment" data-id="${o.id}">✅ ยืนยันชำระเงิน</button></div>`
+          o.paymentMethod !== 'cod' && o.paymentStatus !== 'ชำระเงินแล้ว' && o.status !== 'ยกเลิก'
+            ? `<div><button class="btn-icon" data-action="confirm-payment" data-id="${escapeHtml(o.id)}">✅ ยืนยันชำระ</button></div>`
             : ''
         }
       </td>
       <td>
         <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) — class status-* ทำให้พื้นหลังมีสีต่างกันตามสถานะ -->
         ${
-          // ออเดอร์ที่ลูกค้ายกเลิกเองแล้ว (คืนสต็อกไปแล้ว) เปลี่ยนสถานะต่อไม่ได้ จึงล็อกดรอปดาวน์ไว้
+          // ออเดอร์ที่ลูกค้ายกเลิกเองแล้ว (คืนสต็อกไปแล้ว) เปลี่ยนสถานะต่อไม่ได้ จึงล็อกดรอปดาวน์ไว้ และไม่ต้องมีฟอร์มขนส่ง
           o.status === 'ยกเลิก'
             ? `<select class="order-status-select status-failed" data-id="${escapeHtml(o.id)}" disabled>${optionsHTML}</select>`
-            : `<select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${escapeHtml(o.id)}">${optionsHTML}</select>`
-        }
-      </td>
-      <td>
-        <!-- ฟอร์มระบุบริษัทขนส่ง+เลขพัสดุ ของออเดอร์นี้ ลูกค้าจะเห็นข้อมูลนี้ที่หน้าตรวจสอบคำสั่งซื้อ/บัญชีของฉัน เอาไปติดตามพัสดุที่เว็บขนส่งเองได้ -->
-        <div class="shipping-form" data-id="${o.id}">
+            : `<select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${escapeHtml(o.id)}">${optionsHTML}</select>
+        <!-- ฟอร์มระบุบริษัทขนส่ง+เลขพัสดุ ของออเดอร์นี้ ลูกค้าจะเห็นข้อมูลนี้ที่หน้า "บัญชีของฉัน" เอาไปติดตามพัสดุที่เว็บขนส่งเองได้ -->
+        <div class="shipping-form" data-id="${escapeHtml(o.id)}">
           <select class="shipping-carrier-select">
             <option value="">— เลือกขนส่ง —</option>
             ${SHIPPING_CARRIERS.map(
               (c) => `<option value="${c}" ${o.shippingCarrier === c ? 'selected' : ''}>${c}</option>`
             ).join('')}
           </select>
-          <input type="text" class="shipping-tracking-input" placeholder="เลขพัสดุ" value="${escapeHtml(o.trackingNumber || '')}" />
-          <button class="btn-icon" data-action="save-shipping" data-id="${o.id}">บันทึก</button>
-        </div>
+          <div class="shipping-tracking-row">
+            <input type="text" class="shipping-tracking-input" placeholder="เลขพัสดุ" value="${escapeHtml(o.trackingNumber || '')}" />
+            <button class="btn-icon" data-action="save-shipping" data-id="${escapeHtml(o.id)}">บันทึก</button>
+          </div>
+        </div>`
+        }
       </td>
-      <td>${new Date(o.createdAt).toLocaleString('th-TH')}</td>
-      <td>
+      <td class="order-actions">
         <!-- พิมพ์บิล/ใบเสร็จของออเดอร์นี้ เปิดเป็นหน้าต่างแยกที่จัดหน้าสวยงามพร้อมสั่งพิมพ์ทันที -->
-        <button class="btn-icon" data-action="print-bill" data-id="${o.id}">🧾 พิมพ์บิล</button>
+        <button class="btn-icon" data-action="print-bill" data-id="${escapeHtml(o.id)}">🧾 บิล</button>
         <!-- ลบคำสั่งซื้อ: ลบแล้วยอดขายในสรุปยอดขายประจำวันของวันนั้นจะหายไปตามด้วย เพราะสรุปยอดขายคำนวณจากคำสั่งซื้อโดยตรง ไม่ได้เก็บแยกไว้ต่างหาก -->
-        <button class="btn-icon danger" data-action="delete" data-id="${o.id}">ลบ</button>
+        <button class="btn-icon danger" data-action="delete" data-id="${escapeHtml(o.id)}">ลบ</button>
       </td>
     </tr>
   `;
