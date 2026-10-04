@@ -46,6 +46,13 @@
         <!-- ใช้เป็นชื่อผู้ใช้สำหรับเข้าสู่ระบบ และใช้จับคู่ประวัติคำสั่งซื้อเดิมที่เคยสั่งด้วยเบอร์นี้ (ถ้ามี) -->
         <input type="tel" id="registerPhone" required />
       </div>
+      <!-- ช่องยืนยันตัวตนด้วยหมายเลขคำสั่งซื้อ ซ่อนไว้ก่อน จะโผล่มาเฉพาะเมื่อเบอร์โทรที่กรอกเคยมีคำสั่งซื้ออยู่แล้ว (register.js เป็นคนเปิด)
+           กันคนอื่นเอาเบอร์ของลูกค้าไปสมัครเพื่อแอบดูประวัติคำสั่งซื้อ/ที่อยู่ -->
+      <div class="field" id="registerOrderIdField" style="display:none;">
+        <label for="registerOrderId">หมายเลขคำสั่งซื้อ (ใบไหนก็ได้ที่เคยสั่งด้วยเบอร์นี้)</label>
+        <input type="text" id="registerOrderId" autocomplete="off" />
+        <small style="color: var(--text-dim);">เบอร์นี้เคยมีคำสั่งซื้อแล้ว จึงต้องยืนยันว่าเป็นเจ้าของเบอร์ หมายเลขคำสั่งซื้อแสดงตอนสั่งซื้อสำเร็จ ถ้าหาไม่เจอติดต่อร้านได้ทาง LINE: pp_kp04</small>
+      </div>
       <div class="field">
         <label for="registerAddress">ที่อยู่ (ไม่บังคับ ใช้เติมอัตโนมัติตอนสั่งซื้อ)</label>
         <input type="text" id="registerAddress" />

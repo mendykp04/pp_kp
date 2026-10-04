@@ -350,6 +350,37 @@ img {
   cursor: pointer;      /* บอกผู้ใช้ว่ากดที่รูปได้ (เปิดดูรูปแบบเต็ม) */
 }
 
+/* การ์ดของรองเท้าที่ขายไปแล้ว (ยังโชว์อยู่ช่วงสั้น ๆ หลังขายออก) — รูปจางลง มีป้าย "ขายแล้ว" ทับมุมรูป และปุ่มกดไม่ได้ */
+.product-card .img-wrap {
+  position: relative;
+}
+.product-card.sold img {
+  opacity: 0.55;
+  filter: grayscale(0.6);
+}
+.product-card.sold .name,
+.product-card.sold .price {
+  color: var(--text-dim);
+}
+.sold-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: var(--text);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+}
+/* ปุ่มที่กดไม่ได้ (เช่น ปุ่มของรองเท้าที่ขายแล้ว) */
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* รูปภาพสินค้าภายในกล่อง img-wrap */
 .product-card img {
   width: 100%;          /* ให้รูปเต็มความกว้างกล่อง */
@@ -734,6 +765,9 @@ img {
 }
 .detail-info #detailAddToCart {
   margin-top: 12px;
+}
+.detail-info #detailShareBtn {
+  margin-top: 8px;
 }
 
 /* กล่องครอบแต่ละช่องกรอกข้อมูลในฟอร์ม (label + input) */

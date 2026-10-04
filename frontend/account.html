@@ -46,8 +46,24 @@
     <!-- รายการคำสั่งซื้อทั้งหมดของบัญชีนี้จะถูกวาดลงในนี้โดย account.js -->
     <div id="orderList"><p>กำลังโหลด...</p></div>
 
-    <!-- ฟอร์มเปลี่ยนรหัสผ่าน (พับเก็บไว้ กดเพื่อเปิด) ใช้ตอนอยากเปลี่ยนรหัสเอง หรือเพิ่งได้รหัสชั่วคราวจากร้านหลังลืมรหัสผ่าน -->
+    <!-- ฟอร์มแก้ไขชื่อ-สกุล/ที่อยู่ (พับเก็บไว้ กดเพื่อเปิด) ที่อยู่นี้ใช้เติมอัตโนมัติในฟอร์มสั่งซื้อครั้งถัดไป — เบอร์โทรแก้ไม่ได้ เพราะเป็นชื่อผู้ใช้สำหรับเข้าสู่ระบบ -->
     <details style="margin-top: 32px; max-width: 420px;">
+      <summary style="cursor: pointer; font-weight: 600;">แก้ไขชื่อและที่อยู่</summary>
+      <form id="profileForm" style="margin-top: 16px;">
+        <div class="field">
+          <label for="profileName">ชื่อ-สกุล</label>
+          <input type="text" id="profileName" maxlength="100" required />
+        </div>
+        <div class="field">
+          <label for="profileAddress">ที่อยู่จัดส่ง (ใช้เติมอัตโนมัติตอนสั่งซื้อ)</label>
+          <input type="text" id="profileAddress" maxlength="500" />
+        </div>
+        <button type="submit" class="btn btn-block">บันทึกข้อมูล</button>
+      </form>
+    </details>
+
+    <!-- ฟอร์มเปลี่ยนรหัสผ่าน (พับเก็บไว้ กดเพื่อเปิด) ใช้ตอนอยากเปลี่ยนรหัสเอง หรือเพิ่งได้รหัสชั่วคราวจากร้านหลังลืมรหัสผ่าน -->
+    <details style="margin-top: 16px; max-width: 420px;">
       <summary style="cursor: pointer; font-weight: 600;">เปลี่ยนรหัสผ่าน</summary>
       <form id="changePasswordForm" style="margin-top: 16px;">
         <div class="field">

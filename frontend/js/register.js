@@ -11,6 +11,8 @@ registerForm.addEventListener('submit', async (e) => {
     phone: document.getElementById('registerPhone').value.trim(),
     address: document.getElementById('registerAddress').value.trim(),
     password: document.getElementById('registerPassword').value,
+    // หมายเลขคำสั่งซื้อสำหรับยืนยันตัวตน (ว่างไว้ถ้าช่องนี้ยังไม่ถูกเปิดขึ้นมา)
+    orderId: document.getElementById('registerOrderId').value.trim(),
   };
 
   // ใช้ try/catch ดักจับข้อผิดพลาด (เบอร์นี้สมัครไปแล้ว, รหัสผ่านสั้นเกินไป, หรือเซิร์ฟเวอร์ล่ม/เน็ตหลุด)
@@ -22,6 +24,11 @@ registerForm.addEventListener('submit', async (e) => {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
+      // เบอร์นี้เคยมีคำสั่งซื้อแล้ว backend ขอให้ยืนยันด้วยหมายเลขคำสั่งซื้อ ให้เปิดช่องกรอกขึ้นมา
+      if (data.needOrderId) {
+        document.getElementById('registerOrderIdField').style.display = '';
+        document.getElementById('registerOrderId').focus();
+      }
       throw new Error(data.error || 'สมัครสมาชิกไม่สำเร็จ');
     }
     // สมัครสำเร็จแล้ว backend ล็อกอินให้อัตโนมัติ พาไปหน้า "บัญชีของฉัน" ทันที

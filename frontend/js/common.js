@@ -5,6 +5,11 @@ const API_BASE = '/api';
 // ตัวแปรกำหนดชื่อ key ที่ใช้เก็บข้อมูลตะกร้าใน localStorage ของเบราว์เซอร์
 const CART_KEY = 'sneaker_cart';
 
+// ฟังก์ชันแปลงอักขระพิเศษของ HTML (<, >, &, " ...) ให้เป็น entity ปลอดภัย ใช้ครอบข้อความที่ผู้ใช้พิมพ์เองก่อนแทรกลงในหน้าเว็บด้วย innerHTML
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
 // ฟังก์ชันดึงข้อมูลตะกร้าปัจจุบันออกจาก localStorage
 function getCart() {
   // ใช้ try/catch เผื่อกรณีข้อมูลใน localStorage เสียหายหรือไม่ใช่ JSON ที่ถูกต้อง
@@ -118,6 +123,8 @@ const STATUS_CLASS_MAP = {
   กำลังจัดส่ง: 'status-shipping',
   จัดส่งแล้ว: 'status-delivered',
   จัดส่งไม่สำเร็จ: 'status-failed',
+  // ออเดอร์ที่ลูกค้ากดยกเลิกเอง ใช้สีเดียวกับ "จัดส่งไม่สำเร็จ"
+  ยกเลิก: 'status-failed',
 };
 
 // ลิงก์หน้าติดตามพัสดุของแต่ละบริษัทขนส่งที่ระบบรองรับ (ให้ตรงกับ SHIPPING_CARRIERS ฝั่ง backend/server.js และ admin/js/admin.js)
@@ -204,7 +211,7 @@ async function updateAuthNav() {
     const res = await fetch(`${API_BASE}/auth/customer/me`);
     const data = await res.json();
     el.innerHTML = data.loggedIn
-      ? `<a href="account.html">👤 ${data.name}</a>`
+      ? `<a href="account.html">👤 ${escapeHtml(data.name)}</a>`
       : `<a href="login.html">เข้าสู่ระบบ</a>`;
   } catch {
     // ถ้าเช็คสถานะไม่ได้ (เช่นเน็ตหลุด) ให้แสดงลิงก์เข้าสู่ระบบไว้ก่อนเป็นค่าเริ่มต้น ไม่ปล่อยให้ช่องว่างเปล่า

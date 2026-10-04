@@ -233,7 +233,11 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
       body: JSON.stringify(payload),
     });
     // ถ้า response ไม่สำเร็จ (สถานะไม่ใช่ 2xx) ให้โยน error เพื่อให้ตกไปที่ catch
-    if (!res.ok) throw new Error('checkout failed');
+    // (เก็บข้อความ error จาก backend ไว้ด้วย เช่น "คู่นี้ถูกสั่งซื้อไปแล้ว" ลูกค้าจะได้รู้ว่าต้องทำอะไรต่อ)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    }
     // แปลง response เป็น object คำสั่งซื้อที่ backend สร้างให้ (มี id ออเดอร์)
     const order = await res.json();
 
@@ -270,7 +274,7 @@ document.getElementById('checkoutForm').addEventListener('submit', async (e) => 
     }
   } catch (err) {
     // ถ้าเกิดข้อผิดพลาดระหว่างสั่งซื้อ ให้แจ้งเตือนด้วย toast
-    showToast('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    showToast(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     // เปิดปุ่ม submit กลับมาให้กดใหม่ได้อีกครั้ง
     submitBtn.disabled = false;
     // เปลี่ยนข้อความปุ่มกลับเป็นข้อความเดิม

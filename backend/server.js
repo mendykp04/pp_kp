@@ -77,6 +77,50 @@ app.use(
   })
 );
 
+// แปลงอักขระพิเศษของ HTML ให้ปลอดภัยก่อนแทรกลงในหน้าเว็บ (ใช้กับ meta tag ของลิงก์สินค้าด้านล่าง)
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+// ลิงก์ของรองเท้าแต่ละคู่: /?p=<รหัสสินค้า> (หน้าร้านจะเปิดหน้ารายละเอียดของคู่นั้นให้อัตโนมัติ ดู frontend/js/shop.js)
+// ตรงนี้ทำหน้าที่เดียวคือแทรกชื่อ/ราคา/รูปของรองเท้าคู่นั้นลงใน meta tag ของหน้าแรก เพื่อให้ตอนแชร์ลิงก์ใน LINE/Facebook ขึ้นพรีวิวเป็นรองเท้าคู่นั้น
+// (ตัวดึงพรีวิวของ LINE/Facebook ไม่รัน JavaScript จึงต้องทำที่ฝั่งเซิร์ฟเวอร์) ถ้าไม่มี ?p= หรือหาสินค้าไม่เจอ ก็ส่งหน้าแรกปกติ
+app.get(['/', '/index.html'], async (req, res, next) => {
+  if (typeof req.query.p !== 'string' || !req.query.p) return next();
+  try {
+    const product = (await db.readProducts()).find((p) => p.id === req.query.p);
+    if (!product) return next();
+    const title = `${[product.brand, product.name].filter(Boolean).join(' ')} | SneaKer มือสอง`;
+    const description = [
+      product.sizes?.length ? `ไซส์ ${product.sizes.join(', ')}` : '',
+      `${Number(product.price).toLocaleString('th-TH')} บาท`,
+      product.condition,
+      product.stock > 0 ? '' : 'ขายแล้ว',
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // รูปที่เก็บในเครื่อง (/uploads/...) ต้องเติมที่อยู่เว็บข้างหน้าให้เป็น URL เต็ม ส่วนรูปบน Cloudinary เป็น URL เต็มอยู่แล้ว
+    const image = product.image ? (product.image.startsWith('http') ? product.image : baseUrl + product.image) : '';
+    // ใช้ฟังก์ชันเป็นตัวแทนที่ (ไม่ใช่ข้อความตรง ๆ) กันอักขระ $ ในชื่อสินค้าถูกตีความเป็นรูปแบบพิเศษของ replace
+    const html = (await fs.promises.readFile(path.join(__dirname, '..', 'frontend', 'index.html'), 'utf8'))
+      .replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(title)}</title>`)
+      .replace(/(<meta property="og:title" content=")[^"]*(")/, (m, a, b) => a + escapeHtml(title) + b)
+      .replace(/(<meta property="og:description" content=")[^"]*(")/, (m, a, b) => a + escapeHtml(description) + b)
+      .replace(
+        /<meta name="twitter:card"[^>]*>/,
+        () =>
+          `<meta property="og:url" content="${escapeHtml(`${baseUrl}/?p=${encodeURIComponent(product.id)}`)}" />` +
+          (image
+            ? `\n  <meta property="og:image" content="${escapeHtml(image)}" />\n  <meta name="twitter:card" content="summary_large_image" />`
+            : `\n  <meta name="twitter:card" content="summary" />`)
+      );
+    res.type('html').send(html);
+  } catch (err) {
+    next();
+  }
+});
+
 // เสิร์ฟหน้าบ้าน (frontend) ที่ path หลัก
 // บอก Express ว่าเมื่อมีคนเข้ามาที่ "/" ให้ไปหยิบไฟล์ static (html/css/js) จากโฟลเดอร์ ../frontend มาให้
 app.use('/', express.static(path.join(__dirname, '..', 'frontend')));
@@ -169,6 +213,31 @@ function sanitizeCustomer(customer) {
   const { password, ...rest } = customer;
   return rest;
 }
+
+// ---------- ตรวจสอบ/ทำความสะอาดข้อมูลที่ลูกค้าพิมพ์เข้ามา ----------
+// ข้อมูลจากฟอร์มสาธารณะ (สั่งซื้อ/สมัครสมาชิก) ไม่ต้องล็อกอินก็ส่งมาได้ จึงต้องจำกัดรูปแบบ/ความยาวไว้ที่เซิร์ฟเวอร์เสมอ
+
+// แปลงค่าที่รับมาเป็นข้อความ ตัดช่องว่างหัวท้าย และตัดให้ยาวไม่เกิน maxLength ตัวอักษร
+function cleanText(value, maxLength) {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}
+
+// เบอร์โทรต้องเป็นตัวเลข (อนุญาต + - และช่องว่างคั่นได้) ยาว 6-20 ตัว
+function isValidPhone(phone) {
+  return /^[0-9+\- ]{6,20}$/.test(phone);
+}
+
+// URL ของสลิปต้องเป็นไฟล์ที่อัปโหลดผ่านระบบนี้เท่านั้น (โฟลเดอร์ /uploads ในเครื่อง หรือ Cloudinary)
+// กันคนส่งลิงก์แปลกปลอม (เช่น javascript:...) มาให้แอดมินกดเปิดในหน้าหลังบ้าน
+function isValidSlipUrl(url) {
+  return (
+    typeof url === 'string' &&
+    (/^\/uploads\/[A-Za-z0-9._-]+$/.test(url) || /^https:\/\/res\.cloudinary\.com\/[A-Za-z0-9._~\/%-]+$/.test(url))
+  );
+}
+
+// สถานะของออเดอร์ที่ลูกค้ากดยกเลิกเอง (คืนสต็อกไปแล้ว ไม่นับเป็นยอดขาย และเปลี่ยนสถานะต่อไม่ได้)
+const ORDER_CANCELLED = 'ยกเลิก';
 
 // ---------- Login rate limiting (กันโดนสุ่มรหัสผ่าน / brute-force) ----------
 // เก็บสถิติล็อกอินผิดไว้ในหน่วยความจำ (ไม่ต้องพึ่ง Redis หรือไลบรารีเพิ่ม เพราะแอปนี้รันเซิร์ฟเวอร์เดียว ไม่ได้กระจายหลายเครื่อง)
@@ -264,10 +333,17 @@ app.get('/api/auth/me', (req, res) => {
 
 // เมื่อมีการเรียก POST ที่ /api/auth/customer/register (ลูกค้าสมัครสมาชิกใหม่)
 app.post('/api/auth/customer/register', async (req, res) => {
-  const { name, phone, password, address } = req.body;
+  const name = cleanText(req.body.name, 100);
+  const phone = cleanText(req.body.phone, 20);
+  const address = cleanText(req.body.address, 500);
+  const password = typeof req.body.password === 'string' ? req.body.password : '';
+  const orderId = cleanText(req.body.orderId, 40);
   // ตรวจสอบข้อมูลขั้นต่ำ: ต้องมีชื่อ, เบอร์โทร, รหัสผ่าน (อย่างน้อย 6 ตัวอักษร กันตั้งรหัสสั้นเกินไป)
   if (!name || !phone || !password) {
     return res.status(400).json({ error: 'กรุณาระบุชื่อ-สกุล, เบอร์โทร, และรหัสผ่าน' });
+  }
+  if (!isValidPhone(phone)) {
+    return res.status(400).json({ error: 'เบอร์โทรไม่ถูกต้อง กรุณากรอกเป็นตัวเลข' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
@@ -281,6 +357,33 @@ app.post('/api/auth/customer/register', async (req, res) => {
     return res.status(400).json({ error: 'เบอร์โทรนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบแทนการสมัครใหม่' });
   }
 
+  // ถ้าเบอร์นี้เคยมีคำสั่งซื้ออยู่แล้ว (สั่งแบบไม่ได้สมัครสมาชิก) การสมัครจะทำให้เห็นประวัติคำสั่งซื้อ+ที่อยู่ของเบอร์นั้นทั้งหมด
+  // ระบบนี้ไม่มี SMS/อีเมลยืนยันตัวตน จึงให้ยืนยันว่าเป็นเจ้าของเบอร์จริงด้วย "หมายเลขคำสั่งซื้อ" ใบใดใบหนึ่งของเบอร์นี้แทน (ได้มาตอนสั่งซื้อสำเร็จ)
+  // กันคนอื่นเอาเบอร์ของลูกค้าไปสมัครเพื่อแอบดูข้อมูล
+  const phoneOrders = (await db.readOrders()).filter((o) => o.phone === phone);
+  const verifiedByOrder = phoneOrders.length > 0;
+  if (verifiedByOrder) {
+    // ใช้ตัวนับเดียวกับตอนล็อกอิน กันสุ่มเดาหมายเลขคำสั่งซื้อไปเรื่อย ๆ
+    const verifyKey = `${req.ip}:${phone}`;
+    const blockSeconds = getLoginBlockSeconds(verifyKey);
+    if (blockSeconds > 0) {
+      return res.status(429).json({
+        error: `ลองผิดหลายครั้งเกินไป กรุณารออีก ${Math.ceil(blockSeconds / 60)} นาทีแล้วลองใหม่`,
+      });
+    }
+    if (!phoneOrders.some((o) => o.id === orderId)) {
+      // ถ้ากรอกหมายเลขคำสั่งซื้อมาแต่ไม่ตรง ให้นับเป็นการลองผิด 1 ครั้ง (ยังไม่กรอกมาเลยไม่นับ เพราะเป็นแค่การแจ้งว่าต้องกรอกเพิ่ม)
+      if (orderId) recordFailedLogin(verifyKey);
+      return res.status(400).json({
+        needOrderId: true,
+        error: orderId
+          ? 'หมายเลขคำสั่งซื้อไม่ตรงกับเบอร์โทรนี้ กรุณาตรวจสอบอีกครั้ง หรือติดต่อร้าน'
+          : 'เบอร์โทรนี้เคยมีคำสั่งซื้อแล้ว กรุณากรอกหมายเลขคำสั่งซื้อเพื่อยืนยันว่าเป็นเจ้าของเบอร์',
+      });
+    }
+    resetLoginAttempts(verifyKey);
+  }
+
   let customer;
   if (idx !== -1) {
     // เบอร์นี้มีอยู่แล้วในฐานข้อมูลลูกค้า แต่ยังไม่เคยตั้งรหัสผ่าน (เช่นแอดมินเคยเพิ่มไว้เอง หรือเคยสั่งซื้อแบบไม่ได้สมัครสมาชิก)
@@ -288,13 +391,14 @@ app.post('/api/auth/customer/register', async (req, res) => {
     customers[idx] = {
       ...customers[idx],
       name,
-      address: address || customers[idx].address,
+      // ใช้ที่อยู่เดิมในระบบต่อได้เฉพาะเมื่อยืนยันตัวตนด้วยหมายเลขคำสั่งซื้อแล้ว ไม่งั้นที่อยู่ที่แอดมินเคยบันทึกไว้จะหลุดไปให้คนที่แค่รู้เบอร์โทร
+      address: address || (verifiedByOrder ? customers[idx].address : ''),
       password: hashPassword(password),
     };
     customer = customers[idx];
   } else {
     // เบอร์นี้ไม่เคยมีในระบบมาก่อนเลย ให้สร้างลูกค้าใหม่
-    customer = { id: genId('cus-'), name, phone, address: address || '', password: hashPassword(password) };
+    customer = { id: genId('cus-'), name, phone, address, password: hashPassword(password) };
     customers.push(customer);
   }
   await db.writeCustomers(customers);
@@ -393,6 +497,48 @@ app.post('/api/auth/customer/change-password', requireCustomerAuth, async (req, 
   customers[idx] = { ...customers[idx], password: hashPassword(newPassword) };
   await db.writeCustomers(customers);
   res.json({ success: true });
+});
+
+// เมื่อมีการเรียก PUT ที่ /api/auth/customer/profile (ลูกค้าแก้ชื่อ-สกุล/ที่อยู่ของตัวเองในหน้า "บัญชีของฉัน") — เฉพาะลูกค้าที่ล็อกอินแล้วเท่านั้น
+// ไม่ให้แก้เบอร์โทร เพราะเบอร์โทรคือชื่อผู้ใช้สำหรับล็อกอิน และใช้จับคู่ประวัติคำสั่งซื้อ
+app.put('/api/auth/customer/profile', requireCustomerAuth, async (req, res) => {
+  const name = cleanText(req.body.name, 100);
+  const address = cleanText(req.body.address, 500);
+  if (!name) return res.status(400).json({ error: 'กรุณาระบุชื่อ-สกุล' });
+
+  const customers = await db.readCustomers();
+  const idx = customers.findIndex((c) => c.id === req.session.customerId);
+  if (idx === -1) return res.status(404).json({ error: 'ไม่พบบัญชีลูกค้า' });
+  customers[idx] = { ...customers[idx], name, address };
+  await db.writeCustomers(customers);
+  // อัปเดตค่าใน session ด้วย ให้แถบเมนูและฟอร์มสั่งซื้อ (เติมที่อยู่อัตโนมัติ) ใช้ค่าใหม่ทันทีโดยไม่ต้องล็อกอินใหม่
+  req.session.customerName = name;
+  req.session.customerAddress = address;
+  res.json({ success: true, name, phone: customers[idx].phone, address });
+});
+
+// เมื่อมีการเรียก POST ที่ /api/customer/orders/:id/cancel (ลูกค้ายกเลิกคำสั่งซื้อของตัวเอง) — เฉพาะลูกค้าที่ล็อกอินแล้วเท่านั้น
+// ยกเลิกเองได้เฉพาะออเดอร์ที่ร้านยังไม่เริ่มจัดส่ง และยังไม่ได้จ่ายเงิน/แนบสลิป (ถ้าโอนมาแล้วต้องติดต่อร้านเพื่อคืนเงิน ระบบคืนเงินเองไม่ได้)
+app.post('/api/customer/orders/:id/cancel', requireCustomerAuth, async (req, res) => {
+  const orders = await db.readOrders();
+  // หาเฉพาะออเดอร์ของเบอร์ที่ล็อกอินอยู่ (อ่านจาก session ไม่รับจาก body ป้องกันยกเลิกออเดอร์ของคนอื่น)
+  const order = orders.find((o) => o.id === req.params.id && o.phone === req.session.customerPhone);
+  if (!order) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ' });
+  if (order.status === ORDER_CANCELLED) {
+    return res.status(400).json({ error: 'คำสั่งซื้อนี้ถูกยกเลิกไปแล้ว' });
+  }
+  if (order.status !== 'รอดำเนินการ') {
+    return res.status(400).json({ error: 'ร้านเริ่มจัดส่งคำสั่งซื้อนี้แล้ว ยกเลิกเองไม่ได้ กรุณาติดต่อร้าน' });
+  }
+  if (order.paymentStatus === 'ชำระเงินแล้ว' || order.slipUrl) {
+    return res.status(400).json({ error: 'คำสั่งซื้อนี้ชำระเงิน/แนบสลิปแล้ว กรุณาติดต่อร้านเพื่อยกเลิกและรับเงินคืน' });
+  }
+
+  order.status = ORDER_CANCELLED;
+  await db.writeOrders(orders);
+  // คืนรองเท้าในออเดอร์นี้กลับไปขายหน้าร้านต่อ (เหมือนตอนแอดมินลบออเดอร์)
+  await restoreOrderStock(order);
+  res.json(order);
 });
 
 // เมื่อมีการเรียก GET ที่ /api/customer/orders (ขอประวัติคำสั่งซื้อทั้งหมดของลูกค้าที่ล็อกอินอยู่) — เฉพาะลูกค้าที่ล็อกอินแล้วเท่านั้น
@@ -630,7 +776,10 @@ app.get('/api/orders', requireAuth, async (req, res) => {
   // ถ้ามีการระบุ query string "date" มา (เช่น ตอนดูสรุปยอดขายของวันที่เลือกในแท็บ "สรุปยอดขาย")
   if (req.query.date) {
     // กรองเฉพาะคำสั่งซื้อที่ "วันที่" ของ createdAt (แปลงเป็นเขตเวลาไทยก่อนเทียบ) ตรงกับวันที่ที่ระบุ
-    orders = orders.filter((o) => toThaiDateString(o.createdAt) === req.query.date);
+    // และไม่นับออเดอร์ที่ลูกค้ายกเลิกไปแล้ว เพราะ query นี้ใช้คำนวณยอดขายของวัน (ออเดอร์ที่ยกเลิกยังดูได้ในแท็บ "คำสั่งซื้อ" ตามปกติ)
+    orders = orders.filter(
+      (o) => toThaiDateString(o.createdAt) === req.query.date && o.status !== ORDER_CANCELLED
+    );
   }
   // เรียงลำดับคำสั่งซื้อจากใหม่ไปเก่า (เทียบวันที่สร้าง createdAt) แล้วส่งกลับไป
   res.json(orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
@@ -647,11 +796,22 @@ function calcShippingFee(subtotal) {
 // เมื่อมีการเรียก POST ที่ /api/orders (ลูกค้ากดยืนยันสั่งซื้อจากตะกร้า)
 app.post('/api/orders', async (req, res) => {
   // ดึงข้อมูลลูกค้าและรายการสินค้าที่สั่งซื้อจาก body — slipUrl (ไม่บังคับ) คือรูปสลิปโอนเงินที่อัปโหลดไว้แล้ว (ถ้ามีตอนกดสั่งซื้อ)
-  const { customerName, phone, address, items, paymentMethod, slipUrl } = req.body;
+  const { items, paymentMethod, slipUrl } = req.body;
+  // ชื่อ/เบอร์โทร/ที่อยู่ เป็นข้อความที่ลูกค้าพิมพ์เอง จำกัดความยาวไว้ก่อนเก็บ (ฝั่งหลังบ้านจะ escape อีกชั้นตอนแสดงผล)
+  const customerName = cleanText(req.body.customerName, 100);
+  const phone = cleanText(req.body.phone, 20);
+  const address = cleanText(req.body.address, 500);
   // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่ (ชื่อ, เบอร์โทร, ที่อยู่ และต้องมีรายการสินค้าอย่างน้อย 1 ชิ้น)
   if (!customerName || !phone || !address || !Array.isArray(items) || items.length === 0) {
     // ถ้าข้อมูลไม่ครบ ตอบกลับ error 400
     return res.status(400).json({ error: 'ข้อมูลคำสั่งซื้อไม่ครบถ้วน' });
+  }
+  if (!isValidPhone(phone)) {
+    return res.status(400).json({ error: 'เบอร์โทรไม่ถูกต้อง กรุณากรอกเป็นตัวเลข' });
+  }
+  // สลิป (ถ้าแนบมา) ต้องเป็นไฟล์ที่อัปโหลดผ่านระบบนี้เท่านั้น
+  if (slipUrl && !isValidSlipUrl(slipUrl)) {
+    return res.status(400).json({ error: 'รูปสลิปไม่ถูกต้อง กรุณาแนบใหม่อีกครั้ง' });
   }
   // รายการวิธีชำระเงินที่อนุญาต: เก็บเงินปลายทาง, โอนผ่านธนาคาร, พร้อมเพย์
   const allowedPaymentMethods = ['cod', 'bank_transfer', 'promptpay'];
@@ -680,7 +840,8 @@ app.post('/api/orders', async (req, res) => {
       return res.status(400).json({ error: `ไม่พบสินค้ารหัส ${item.productId}` });
     }
     // แปลงจำนวนที่สั่งซื้อเป็นตัวเลข ถ้าไม่มีค่าให้ default เป็น 1
-    const qty = Number(item.qty) || 1;
+    // (ต้องเป็นจำนวนเต็มบวกเท่านั้น กันค่าติดลบ/ทศนิยมที่ส่งมาทำให้ยอดรวมหรือสต็อกเพี้ยน)
+    const qty = Math.max(1, Math.floor(Number(item.qty)) || 1);
     // สินค้าเป็นของมือสอง แต่ละรายการมีแค่ 1 คู่เสมอ ไม่สามารถขายเกินจำนวนที่มีจริงได้ (stock = 0 คือถูกขายไปแล้ว/มีคนอื่นจองไปก่อน)
     const alreadyReserved = reservedQtyByProductId[product.id] || 0;
     if (alreadyReserved + qty > product.stock) {
@@ -709,7 +870,8 @@ app.post('/api/orders', async (req, res) => {
       productId: product.id,
       name: product.name,
       price,
-      size: item.size || null,
+      // ไซส์ต้องเป็นไซส์ที่สินค้านี้มีจริง (ไม่เชื่อค่าที่ฝั่งลูกค้าส่งมาตรง ๆ) ถ้าไม่ตรงให้ใช้ไซส์แรกของสินค้าแทน
+      size: (product.sizes || []).includes(Number(item.size)) ? Number(item.size) : product.sizes?.[0] ?? null,
       qty,
     });
   }
@@ -722,6 +884,8 @@ app.post('/api/orders', async (req, res) => {
   Object.keys(reservedQtyByProductId).forEach((productId) => {
     const product = products.find((p) => p.id === productId);
     product.stock -= reservedQtyByProductId[productId];
+    // จดเวลาที่ขายออกไว้ ให้หน้าร้านโชว์ป้าย "ขายแล้ว" ต่ออีกช่วงหนึ่งได้ (ดู SOLD_SHOW_DAYS ใน frontend/js/shop.js)
+    if (product.stock <= 0) product.soldAt = new Date().toISOString();
   });
   await db.writeProducts(products);
 
@@ -764,6 +928,10 @@ app.put('/api/orders/:id/status', requireAuth, async (req, res) => {
   const idx = orders.findIndex((o) => o.id === req.params.id);
   // ถ้าไม่เจอออเดอร์ ให้ตอบกลับ 404
   if (idx === -1) return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ' });
+  // ออเดอร์ที่ลูกค้ายกเลิกแล้วคืนสต็อกไปแล้ว (รองเท้าอาจถูกคนอื่นสั่งไปแล้วด้วย) จึงเปลี่ยนสถานะกลับมาไม่ได้ และตั้งสถานะ "ยกเลิก" จากตรงนี้ก็ไม่ได้เช่นกัน (จะไม่ได้คืนสต็อก)
+  if (orders[idx].status === ORDER_CANCELLED || status === ORDER_CANCELLED) {
+    return res.status(400).json({ error: 'คำสั่งซื้อที่ยกเลิกแล้วเปลี่ยนสถานะไม่ได้' });
+  }
   // อัปเดตสถานะของออเดอร์นั้น ถ้าไม่ได้ส่ง status มาให้คงค่าเดิมไว้
   orders[idx].status = status || orders[idx].status;
   // บันทึกรายการคำสั่งซื้อทั้งหมด (ที่อัปเดตแล้ว) กลับลงไฟล์
@@ -778,10 +946,17 @@ app.post('/api/orders/:id/slip', async (req, res) => {
   if (!phone || !slipUrl) {
     return res.status(400).json({ error: 'กรุณาระบุเบอร์โทรและแนบรูปสลิป' });
   }
+  // สลิปต้องเป็นไฟล์ที่อัปโหลดผ่านระบบนี้เท่านั้น
+  if (!isValidSlipUrl(slipUrl)) {
+    return res.status(400).json({ error: 'รูปสลิปไม่ถูกต้อง กรุณาแนบใหม่อีกครั้ง' });
+  }
   const orders = await db.readOrders();
   const idx = orders.findIndex((o) => o.id === req.params.id && o.phone === phone);
   if (idx === -1) {
     return res.status(404).json({ error: 'ไม่พบคำสั่งซื้อ กรุณาตรวจสอบหมายเลขคำสั่งซื้อและเบอร์โทรอีกครั้ง' });
+  }
+  if (orders[idx].status === ORDER_CANCELLED) {
+    return res.status(400).json({ error: 'คำสั่งซื้อนี้ถูกยกเลิกไปแล้ว' });
   }
   // บันทึกสลิปใหม่ และตั้งสถานะการชำระเงินกลับเป็น "รอตรวจสอบสลิป" เสมอ (เผื่อเป็นการแนบสลิปใหม่ทับของเดิมที่เคยถูกปฏิเสธหรือยังไม่ได้ตรวจ)
   orders[idx].slipUrl = slipUrl;
@@ -824,6 +999,22 @@ app.put('/api/orders/:id/shipping', requireAuth, async (req, res) => {
   res.json(orders[idx]);
 });
 
+// ฟังก์ชันคืนสต็อกสินค้าทุกชิ้นในออเดอร์กลับเป็น "พร้อมขาย" ใช้ตอนแอดมินลบออเดอร์ หรือลูกค้ายกเลิกออเดอร์เอง
+async function restoreOrderStock(order) {
+  const products = await db.readProducts();
+  let changed = false;
+  order.items.forEach((item) => {
+    const product = products.find((p) => p.id === item.productId);
+    if (product) {
+      product.stock += item.qty;
+      // กลับมาขายต่อแล้ว ล้างเวลาที่ขายออก ไม่ให้หน้าร้านโชว์ป้าย "ขายแล้ว"
+      product.soldAt = null;
+      changed = true;
+    }
+  });
+  if (changed) await db.writeProducts(products);
+}
+
 // เมื่อมีการเรียก DELETE ที่ /api/orders/:id (ลบคำสั่งซื้อตามรหัส) — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
 // หมายเหตุ: แท็บ "สรุปยอดขาย" คำนวณยอดขายสดจากคำสั่งซื้อโดยตรง จึงไม่ต้องอัปเดตยอดขายแยกต่างหาก — ลบคำสั่งซื้อแล้วยอดขายของวันนั้นจะลดลงตามราคาที่หายไปทันที
 app.delete('/api/orders/:id', requireAuth, async (req, res) => {
@@ -838,16 +1029,8 @@ app.delete('/api/orders/:id', requireAuth, async (req, res) => {
   // บันทึกรายการคำสั่งซื้อที่เหลือ (หลังลบ) กลับลงไฟล์
   await db.writeOrders(orders);
   // คืนสต็อกสินค้าที่อยู่ในคำสั่งซื้อนี้กลับเป็น "พร้อมขาย" (สินค้ามือสองแต่ละคู่มีแค่ 1 ชิ้น การลบออเดอร์แปลว่าคู่นั้นยังไม่ถูกขายจริง)
-  const products = await db.readProducts();
-  let changed = false;
-  removed.items.forEach((item) => {
-    const product = products.find((p) => p.id === item.productId);
-    if (product) {
-      product.stock += item.qty;
-      changed = true;
-    }
-  });
-  if (changed) await db.writeProducts(products);
+  // ยกเว้นออเดอร์ที่ลูกค้ายกเลิกไปแล้ว เพราะคืนสต็อกไปแล้วตอนยกเลิก (ถ้าคืนซ้ำ รองเท้าคู่เดียวจะกลายเป็นขายได้ 2 ครั้ง)
+  if (removed.status !== ORDER_CANCELLED) await restoreOrderStock(removed);
   // ตอบกลับข้อมูลคำสั่งซื้อที่ถูกลบไป เพื่อยืนยันว่าลบรายการไหน
   res.json(removed);
 });
@@ -944,7 +1127,7 @@ app.delete('/api/employees/:id', requireAuth, async (req, res) => {
 function enrichCustomerWithOrders(customer, orders) {
   // กรองเฉพาะคำสั่งซื้อที่เบอร์โทรตรงกับลูกค้าคนนี้ แล้วเรียงจากใหม่ไปเก่า
   const customerOrders = orders
-    .filter((o) => o.phone === customer.phone)
+    .filter((o) => o.phone === customer.phone && o.status !== ORDER_CANCELLED)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   // ส่งคืนข้อมูลลูกค้าเดิม (ตัดฟิลด์ password ออกก่อนเสมอ) รวมกับรายการคำสั่งซื้อที่เจอ (ใช้ดูว่าลูกค้าคนนี้เคยสั่งรองเท้ารุ่นไหนไปบ้าง)
   // hasAccount บอกหน้า admin ว่าลูกค้าคนนี้สมัครสมาชิกไว้แล้วหรือยัง (มีรหัสผ่านหรือไม่) โดยไม่ต้องส่งแฮชรหัสผ่านออกไป
@@ -1277,7 +1460,8 @@ app.get('/api/reports/summary', requireAuth, async (req, res) => {
   // กรองเฉพาะคำสั่งซื้อที่อยู่ในช่วงวันที่ที่ระบุ (เทียบแค่ส่วนวันที่ YYYY-MM-DD ของ createdAt แปลงเป็นเขตเวลาไทยก่อนเทียบ)
   const rangeOrders = orders.filter((o) => {
     const orderDate = toThaiDateString(o.createdAt);
-    return orderDate >= from && orderDate <= to;
+    // ไม่นับออเดอร์ที่ลูกค้ายกเลิกไปแล้วเป็นยอดขาย
+    return orderDate >= from && orderDate <= to && o.status !== ORDER_CANCELLED;
   });
   // กรองเฉพาะรายจ่ายที่อยู่ในช่วงวันที่ที่ระบุ
   const rangeExpenses = expenses.filter((e) => e.date >= from && e.date <= to);

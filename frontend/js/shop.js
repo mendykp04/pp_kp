@@ -48,6 +48,8 @@ async function loadProducts() {
     populateSizeFilter();
     // แสดงผลสินค้าทั้งหมดลงในหน้าเว็บ
     renderProducts();
+    // ถ้าเปิดเว็บมาจากลิงก์ของรองเท้าคู่ใดคู่หนึ่ง (/?p=<id>) ให้เปิดรายละเอียดของคู่นั้นขึ้นมาเลย
+    openProductFromUrl();
   } catch (err) {
     // ถ้าเกิดข้อผิดพลาดระหว่างโหลด ให้แสดงข้อความแจ้งเตือนแทนตารางสินค้า
     productGrid.innerHTML = '<p>ไม่สามารถโหลดสินค้าได้ กรุณาลองใหม่ภายหลัง</p>';
@@ -83,6 +85,15 @@ function populateSizeFilter() {
     opt.textContent = `ไซส์ ${size}`;
     sizeFilter.appendChild(opt);
   });
+}
+
+// รองเท้าที่ขายไปแล้วจะยังโชว์อยู่ท้ายรายการพร้อมป้าย "ขายแล้ว" ต่ออีกกี่วันหลังขายออก (ให้ลูกค้าเห็นว่าร้านมีของหมุนเวียน ขายได้จริง) พ้นช่วงนี้แล้วจึงหายไปจากหน้าร้าน
+const SOLD_SHOW_DAYS = 14;
+
+// ฟังก์ชันตรวจสอบว่าสินค้านี้ "ขายแล้ว แต่ยังอยู่ในช่วงที่ต้องโชว์ป้ายขายแล้ว" หรือไม่ (soldAt ถูกบันทึกโดย backend ตอนมีคนสั่งซื้อ)
+function isRecentlySold(product) {
+  if (product.stock > 0 || !product.soldAt) return false;
+  return Date.now() - new Date(product.soldAt).getTime() < SOLD_SHOW_DAYS * 24 * 60 * 60 * 1000;
 }
 
 // ฟังก์ชันคืนราคาที่ลูกค้าจ่ายจริงตอนนี้ของสินค้า 1 ชิ้น (ราคา Flash Sale ถ้ากำลังลดอยู่ ไม่งั้นราคาปกติ) ใช้ตอนเรียงลำดับตามราคา
@@ -123,9 +134,8 @@ function getFilteredProducts() {
     const max = maxStr ? Number(maxStr) : Infinity;
     list = list.filter((p) => p.price >= min && p.price <= max);
   }
-  // ตัดสินค้าที่ขายไปแล้ว (stock = 0) ออกจากหน้าร้าน ไม่ต้องแสดงให้ลูกค้าเห็นอีก
-  // (สินค้าที่ยังไม่ขายที่เหลือจะเลื่อนขึ้นมาแทนที่ตำแหน่งเองโดยอัตโนมัติ เพราะเป็นแค่การกรอง list ไม่ใช่การเรียงลำดับใหม่)
-  list = list.filter((p) => p.stock > 0);
+  // ตัดสินค้าที่ขายไปแล้ว (stock = 0) ออกจากหน้าร้าน ยกเว้นคู่ที่เพิ่งขายไปไม่เกิน SOLD_SHOW_DAYS วัน ซึ่งจะยังโชว์อยู่ท้ายรายการพร้อมป้าย "ขายแล้ว"
+  list = list.filter((p) => p.stock > 0 || isRecentlySold(p));
   // ถ้ามีการเลือกไซส์ใน dropdown (ไม่ใช่ค่าว่าง "ทุกไซส์") ให้กรองเฉพาะสินค้าที่มีไซส์นั้น
   if (sizeFilter.value) {
     const size = Number(sizeFilter.value);
@@ -140,6 +150,8 @@ function getFilteredProducts() {
   } else if (sortSelect.value === 'price-desc') {
     list.sort((a, b) => getEffectivePrice(b) - getEffectivePrice(a));
   }
+  // ไม่ว่าจะเรียงแบบไหน ให้คู่ที่ยังซื้อได้ขึ้นก่อนเสมอ ส่วนคู่ที่ขายแล้วไปต่อท้าย (คงลำดับภายในแต่ละกลุ่มไว้ตามที่เรียงมา)
+  list = [...list.filter((p) => p.stock > 0), ...list.filter((p) => p.stock <= 0)];
   // คืนค่ารายการสินค้าที่ผ่านการกรองและเรียงลำดับแล้ว
   return list;
 }
@@ -158,9 +170,11 @@ function renderProducts() {
   productGrid.innerHTML = list
     .map((p) => {
       // ตรวจสอบว่าสินค้าชิ้นนี้กำลังมี Flash Sale ที่ active อยู่ตอนนี้หรือไม่ (เทียบ productId กับรายการที่โหลดมาจาก /api/flash-sales/active)
-      const sale = activeFlashSales.find((s) => s.productId === p.id);
-      // ถ้ามี Flash Sale ให้เติม class "flash-card" เพิ่ม เพื่อให้การ์ดมีขอบสีเน้นเด่นกว่าปกติ
-      const cardClass = sale ? 'product-card flash-card' : 'product-card';
+      // คู่ที่ขายแล้ว (ยังโชว์อยู่ช่วงสั้น ๆ) ไม่ต้องโชว์ราคา Flash Sale และกดเพิ่มลงตะกร้าไม่ได้
+      const sold = p.stock <= 0;
+      const sale = sold ? null : activeFlashSales.find((s) => s.productId === p.id);
+      // ถ้ามี Flash Sale ให้เติม class "flash-card" เพิ่ม เพื่อให้การ์ดมีขอบสีเน้นเด่นกว่าปกติ ส่วนคู่ที่ขายแล้วเติม class "sold" ให้ดูจางลง
+      const cardClass = sold ? 'product-card sold' : sale ? 'product-card flash-card' : 'product-card';
       // สร้างส่วนแสดงราคา: ถ้ามี Flash Sale ให้โชว์ราคาปกติขีดฆ่า + ราคาลด + ป้ายเปอร์เซ็นต์ส่วนลด + ตัวนับถอยหลัง
       // ถ้าไม่มี Flash Sale ให้โชว์ราคาปกติตามเดิม
       const priceBlock = sale
@@ -186,13 +200,19 @@ function renderProducts() {
           : '';
       return `
     <div class="${cardClass}">
-      <div class="img-wrap" data-detail-id="${p.id}"><img src="${p.image}" alt="${p.name}" loading="lazy" /></div>
+      <div class="img-wrap" data-detail-id="${p.id}"><img src="${p.image}" alt="${p.name}" loading="lazy" />${
+        sold ? '<span class="sold-badge">ขายแล้ว</span>' : ''
+      }</div>
       <div class="info">
         <span class="brand">${p.brand}</span>
         <span class="name">${p.name}</span>
         ${tagsBlock}
         ${priceBlock}
-        <button class="btn btn-card btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''}>เพิ่มลงตะกร้า</button>
+        ${
+          sold
+            ? '<button class="btn btn-card btn-block" disabled>ขายแล้ว</button>'
+            : `<button class="btn btn-card btn-block" data-id="${p.id}" ${sale ? `data-flash-id="${sale.id}"` : ''}>เพิ่มลงตะกร้า</button>`
+        }
       </div>
     </div>
   `;
@@ -344,13 +364,11 @@ function openProductDetailModal(productId) {
   // ซ่อนทั้งกล่อง (รวมหัวข้อ) ถ้าไม่ได้กรอกไว้ กันเหลือหัวข้อเปล่า ๆ
   document.getElementById('detailDescription').textContent = product.description || '';
   document.getElementById('detailDescriptionBox').classList.toggle('hidden', !product.description);
-  // ราคา: ถ้าสินค้านี้กำลัง Flash Sale อยู่ ให้โชว์ราคาปกติขีดฆ่า + ราคาลด + ป้ายส่วนลด เหมือนบนการ์ด (ปุ่มเพิ่มลงตะกร้าด้านล่างจะใช้ราคาลดนี้เช่นกัน)
-  const sale = activeFlashSales.find((s) => s.productId === product.id);
-  document.getElementById('detailPrice').innerHTML = sale
-    ? `<span class="price-strike">${formatPrice(product.price)}</span>
-       <span class="price flash-price">${formatPrice(sale.salePrice)}</span>
-       <span class="discount-badge">-${Math.round((1 - sale.salePrice / product.price) * 100)}%</span>`
-    : `<span class="price">${formatPrice(product.price)}</span>`;
+  // วาดราคา + สถานะปุ่มเพิ่มลงตะกร้า
+  renderDetailPurchase();
+
+  // เปลี่ยน URL บนแถบที่อยู่เป็นลิงก์ของรองเท้าคู่นี้ (/?p=<id>) โดยไม่โหลดหน้าใหม่ ลูกค้าคัดลอกจากแถบที่อยู่ไปส่งต่อได้เลย
+  history.replaceState(null, '', `?p=${encodeURIComponent(product.id)}`);
 
   // วาดรูปใหญ่ + แถบรูปย่อตามรูปแรก แล้วเปิด modal ขึ้นมา
   renderProductDetailGallery();
@@ -393,6 +411,44 @@ function renderDetailSizes(sizes) {
       })
       .join('')
   );
+}
+
+// ฟังก์ชันวาดราคา + สถานะปุ่ม "เพิ่มลงตะกร้า" ของสินค้าที่เปิดดูอยู่ใน modal รายละเอียด
+// แยกออกมาต่างหากเพราะต้องวาดซ้ำเมื่อข้อมูล Flash Sale โหลดเสร็จ/หมดเวลาระหว่างที่ modal เปิดอยู่ (ดู loadFlashSales)
+function renderDetailPurchase() {
+  const product = detailProduct;
+  if (!product) return;
+  const sold = product.stock <= 0;
+  // ราคา: ถ้าสินค้านี้กำลัง Flash Sale อยู่ ให้โชว์ราคาปกติขีดฆ่า + ราคาลด + ป้ายส่วนลด เหมือนบนการ์ด (ปุ่มเพิ่มลงตะกร้าด้านล่างจะใช้ราคาลดนี้เช่นกัน)
+  const sale = sold ? null : activeFlashSales.find((s) => s.productId === product.id);
+  document.getElementById('detailPrice').innerHTML = sale
+    ? `<span class="price-strike">${formatPrice(product.price)}</span>
+       <span class="price flash-price">${formatPrice(sale.salePrice)}</span>
+       <span class="discount-badge">-${Math.round((1 - sale.salePrice / product.price) * 100)}%</span>`
+    : `<span class="price">${formatPrice(product.price)}</span>`;
+  // คู่ที่ขายไปแล้ว (เปิดจากลิงก์ที่แชร์ไว้ หรือจากการ์ดที่ติดป้าย "ขายแล้ว") ยังดูรายละเอียดได้ แต่กดเพิ่มลงตะกร้าไม่ได้
+  const addBtn = document.getElementById('detailAddToCart');
+  addBtn.disabled = sold;
+  addBtn.textContent = sold ? 'ขายแล้ว' : 'เพิ่มลงตะกร้า';
+}
+
+// ฟังก์ชันปิด modal รายละเอียดสินค้า พร้อมเอา ?p=<id> ออกจาก URL กลับเป็นที่อยู่หน้าร้านปกติ
+function closeProductDetailModal() {
+  productDetailModal.classList.remove('open');
+  history.replaceState(null, '', location.pathname);
+}
+
+// ฟังก์ชันเปิดรายละเอียดของรองเท้าคู่ที่ระบุมาใน URL (/?p=<id>) ใช้ตอนลูกค้าเปิดเว็บจากลิงก์ที่มีคนแชร์มา — เรียกครั้งเดียวหลังโหลดสินค้าเสร็จ
+function openProductFromUrl() {
+  const productId = new URLSearchParams(location.search).get('p');
+  if (!productId) return;
+  if (allProducts.some((p) => p.id === productId)) {
+    openProductDetailModal(productId);
+  } else {
+    // สินค้าถูกลบออกจากร้านไปแล้ว
+    showToast('ไม่พบรองเท้าคู่นี้แล้ว');
+    history.replaceState(null, '', location.pathname);
+  }
 }
 
 // ฟังก์ชันวาด (render) รูปใหญ่ + แถบรูปย่อ ตามตำแหน่ง detailIndex ปัจจุบัน
@@ -439,17 +495,28 @@ document.getElementById('detailAddToCart').addEventListener('click', () => {
   if (!detailProduct) return;
   // ถ้าสินค้านี้กำลัง Flash Sale อยู่ ให้ใช้ราคาลด (ตรงกับราคาที่โชว์ใน modal นี้)
   const sale = activeFlashSales.find((s) => s.productId === detailProduct.id) || null;
-  productDetailModal.classList.remove('open');
+  closeProductDetailModal();
   addProductToCart(detailProduct.id, sale);
 });
 
-// ผูก event ให้ปุ่มกากบาทปิด modal ดูรายละเอียด/รูปสินค้า
-document.getElementById('closeDetailModal').addEventListener('click', () => {
-  productDetailModal.classList.remove('open');
+// ผูก event ให้ปุ่ม "คัดลอกลิงก์" ใน modal รายละเอียดสินค้า เอาไว้ส่งให้เพื่อนดูหรือโพสต์ใน LINE/Facebook
+document.getElementById('detailShareBtn').addEventListener('click', async () => {
+  if (!detailProduct) return;
+  const url = `${location.origin}/?p=${encodeURIComponent(detailProduct.id)}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('คัดลอกลิงก์แล้ว');
+  } catch {
+    // เบราว์เซอร์บางตัว (หรือเว็บที่ไม่ได้เปิดผ่าน https) ไม่อนุญาตให้คัดลอกอัตโนมัติ ให้โชว์ลิงก์ในกล่องให้คัดลอกเองแทน
+    prompt('คัดลอกลิงก์ของรองเท้าคู่นี้', url);
+  }
 });
+
+// ผูก event ให้ปุ่มกากบาทปิด modal ดูรายละเอียด/รูปสินค้า
+document.getElementById('closeDetailModal').addEventListener('click', closeProductDetailModal);
 // ผูก event คลิกที่พื้นหลังมืดรอบ modal ถ้าคลิกตรงพื้นหลัง (ไม่ใช่ในกล่อง) ให้ปิด modal ด้วย
 productDetailModal.addEventListener('click', (e) => {
-  if (e.target === productDetailModal) productDetailModal.classList.remove('open');
+  if (e.target === productDetailModal) closeProductDetailModal();
 });
 
 // เมื่อผู้ใช้พิมพ์ในช่องค้นหา (ทุกครั้งที่ตัวอักษรเปลี่ยน) ให้วาดรายการสินค้าใหม่ตามคำค้นหา
@@ -479,6 +546,8 @@ async function loadFlashSales() {
     renderFlashSales();
     // วาดตารางสินค้าทั้งหมดใหม่ด้วย เพราะการ์ดในตาราง "สินค้าทั้งหมด" ก็ต้องอัปเดตราคา/ป้ายลดราคาให้ตรงกับ Flash Sale ล่าสุดเช่นกัน
     renderProducts();
+    // ถ้ากำลังเปิดดูรายละเอียดสินค้าอยู่ ให้อัปเดตราคาในนั้นให้ตรงกับ Flash Sale ล่าสุดด้วย
+    if (productDetailModal.classList.contains('open')) renderDetailPurchase();
   } catch (err) {
     // ถ้าโหลดไม่สำเร็จ ให้ซ่อนโซน Flash Sale ไปเลย ไม่ต้องหยุดการทำงานของหน้าเว็บส่วนอื่น
     flashSaleSection.style.display = 'none';

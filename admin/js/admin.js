@@ -547,21 +547,26 @@ function renderOrderTable() {
       if (!statusLabels.includes(o.status)) statusLabels.unshift(o.status);
       // สร้างตัวเลือก <option> ทั้งหมด โดยเลือกตัวที่ตรงกับสถานะปัจจุบันของออเดอร์ไว้ก่อน
       const optionsHTML = statusLabels
-        .map((s) => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`)
+        .map((s) => `<option value="${escapeHtml(s)}" ${s === o.status ? 'selected' : ''}>${escapeHtml(s)}</option>`)
         .join('');
       return `
     <tr>
-      <td>${o.id}</td>
-      <td>${o.customerName}<br /><small>${o.address}</small></td>
-      <td>${o.phone}</td>
-      <td>${o.items.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')}</td>
+      <td>${escapeHtml(o.id)}</td>
+      <td>${escapeHtml(o.customerName)}<br /><small>${escapeHtml(o.address)}</small></td>
+      <td>${escapeHtml(o.phone)}</td>
+      <td>${o.items.map((i) => `${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)}) x${escapeHtml(i.qty)}`).join('<br />')}</td>
       <td>${formatPrice(o.total)}</td>
       <td>${formatPaymentMethod(o.paymentMethod)}</td>
       <td>
         <!-- ป้ายสถานะการชำระเงิน (คนละสถานะกับสถานะจัดส่ง) -->
-        <span class="payment-status-badge ${PAYMENT_STATUS_CLASS_MAP[o.paymentStatus] || ''}">${o.paymentStatus || '-'}</span>
+        <span class="payment-status-badge ${PAYMENT_STATUS_CLASS_MAP[o.paymentStatus] || ''}">${escapeHtml(o.paymentStatus || '-')}</span>
         <!-- ลิงก์ดูรูปสลิปที่ลูกค้าแนบมา (ถ้ามี) -->
-        ${o.slipUrl ? `<div><a href="${o.slipUrl}" target="_blank" rel="noopener">ดูสลิป</a></div>` : ''}
+        ${
+          // เปิดลิงก์สลิปเฉพาะที่เป็นไฟล์อัปโหลดของระบบเท่านั้น (/uploads/... หรือ https) กันลิงก์แปลกปลอมในข้อมูลเก่า
+          o.slipUrl && /^(\/uploads\/|https:\/\/)/.test(o.slipUrl)
+            ? `<div><a href="${escapeHtml(o.slipUrl)}" target="_blank" rel="noopener">ดูสลิป</a></div>`
+            : ''
+        }
         <!-- ปุ่มยืนยันการชำระเงิน แสดงเฉพาะตอนที่ยังต้องโอนเงิน (ไม่ใช่เก็บเงินปลายทาง) และยังไม่เคยยืนยันมาก่อน -->
         ${
           o.paymentMethod !== 'cod' && o.paymentStatus !== 'ชำระเงินแล้ว'
@@ -571,7 +576,12 @@ function renderOrderTable() {
       </td>
       <td>
         <!-- ดรอปดาวน์เปลี่ยนสถานะออเดอร์ เปลี่ยนตัวเลือกแล้วจะยิง API อัปเดตสถานะทันที (ดู event listener ด้านล่าง) — class status-* ทำให้พื้นหลังมีสีต่างกันตามสถานะ -->
-        <select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${o.id}">${optionsHTML}</select>
+        ${
+          // ออเดอร์ที่ลูกค้ายกเลิกเองแล้ว (คืนสต็อกไปแล้ว) เปลี่ยนสถานะต่อไม่ได้ จึงล็อกดรอปดาวน์ไว้
+          o.status === 'ยกเลิก'
+            ? `<select class="order-status-select status-failed" data-id="${escapeHtml(o.id)}" disabled>${optionsHTML}</select>`
+            : `<select class="order-status-select ${getOrderStatusClass(o.status)}" data-id="${escapeHtml(o.id)}">${optionsHTML}</select>`
+        }
       </td>
       <td>
         <!-- ฟอร์มระบุบริษัทขนส่ง+เลขพัสดุ ของออเดอร์นี้ ลูกค้าจะเห็นข้อมูลนี้ที่หน้าตรวจสอบคำสั่งซื้อ/บัญชีของฉัน เอาไปติดตามพัสดุที่เว็บขนส่งเองได้ -->
@@ -979,13 +989,13 @@ function renderCustomerTable() {
       // สร้างข้อความสรุปรองเท้าที่เคยสั่ง ถ้าไม่เคยสั่งเลยให้แสดงขีดกลาง
       const itemsSummary =
         allItems.length > 0
-          ? allItems.map((i) => `${i.name} (ไซส์ ${i.size}) x${i.qty}`).join('<br />')
+          ? allItems.map((i) => `${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)}) x${escapeHtml(i.qty)}`).join('<br />')
           : '-';
       return `
     <tr>
-      <td>${c.name}</td>
-      <td>${c.phone}</td>
-      <td>${c.address || '-'}</td>
+      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.phone)}</td>
+      <td>${escapeHtml(c.address || '-')}</td>
       <td>${itemsSummary}</td>
       <td>
         <button class="btn-icon" data-action="edit" data-id="${c.id}">แก้ไข</button>
@@ -1335,15 +1345,15 @@ function renderReportTable(dayOrders) {
         (o) => `
       <tr>
         <td>${new Date(o.createdAt).toLocaleTimeString('th-TH')}</td>
-        <td>${o.customerName}</td>
+        <td>${escapeHtml(o.customerName)}</td>
         <td>
           <ul class="order-items-list">
             ${o.items
-              .map((i) => `<li>${i.name} (ไซส์ ${i.size}) <span class="item-qty">x${i.qty}</span></li>`)
+              .map((i) => `<li>${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)}) <span class="item-qty">x${escapeHtml(i.qty)}</span></li>`)
               .join('')}
           </ul>
         </td>
-        <td><span class="payment-method-badge pm-${o.paymentMethod}">${formatPaymentMethod(o.paymentMethod)}</span></td>
+        <td><span class="payment-method-badge pm-${escapeHtml(o.paymentMethod)}">${formatPaymentMethod(o.paymentMethod)}</span></td>
         <td>${formatPrice(o.total)}</td>
       </tr>
     `

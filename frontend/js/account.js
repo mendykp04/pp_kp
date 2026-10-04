@@ -9,21 +9,29 @@ function renderOrderCard(order) {
   const statusClass = STATUS_CLASS_MAP[order.status] || '';
   const paymentStatusClass = PAYMENT_STATUS_CLASS_MAP[order.paymentStatus] || '';
   // ให้แนบ/เปลี่ยนสลิปได้เฉพาะตอนที่ยังต้องโอนเงินอยู่ (ไม่ใช่เก็บเงินปลายทาง) และแอดมินยังไม่ได้ยืนยันว่าจ่ายแล้ว
-  const canUploadSlip = order.paymentMethod !== 'cod' && order.paymentStatus !== 'ชำระเงินแล้ว';
+  const cancelled = order.status === 'ยกเลิก';
+  const canUploadSlip = !cancelled && order.paymentMethod !== 'cod' && order.paymentStatus !== 'ชำระเงินแล้ว';
+  // ลูกค้ายกเลิกเองได้เฉพาะออเดอร์ที่ร้านยังไม่เริ่มจัดส่ง และยังไม่ได้จ่ายเงิน/แนบสลิป (เงื่อนไขเดียวกับที่ backend ตรวจ — ถ้าโอนมาแล้วต้องติดต่อร้านเพื่อรับเงินคืน)
+  const canCancel = order.status === 'รอดำเนินการ' && order.paymentStatus !== 'ชำระเงินแล้ว' && !order.slipUrl;
   return `
-    <div class="cart-summary" style="margin-bottom: 16px;" data-order-id="${order.id}">
+    <div class="cart-summary" style="margin-bottom: 16px;" data-order-id="${escapeHtml(order.id)}">
       <div class="row">
         <span>หมายเลขคำสั่งซื้อ</span>
-        <span>${order.id}</span>
+        <span>${escapeHtml(order.id)}</span>
       </div>
       <div class="row">
         <span>สถานะการจัดส่ง</span>
-        <span class="status-badge ${statusClass}">${order.status}</span>
+        <span class="status-badge ${statusClass}">${escapeHtml(order.status)}</span>
       </div>
-      <div class="row">
+      ${
+        // ออเดอร์ที่ยกเลิกแล้วไม่ต้องโชว์สถานะการชำระเงิน (ไม่มีอะไรต้องจ่ายแล้ว)
+        cancelled
+          ? ''
+          : `<div class="row">
         <span>สถานะการชำระเงิน</span>
-        <span class="status-badge ${paymentStatusClass}">${order.paymentStatus || '-'}</span>
-      </div>
+        <span class="status-badge ${paymentStatusClass}">${escapeHtml(order.paymentStatus || '-')}</span>
+      </div>`
+      }
       <div class="row">
         <span>วันที่สั่งซื้อ</span>
         <span>${new Date(order.createdAt).toLocaleString('th-TH')}</span>
@@ -35,7 +43,7 @@ function renderOrderCard(order) {
       ${renderShippingInfoRows(order)}
       <div class="row">
         <span>รายการสินค้า</span>
-        <span>${order.items.map((i) => `${i.name} (ไซส์ ${i.size})`).join(', ')}</span>
+        <span>${order.items.map((i) => `${escapeHtml(i.name)} (ไซส์ ${escapeHtml(i.size)})`).join(', ')}</span>
       </div>
       ${
         // ออเดอร์เก่าก่อนมีระบบค่าจัดส่งจะไม่มีค่านี้ (null) ไม่ต้องแสดงแถวนี้
@@ -53,17 +61,22 @@ function renderOrderCard(order) {
     </div>
     ${
       order.slipUrl
-        ? `<p style="margin-top:-8px; margin-bottom:16px;">สลิปที่แนบไว้: <a href="${order.slipUrl}" target="_blank" rel="noopener" style="color: var(--accent);">ดูรูปสลิป</a></p>`
+        ? `<p style="margin-top:-8px; margin-bottom:16px;">สลิปที่แนบไว้: <a href="${escapeHtml(order.slipUrl)}" target="_blank" rel="noopener" style="color: var(--accent);">ดูรูปสลิป</a></p>`
         : ''
     }
     ${
       canUploadSlip
         ? `
       <div class="field" style="margin-top:-8px; margin-bottom:24px;">
-        <label for="slip-${order.id}">${order.slipUrl ? 'แนบสลิปใหม่ (ถ้าแนบผิดรูป)' : 'แนบสลิปโอนเงิน'}</label>
-        <input type="file" id="slip-${order.id}" data-order-id="${order.id}" accept="image/*" class="account-slip-input" />
+        <label for="slip-${escapeHtml(order.id)}">${order.slipUrl ? 'แนบสลิปใหม่ (ถ้าแนบผิดรูป)' : 'แนบสลิปโอนเงิน'}</label>
+        <input type="file" id="slip-${escapeHtml(order.id)}" data-order-id="${escapeHtml(order.id)}" accept="image/*" class="account-slip-input" />
       </div>
     `
+        : ''
+    }
+    ${
+      canCancel
+        ? `<button type="button" class="btn btn-outline account-cancel-btn" data-order-id="${escapeHtml(order.id)}" style="margin-top:-8px; margin-bottom:24px;">ยกเลิกคำสั่งซื้อนี้</button>`
         : ''
     }
   `;
@@ -76,6 +89,28 @@ async function loadOrders() {
   orderList.innerHTML = orders.length
     ? orders.map(renderOrderCard).join('')
     : '<p style="color: var(--text-dim);">ยังไม่มีประวัติคำสั่งซื้อ</p>';
+
+  // ผูก event ให้ปุ่ม "ยกเลิกคำสั่งซื้อนี้" ทุกปุ่มที่เพิ่งวาดใหม่
+  document.querySelectorAll('.account-cancel-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      // ยืนยันก่อนเสมอ เพราะยกเลิกแล้วรองเท้าคู่นั้นจะกลับไปขายหน้าร้านทันที อาจมีคนอื่นสั่งไปก่อน
+      if (!confirm('ต้องการยกเลิกคำสั่งซื้อนี้ใช่หรือไม่?\n\nยกเลิกแล้วรองเท้าจะกลับไปวางขายหน้าร้านทันที')) return;
+      try {
+        const res = await fetch(`${API_BASE}/customer/orders/${encodeURIComponent(btn.dataset.orderId)}/cancel`, {
+          method: 'POST',
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || 'ยกเลิกคำสั่งซื้อไม่สำเร็จ');
+        }
+        showToast('ยกเลิกคำสั่งซื้อเรียบร้อย');
+      } catch (err) {
+        showToast(err.message);
+      }
+      // โหลดรายการใหม่ทั้งสองกรณี (ถ้ายกเลิกไม่ได้เพราะร้านเพิ่งเปลี่ยนสถานะ จะได้เห็นสถานะล่าสุด)
+      loadOrders();
+    });
+  });
 
   // ผูก event ให้ช่องแนบสลิปทุกช่องที่เพิ่งวาดใหม่
   document.querySelectorAll('.account-slip-input').forEach((input) => {
@@ -120,6 +155,9 @@ async function loadOrders() {
     // แสดงชื่อ/เบอร์โทรของบัญชีที่ล็อกอินอยู่ และเก็บเบอร์โทรไว้ใช้ยืนยันตัวตนตอนแนบสลิป
     document.getElementById('accountInfo').textContent = `${me.name} · ${me.phone}`;
     accountPhone = me.phone;
+    // เติมชื่อ/ที่อยู่ปัจจุบันลงในฟอร์ม "แก้ไขชื่อและที่อยู่"
+    document.getElementById('profileName').value = me.name || '';
+    document.getElementById('profileAddress').value = me.address || '';
 
     await loadOrders();
   } catch (err) {
@@ -158,6 +196,30 @@ changePasswordForm.addEventListener('submit', async (e) => {
     }
     changePasswordForm.reset();
     showToast('เปลี่ยนรหัสผ่านเรียบร้อย');
+  } catch (err) {
+    showToast(err.message);
+  }
+});
+
+// ผูก event ให้ฟอร์ม "แก้ไขชื่อและที่อยู่" ยิงไปบันทึกที่ backend
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+  // ป้องกันเบราว์เซอร์รีโหลดหน้าตามพฤติกรรมปกติของฟอร์ม
+  e.preventDefault();
+  try {
+    const res = await fetch(`${API_BASE}/auth/customer/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: document.getElementById('profileName').value.trim(),
+        address: document.getElementById('profileAddress').value.trim(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'บันทึกข้อมูลไม่สำเร็จ');
+    // อัปเดตชื่อที่แสดงบนหน้านี้และบนแถบเมนูให้ตรงกับที่เพิ่งบันทึกทันที
+    document.getElementById('accountInfo').textContent = `${data.name} · ${data.phone}`;
+    updateAuthNav();
+    showToast('บันทึกข้อมูลเรียบร้อย');
   } catch (err) {
     showToast(err.message);
   }
